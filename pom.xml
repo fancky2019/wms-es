@@ -338,7 +338,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>gs.com.gses.GsesApplication</mainClass>
+                    <mainClass>gs.com.gses.WmsEsApplication</mainClass>
                     <skip>true</skip>
                 </configuration>
                 <executions>
