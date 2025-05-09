@@ -1,0 +1,7 @@
+spring:
+  #设置环境
+  profiles:
+    #@environment@ 要和pom文件中profile中的节点保持一致
+   active: dev
+
+

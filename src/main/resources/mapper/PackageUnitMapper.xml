@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="generator.mapper.PackageUnitMapper">
+
+    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.PackageUnit">
+            <id property="id" column="Id" jdbcType="BIGINT"/>
+            <result property="materialId" column="MaterialId" jdbcType="BIGINT"/>
+            <result property="unit" column="Unit" jdbcType="VARCHAR"/>
+            <result property="convertFigureSmallUnit" column="ConvertFigureSmallUnit" jdbcType="DECIMAL"/>
+            <result property="length" column="Length" jdbcType="DECIMAL"/>
+            <result property="width" column="Width" jdbcType="DECIMAL"/>
+            <result property="height" column="Height" jdbcType="DECIMAL"/>
+            <result property="weight" column="Weight" jdbcType="DECIMAL"/>
+            <result property="volume" column="Volume" jdbcType="DECIMAL"/>
+            <result property="fullPalletQuantity" column="FullPalletQuantity" jdbcType="DECIMAL"/>
+            <result property="str1" column="Str1" jdbcType="VARCHAR"/>
+            <result property="str2" column="Str2" jdbcType="VARCHAR"/>
+            <result property="str3" column="Str3" jdbcType="VARCHAR"/>
+            <result property="str4" column="Str4" jdbcType="VARCHAR"/>
+            <result property="str5" column="Str5" jdbcType="VARCHAR"/>
+            <result property="creatorId" column="CreatorId" jdbcType="OTHER"/>
+            <result property="creatorName" column="CreatorName" jdbcType="VARCHAR"/>
+            <result property="lastModifierId" column="LastModifierId" jdbcType="OTHER"/>
+            <result property="lastModifierName" column="LastModifierName" jdbcType="VARCHAR"/>
+            <result property="creationTime" column="CreationTime" jdbcType="BIGINT"/>
+            <result property="lastModificationTime" column="LastModificationTime" jdbcType="BIGINT"/>
+            <result property="isMainUnit" column="IsMainUnit" jdbcType="BIT"/>
+            <result property="packageMethod" column="PackageMethod" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        Id,MaterialId,Unit,
+        ConvertFigureSmallUnit,Length,Width,
+        Height,Weight,Volume,
+        FullPalletQuantity,Str1,Str2,
+        Str3,Str4,Str5,
+        CreatorId,CreatorName,LastModifierId,
+        LastModifierName,CreationTime,LastModificationTime,
+        IsMainUnit,PackageMethod
+    </sql>
+</mapper>

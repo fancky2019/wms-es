@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--日志级别以及优先级排序: OFF > FATAL > ERROR > WARN > INFO > DEBUG > TRACE > ALL -->
+
+<configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <!--自定义一些常量，之后使用${变量名}引用-->
+        <Property name="logFilePath">log</Property>
+        <Property name="logFileName">test.log</Property>
+<!--        "[%d{yyyy-MM-dd HH:mm:ss:SSS}] [%p] - %m%n"-->
+        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId}] %-5level %c{36} - %m%n</property>
+    </Properties>
+
+    <appenders>
+        <!--append="false" :根据其下日志策略,每次清空文件重新输入日志,可用于测试-->
+        <!--        <File name="log" fileName="${logFilePath}/${logFileName}" append="false">-->
+        <!--            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>-->
+        <!--        </File>-->
+
+
+        <!-- ${sys:user.home} : 默认项目路径   root /root   普通用户  /home-->
+
+         <!--1. 设置SMTPAppender属性-->
+        <!--          to  收件人，多个逗号隔开，from发件人-->
+        <!--        smtpPassword:设置QQ邮件客户端时候的授权码-->
+        <smtp name="Mail" subject="Error Log" to="709737588@qq.com,517312606@qq.com" from="1513918351@qq.com"
+              replyTo="1513918351@qq.com" smtpHost="smtp.qq.com" smtpDebug="false" smtpProtocol="smtps"
+              smtpUsername="1513918351@qq.com" smtpPassword="ifxoxskborkojeea" smtpPort="465" bufferSize="1024">
+              <!--定义error级别日志才发-->
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+		</smtp>
+
+
+        <console name="Console" target="SYSTEM_OUT">
+           <PatternLayout pattern="${log_pattern}"/>
+        </console>
+        <!--        linux指定文件文职-->
+        <!--        <RollingFile name="RollingFile" fileName="var/log/ordermigratedbtool/${date:yyyy-MM}/${date:yyyy-MM-dd}/log.log"-->
+        <!--                     filePattern="var/log/ordermigratedbtool/$${date:yyyy-MM}/$${date:yyyy-MM-dd}/info-%d{yyyy-MM-dd}-%i.log">-->
+        <RollingFile name="RollingFile" fileName="logs/${date:yyyy-MM}/${date:yyyy-MM-dd}/log.log"
+                     filePattern="logs/$${date:yyyy-MM}/$${date:yyyy-MM-dd}/info-%d{yyyy-MM-dd}-%i.log">
+            <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout pattern="${log_pattern}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="6" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="20"/>
+        </RollingFile>
+
+        <Async name="AsyncMail">
+            <appender-ref ref="Mail"/>
+        </Async>
+    </appenders>
+
+    <loggers>
+<!--        过滤框架的debug-->
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="org.mybatis" level="INFO"/>
+        <logger name="org.thymeleaf" level="INFO"/>
+        <logger name="org.redisson" level="INFO"/>
+        <logger name="com.zaxxer.hikari" level="INFO"/>
+        <logger name="io.lettuce.core" level="INFO"/>
+        <logger name="org.apache" level="INFO"/>
+        <logger name="io.netty.channel.nio" level="INFO"/>
+        <logger name="io.debezium" level="INFO"/>
+        <logger name=" com.ververica.cdc" level="INFO"/>
+        <!--        异步-->
+        <AsyncRoot level="all">
+            <appender-ref ref="Console"/>
+            <appender-ref ref="RollingFile"/>
+<!--            <appender-ref ref="Mail"/>-->
+        </AsyncRoot>
+
+        <!--        同步-->
+<!--        <Root level="all">-->
+        <!--            <appender-ref ref="Console"/>-->
+        <!--            <appender-ref ref="RollingFile"/>-->
+        <!--            <appender-ref ref="AsyncMail"/>-->
+        <!--        </Root>-->
+
+
+<!--        <AsyncLogger name="AsyncLogger" level="trace" includeLocation="true" additivity="false">-->
+<!--            <appender-ref ref="RollingFile"/>-->
+<!--             <appender-ref ref="Mail"/>-->
+<!--        </AsyncLogger>-->
+    </loggers>
+</configuration>

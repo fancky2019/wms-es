@@ -1,0 +1,256 @@
+#注意每个属性：（冒号）后要有一个空格
+
+server:
+  port: 8081
+  servlet:
+    #设置项目名称，注意配置文件 dev、tes、prod的配置
+    context-path: /sbp
+
+eureka:
+  client:
+    # 下面两句不注册到注册中心。Eureka会默认把自己注册到注册中心：http://localhost:8761/eureka/
+    registerWithEureka: false
+    fetchRegistry: false
+
+#公共配置与profiles选择无关 mapperLocations指的路径是src/main/resources
+#mapper路径和实体对象路径
+#要配置mybatis不然mybatis有可能无法Invalid bound statement问题
+mybatis:
+  #  Mapper文件存放的位置
+  mapperLocations: classpath:mapper/**/*.xml
+  #  实体类所在的包
+  typeAliasesPackage: com.example.demo.model.entity
+
+#mybatis 分页
+pagehelper:
+  ##  mysql、sqlserver2012，没找到sqlserver2008版本的
+  helperDialect: sqlserver2012
+  reasonable: true
+  supportMethodsArguments: true
+  params: count=countSql
+
+#开发配
+
+spring:
+  application:
+    name: SpringBootProject
+  thymeleaf:
+  #    view:
+  #      prefix: /
+  #      suffix: .html
+  # html
+  #   prefix: classpath:/templates/
+  #    #图片
+  #  resources:
+  #    static-locations: classpath:/
+
+  datasource:
+    # sqlserver
+    url: jdbc:sqlserver://localhost:1433;DatabaseName=WMS
+    #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: sa
+    password: 123456
+
+    #    #mysql
+    #    #具体参见类DynamicDataSourceAspect 说明
+    #    #不用此默认，默认就是写库,多数据源用jdbcUrl，不是url,spring 默认用的是url，用多数据源用url会报错。
+    #    url: jdbc:mysql://127.0.0.1:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+    #    driver-class-name: com.mysql.cj.jdbc.Driver
+    #    username: root
+    #    password: 123456
+
+    #    writer:
+    #      jdbcUrl: jdbc:mysql://127.0.0.1:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+    #      driver-class-name: com.mysql.cj.jdbc.Driver
+    #      username: root
+    #      password: 123456
+    #    reader:
+    #      jdbcUrl: jdbc:mysql://127.0.0.1:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+    #      driver-class-name: com.mysql.cj.jdbc.Driver
+    #      username: root
+    #      password: 123456
+
+
+    #mysql 连接池8h自动断开配置
+    #    #验证连接的有效性
+    #    spring.datasource.test-while-idle=true
+    #    #获取连接时候验证，会影响性能
+    #    spring.datasource.test-on-borrow=true
+    #    spring.datasource.validation-query=SELECT 1 FROM DUAL
+    #    #空闲连接回收的时间间隔，与test-while-idle一起使用，设置5分钟
+    #    spring.datasource.time-between-eviction-runs-millis=300000
+    #    #连接池空闲连接的有效时间 ，设置30分钟
+    #    spring.datasource.min-evictable-idle-time-millis=1800000
+    #  spring-boot默认连接池
+    #  spring-boot中，根据以下3个优先级加载连接池
+    #  1）如果classpath中有HikariCP，优先选择它
+    #  2）如果Tomcat pooling 连接池可用，就会选择它
+    #  3）如果以上都没有，则会选择Commons DBCP2连接池
+    #    dbcp2:
+    #      test-on-borrow: true
+    #      validation-query: SELECT 1
+    #      time-between-eviction-runs-millis: 300000
+    #      min-evictable-idle-time-millis: 1800000
+    #      test-while-idle: true
+    # HikariCP： springboot2.0 默认的连接池。https://github.com/brettwooldridge/HikariCP
+    #HikariCP  高并发性能优。mysql 8h 空闲断开连接可用quartz 调度定期select 1  。
+    #产生此问题DB工作就不繁忙，性能要求不高。可以用上面dbcp2的配置，采取空闲查询策略。
+    #要引入mybatis
+    type: com.zaxxer.hikari.HikariDataSource
+    # Hikari will use the above plus the following to setup connection pooling
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 15
+      auto-commit: true
+      idle-timeout: 30000
+      #pool-name: HikariCP-Demo
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      #connection-test-query: SELECT 1
+
+
+
+  redis:
+    #  数据库索引
+    database: 5
+    # 远程服务器地址
+    host: 192.168.5.89
+    # 远程服务器端口
+    port: 6379
+    # 验证码
+    password: fancky123456
+    jedis:
+      pool:
+        # 最大空闲连接
+        max-idle: 8
+        # 最小空闲链接
+        min-idle: 0
+        # 最大连接数（负数表示没有限制）
+        max-active: 8
+        # 最大阻塞等待时间（负数表示没有限制）
+        max-wait: 0
+    # 链接超时时间（毫秒）
+    timeout: 50
+
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: fancky
+    password: 123456
+    #发布确认
+    publisher-confirms: true
+    # 开启发送失败退回
+    publisher-returns: true
+    template:
+      #设置为 true 后 消费者在消息没有被路由到合适队列情况下会被return监听，而不会自动删除
+      mandatory: true
+    virtual-host: /
+    #开启手动Axk,手动无法自动加入死信队列，可以重试指定次数。
+    #设置成默认的自动Ack,springboot会加入死信队列，一定设置死信队列。
+    #    listener.simple.acknowledge-mode: manual
+    listener:
+      simple:
+        retry:
+          #是否开启消费者重试（为false时关闭消费者重试，这时消费端代码异常会一直重复收到消息）
+          enabled: true
+          #最大重试次数（包括执行一次，实际重试两次。1+2=3）
+          max-attempts: 3
+          #重试间隔时间（单位毫秒）
+          initial-interval: 2000
+        #公平分发模式 默认是1
+        prefetch: 30
+        #acknowledge-mode: manual
+        #消费异常的数据进入死信队列
+        default-requeue-rejected: false
+    #    listener:
+    #      direct:
+    #        acknowledge-mode: manual
+    #        #默认是1
+    #        prefetch: 1
+
+
+  #    template:
+  #      mandatory: true
+  #      #消费端
+  #    listener:
+  #      simple:
+  #        acknowledge-mode: manual
+  #        #初始连接数量
+  #        concurrency: 5
+  #        #最大连接数量
+  #        max-concurrency: 10
+  #        #公平分发模式
+  #        prefetch: 1
+
+  kafka:
+    bootstrap-servers: localhost:9092 # 指定kafka 代理地址，可以多个
+    producer: # 生产者
+      retries: 0 # 设置大于0的值，则客户端会将发送失败的记录重新发送
+      # 每次批量发送消息的数量
+      batch-size: 16384
+      buffer-memory: 33554432
+      client-id: springbootKafkaProducer
+      # 指定消息key和消息体的编解码方式
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: -1
+
+    consumer:
+      group-id: springbootKafkaConsumer
+      enable-auto-commit: false
+      # 禁用自动提交下面也注释。springboot会自动管理提交
+      # auto-commit-interval: 1000
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        #max-poll-records: 10
+        #fetch-max-wait:
+        #listener:
+      #手动提交模式
+      #ack-mode: manual
+
+#Feign  开启熔断
+#注意：节点不在spring内
+#如果页面显示异常信息，说明熔断没有开启成功
+feign:
+  hystrix:
+    enabled: true
+
+ribbon:
+  OkToRetryOnAllOperations: false #对所有操作请求都进行重试,默认false
+  ReadTimeout: 5000   #负载均衡超时时间，默认值5000
+  ConnectTimeout: 3000 #ribbon请求连接的超时时间，默认值2000
+  MaxAutoRetries: 0     #对当前实例的重试次数，默认0
+  MaxAutoRetriesNextServer: 1 #对切换实例的重试次数，默认1
+
+hystrix:
+  command:
+    default: #default全局有效，service id指定应用有效
+      execution:
+        timeout:
+          #如果enabled设置为false，则请求超时交给ribbon控制,为true,则超时作为熔断根据
+          enabled: true
+        isolation:
+          thread:
+            timeoutInMilliseconds: 10000 #断路器超时时间，默认1000ms
+
+#默认log
+#logging:
+#  #  path没起作用
+# # path:
+#  file: logs/log.log
+logging:
+  config: classpath:log4j2.yml
+swagger2:
+  enable: true #false (或者在pro环境下不写此配置):禁用就打不开swagger网页
+knife4j:
+  #false:禁用knife4j
+  enable: true
+demo:
+  JWTSecretKey: GQDstcKsx0NHjPOuXOYg5MbeJ1XT0uFiwDVvVBrk
+  multiEnvironment: multiEnvironmentDev
+cron: '0/8 * * * * ?'
+
+sbp:
+  ordermigratedbtoolurl: http://localhost:8101
+

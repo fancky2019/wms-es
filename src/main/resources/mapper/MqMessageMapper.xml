@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="generator.mapper.MqMessageMapper">
+
+    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.MqMessage">
+            <id property="id" column="Id" jdbcType="BIGINT"/>
+            <result property="msgId" column="MsgId" jdbcType="VARCHAR"/>
+            <result property="msgContent" column="MsgContent" jdbcType="VARCHAR"/>
+            <result property="exchange" column="Exchange" jdbcType="VARCHAR"/>
+            <result property="routeKey" column="RouteKey" jdbcType="VARCHAR"/>
+            <result property="queue" column="Queue" jdbcType="VARCHAR"/>
+            <result property="topic" column="Topic" jdbcType="VARCHAR"/>
+            <result property="tag" column="Tag" jdbcType="VARCHAR"/>
+            <result property="publishAck" column="PublishAck" jdbcType="BIT"/>
+            <result property="consumeAck" column="ConsumeAck" jdbcType="BIT"/>
+            <result property="consumeFail" column="ConsumeFail" jdbcType="BIT"/>
+            <result property="remark" column="remark" jdbcType="VARCHAR"/>
+            <result property="creatorId" column="CreatorId" jdbcType="OTHER"/>
+            <result property="creatorName" column="CreatorName" jdbcType="VARCHAR"/>
+            <result property="lastModifierId" column="LastModifierId" jdbcType="OTHER"/>
+            <result property="lastModifierName" column="LastModifierName" jdbcType="VARCHAR"/>
+            <result property="creationTime" column="CreationTime" jdbcType="BIGINT"/>
+            <result property="lastModificationTime" column="LastModificationTime" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        Id,MsgId,MsgContent,
+        Exchange,RouteKey,Queue,
+        Topic,Tag,PublishAck,
+        ConsumeAck,ConsumeFail,remark,
+        CreatorId,CreatorName,LastModifierId,
+        LastModifierName,CreationTime,LastModificationTime
+    </sql>
+</mapper>

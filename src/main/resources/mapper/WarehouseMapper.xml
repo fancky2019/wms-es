@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="generator.mapper.WarehouseMapper">
+
+    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.Warehouse">
+            <id property="id" column="Id" jdbcType="BIGINT"/>
+            <result property="XCode" column="XCode" jdbcType="VARCHAR"/>
+            <result property="XName" column="XName" jdbcType="VARCHAR"/>
+            <result property="XStatus" column="XStatus" jdbcType="INTEGER"/>
+            <result property="XType" column="XType" jdbcType="INTEGER"/>
+            <result property="str1" column="Str1" jdbcType="VARCHAR"/>
+            <result property="str2" column="Str2" jdbcType="VARCHAR"/>
+            <result property="str3" column="Str3" jdbcType="VARCHAR"/>
+            <result property="str4" column="Str4" jdbcType="VARCHAR"/>
+            <result property="str5" column="Str5" jdbcType="VARCHAR"/>
+            <result property="creatorId" column="CreatorId" jdbcType="OTHER"/>
+            <result property="creatorName" column="CreatorName" jdbcType="VARCHAR"/>
+            <result property="lastModifierId" column="LastModifierId" jdbcType="OTHER"/>
+            <result property="lastModifierName" column="LastModifierName" jdbcType="VARCHAR"/>
+            <result property="creationTime" column="CreationTime" jdbcType="BIGINT"/>
+            <result property="lastModificationTime" column="LastModificationTime" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        Id,XCode,XName,
+        XStatus,XType,Str1,
+        Str2,Str3,Str4,
+        Str5,CreatorId,CreatorName,
+        LastModifierId,LastModifierName,CreationTime,
+        LastModificationTime
+    </sql>
+</mapper>
