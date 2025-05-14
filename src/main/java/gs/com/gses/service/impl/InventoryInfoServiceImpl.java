@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.elasticsearch.ShipOrderInfoRepository;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
+import gs.com.gses.model.elasticsearch.ShipOrderInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
@@ -15,15 +16,22 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.ParsedTopHits;
+import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
-import org.springframework.data.elasticsearch.core.IndexOperations;
-import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
@@ -32,10 +40,12 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -87,6 +97,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     @Autowired
     private RedisTemplate redisTemplate;
 
+    private static String SEPARATOR = "|";
+
+
     @Override
     public void initInventoryInfoFromDb() {
         StopWatch stopWatch = new StopWatch("initInventoryInfoFromDb");
@@ -137,9 +150,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             InventoryInfo inventoryInfo = null;
             for (InventoryItemDetail inventoryItemDetail : inventoryItemDetailList) {
-                if(inventoryItemDetail.getInventoryItemId().equals(509955479831320L))
-                {
-                    int nn=0;
+                if (inventoryItemDetail.getInventoryItemId().equals(509955479831320L)) {
+                    int nn = 0;
                 }
                 inventoryInfo = new InventoryInfo();
                 InventoryItem inventoryItem = inventoryItemList.stream().filter(p -> p.getId().equals(inventoryItemDetail.getInventoryItemId())).findFirst().orElse(null);
@@ -232,8 +244,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 inventoryInfo.setInventoryItemStr3(inventoryItem.getStr3());
                 inventoryInfo.setInventoryItemStr4(inventoryItem.getStr4());
                 inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
-
-
 
 
                 if (inventoryItem.getOrganiztionId() != null) {
@@ -429,11 +439,59 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         request.setLanewayXStatus(1);
 
+        List<String> sourceFieldList = new ArrayList<>();
+        sourceFieldList.add("inventoryId");
+        sourceFieldList.add("inventoryItemId");
+        sourceFieldList.add("inventoryItemDetailId");
+        sourceFieldList.add("packageQuantity");
+        sourceFieldList.add("allocatedPackageQuantity");
+        sourceFieldList.add("pallet");
+        request.setSourceFieldList(sourceFieldList);
 
 
         request.setPageIndex(0);
         request.setPageSize(50);
-        return getInventoryInfoList( request) ;
+        return getInventoryInfoList(request);
+
+    }
+
+    @Override
+    public HashMap<Object, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
+        request.setInventoryXStatus(0);
+        request.setInventoryIsExpired(false);
+        request.setInventoryIsLocked(false);
+
+        request.setInventoryItemIsLocked(false);
+        request.setInventoryItemXStatus(0);
+        request.setInventoryItemIsExpired(false);
+
+        request.setXStatus(0);
+        request.setIsLocked(false);
+        request.setIsExpired(false);
+
+        request.setLocationXStatus(1);
+        request.setForbidOutbound(false);
+        request.setLocationIsLocked(false);
+        request.setIsCountLocked(false);
+        //平库也可以分配，默认只能立库
+//        request.setLocationXType(1);
+
+        request.setLanewayXStatus(1);
+
+        List<String> sourceFieldList = new ArrayList<>();
+        sourceFieldList.add("inventoryId");
+        sourceFieldList.add("inventoryItemId");
+        sourceFieldList.add("inventoryItemDetailId");
+        sourceFieldList.add("packageQuantity");
+        sourceFieldList.add("allocatedPackageQuantity");
+        sourceFieldList.add("pallet");
+        request.setSourceFieldList(sourceFieldList);
+
+
+        request.setPageIndex(0);
+        request.setPageSize(50);
+        return getAllocatedInventoryInfoList(request);
+
     }
 
     @Override
@@ -533,10 +591,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //        boolQuery.must(dateQuery);
 
 
-
-
-
-
 //        List<String> includeList = new ArrayList<>();
 //        includeList.add("applyShipOrderId");
 //        includeList.add("materialName");
@@ -626,5 +680,221 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         return pageData;
     }
 
+    @Override
+    public HashMap<Object, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
+
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        if (request.getZoneId() != null && request.getZoneId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("zoneId", request.getZoneId()));
+        }
+        if (request.getInventoryXStatus() != null && request.getInventoryXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryXStatus", request.getInventoryXStatus()));
+        }
+        if (request.getInventoryIsExpired() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryIsExpired", request.getInventoryIsExpired()));
+        }
+        if (request.getInventoryIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryIsLocked", request.getInventoryIsLocked()));
+        }
+
+        if (request.getInventoryItemIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsLocked", request.getInventoryItemIsLocked()));
+        }
+        if (request.getInventoryItemXStatus() != null && request.getInventoryItemXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemXStatus", request.getInventoryItemXStatus()));
+        }
+
+        if (request.getInventoryItemIsExpired() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsExpired", request.getInventoryItemIsExpired()));
+        }
+
+        if (request.getXStatus() != null && request.getXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("xStatus", request.getXStatus()));
+        }
+        if (request.getIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isLocked", request.getIsLocked()));
+        }
+        if (request.getIsExpired() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isExpired", request.getIsExpired()));
+        }
+
+        if (request.getLocationXStatus() != null && request.getLocationXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationXStatus", request.getLocationXStatus()));
+        }
+
+        if (request.getForbidOutbound() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("forbidOutbound", request.getForbidOutbound()));
+        }
+        if (request.getLocationIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationIsLocked", request.getLocationIsLocked()));
+        }
+        if (request.getIsCountLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isCountLocked", request.getIsCountLocked()));
+        }
+
+        if (request.getLocationXType() != null && request.getLocationXType() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationXType", request.getLocationXType()));
+        }
+        if (request.getLanewayXStatus() != null && request.getLanewayXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("lanewayXStatus", request.getLanewayXStatus()));
+        }
+        //rangeQuery gt  gte  lte
+
+        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryPackageQuantity").gt(0));
+        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryAllocatedPackageQuantity", 0));
+        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryItemPackageQuantity").gt(0));
+        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemAllocatedPackageQuantity", 0));
+        boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
+        boolQueryBuilder.must(QueryBuilders.termQuery("allocatedPackageQuantity", 0));
+        if (request.getMaterialId() != null && request.getMaterialId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("materialId", request.getMaterialId()));
+        }
+        if (request.getIsSealed() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isSealed", request.getIsSealed()));
+        }
+        if (request.getInventoryItemIsSealed() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsSealed", request.getInventoryItemIsSealed()));
+        }
+
+
+        if (StringUtils.isNotEmpty(request.getApplyOrOrderCode())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("applyOrOrderCode", request.getApplyOrOrderCode()));
+        } else {
+            // 过滤字段存在且非空
+            boolQueryBuilder.mustNot(QueryBuilders.existsQuery("applyOrOrderCode"));
+        }
+
+        // in id  查询
+        if (CollectionUtils.isNotEmpty(request.getMaterialIdList())) {
+            boolQueryBuilder.must(QueryBuilders.termsQuery("materialId", request.getMaterialIdList()));
+        }
+
+
+        List<SortBuilder<?>> sortBuilderList = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(request.getSortFieldList())) {
+            SortOrder sortOrder = null;
+            for (Sort sort : request.getSortFieldList()) {
+                switch (sort.getSortType().toLowerCase()) {
+                    case "asc":
+                        sortOrder = SortOrder.ASC;
+                        break;
+                    case "desc":
+                        sortOrder = SortOrder.DESC;
+                        break;
+                    default:
+                        throw new Exception("不支持的排序");
+                }
+                sortBuilderList.add(SortBuilders.fieldSort(sort.getSortField())
+                        .order(sortOrder));
+            }
+        }
+
+
+        //region script
+
+        List<String> aggFields = new ArrayList<>();
+        aggFields.add("materialId");
+
+
+        String scriptContent = aggFields.stream().map(one -> String.format("doc['%s'].value", one))
+                .collect(Collectors.joining("+'" + SEPARATOR + "'+"));
+
+
+        Script script = new Script(scriptContent);
+        int aggregationSize = 2;
+        if (CollectionUtils.isNotEmpty(request.getMaterialIdList())) {
+            aggregationSize = request.getMaterialIdList().size();
+        }
+        // 创建一个聚合查询对象
+        TermsAggregationBuilder scriptAggregationBuilder =
+                AggregationBuilders
+                        .terms("aggregation_name_materialId")
+                        .script(script)
+                        // 返回桶数
+                        .size(aggregationSize);
+
+        //创建一个 top_hits 聚合
+        TopHitsAggregationBuilder topHitsAggregation =
+                AggregationBuilders.topHits("top_docs")
+                        .sort("packageQuantity", SortOrder.ASC)
+                        .sort("allocatedPackageQuantity", SortOrder.ASC)
+                        //分页，可不要，直接指定size
+                        .from(0)
+                        // 设置每个桶内 返回的文档数目
+                        .size(100);
+        //可将 scriptAggregationBuilder 的值复制到postman 中格式化查看，就是对应的dsl 语句
+        //将 top_hits 聚合添加到桶聚合中。
+        scriptAggregationBuilder.subAggregation(topHitsAggregation);
+
+        int debug = 1;
+        //endregion
+
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder)
+                .withSorts(sortBuilderList)
+                .withSourceFilter(new SourceFilter() {
+                    //返回的字段
+                    @Override
+                    public String[] getIncludes() {
+//                        return includeList.toArray(new String[0]);
+//
+                        if (request.getSourceFieldList() != null) {
+                            return request.getSourceFieldList().toArray(new String[0]);
+                        } else {
+                            return new String[0];
+                        }
+
+                    }
+
+                    //不需要返回的字段
+                    @Override
+                    public String[] getExcludes() {
+                        return new String[0];
+                    }
+                })
+                //高亮字段显示
+//                .withHighlightFields(new HighlightBuilder.Field("product_name"))
+                .withTrackTotalHits(true)//解除最大1W条限制
+                .addAggregation(scriptAggregationBuilder)
+                .build();
+
+
+        SearchHits<InventoryInfo> searchHits = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
+
+        AggregationsContainer<?> aggregationsContainer = searchHits.getAggregations();
+        Object obj = aggregationsContainer.aggregations();
+        Aggregations aggregations = (Aggregations) aggregationsContainer.aggregations();
+
+
+        Map<String, Aggregation> map = aggregations.getAsMap();
+        //key    ShipOrderCode91|ApplyShipOrderCode92
+        HashMap<Object, Long> hashMap1 = new HashMap<>();
+        HashMap<Object, List<InventoryInfo>> bucketHitsMap = new HashMap<>();
+        for (Aggregation aggregation : map.values()) {
+            Terms terms1 = aggregations.get(aggregation.getName());
+            for (Terms.Bucket bucket : terms1.getBuckets()) {
+                Object key = bucket.getKey();
+                long count = bucket.getDocCount();
+                hashMap1.put(key, count);
+
+                Aggregations bucketAggregations = bucket.getAggregations();
+
+                org.elasticsearch.search.SearchHits bucketSearchHits = ((ParsedTopHits) bucketAggregations.asList().get(0)).getHits();
+                List<InventoryInfo> bucketHitList = new ArrayList<>();
+                for (org.elasticsearch.search.SearchHit searchHit : bucketSearchHits.getHits()) {
+
+//                    //字段名和对应的值
+//                    Map<String, Object> smap = searchHit.getSourceAsMap();
+                    String json = searchHit.getSourceAsString();
+                    InventoryInfo inventoryInfo = objectMapper.readValue(json, InventoryInfo.class);
+                    bucketHitList.add(inventoryInfo);
+                }
+                bucketHitsMap.put(key, bucketHitList);
+            }
+        }
+
+
+        return bucketHitsMap;
+    }
 
 }

@@ -8,14 +8,20 @@ import gs.com.gses.model.response.PageData;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.HashMap;
+import java.util.List;
+
 
 public interface InventoryInfoService {
 
     PageData<InventoryInfo> getInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
-    PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
+    PageData<InventoryInfo>  getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
 
     void initInventoryInfoFromDb()  ;
 
+    HashMap<Object, List<InventoryInfo>>   getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
+
+    HashMap<Object, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
 }

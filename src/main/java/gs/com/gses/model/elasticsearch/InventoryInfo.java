@@ -28,6 +28,8 @@ public class InventoryInfo {
     @Field(type = FieldType.Long)
     private Long locationId;
     @Field(type = FieldType.Keyword)
+//    es 默认null 不创建索引，会创建mapping
+//    @Field(type = FieldType.Text, nullValue = "NULL_PLACEHOLDER")
     private String locationCode;
 
     /**
@@ -826,7 +828,7 @@ public class InventoryInfo {
     /**
      * 创建时间戳13位
      */
-    @Field(type = FieldType.Text)
+    @Field(name = "creationTime", index = true, store = true, type = FieldType.Date, format = DateFormat.custom, pattern = pattern)
     private LocalDateTime creationTime;
 
     /**

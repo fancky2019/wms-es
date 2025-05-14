@@ -26,6 +26,7 @@ import org.springframework.util.StopWatch;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -194,15 +195,15 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
                     .map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
             InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
             inventoryInfoRequest.setMaterialIdList(materialIdList);
-            PageData<InventoryInfo> page = this.inventoryInfoService.getInventoryInfoDefaultList(inventoryInfoRequest);
-            List<InventoryInfo> inventoryInfoList = page.getData();
+            HashMap<Object, List<InventoryInfo>> page = this.inventoryInfoService.getDefaultAllocatedInventoryInfoList(inventoryInfoRequest);
+
             int m=0;
         }
 
         stopWatch.stop();
 //        stopWatch.start("BatchInsert_Trace2");
         long mills = stopWatch.getTotalTimeMillis();
-        log.info("DemoOrder batchInsertSession {} ms", mills);
+        log.info("allocate complete {} ms", mills);
     }
 
 
