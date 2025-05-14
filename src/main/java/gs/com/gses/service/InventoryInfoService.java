@@ -20,8 +20,8 @@ public interface InventoryInfoService {
 
     void initInventoryInfoFromDb()  ;
 
-    HashMap<Object, List<InventoryInfo>>   getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
+    HashMap<Long, List<InventoryInfo>>   getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
-    HashMap<Object, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
+    HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
 }

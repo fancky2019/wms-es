@@ -456,7 +456,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public HashMap<Object, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
+    public HashMap<Long, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
         request.setInventoryXStatus(0);
         request.setInventoryIsExpired(false);
         request.setInventoryIsLocked(false);
@@ -681,7 +681,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public HashMap<Object, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
+    public HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
 
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         if (request.getZoneId() != null && request.getZoneId() > 0) {
@@ -869,7 +869,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         Map<String, Aggregation> map = aggregations.getAsMap();
         //key    ShipOrderCode91|ApplyShipOrderCode92
         HashMap<Object, Long> hashMap1 = new HashMap<>();
-        HashMap<Object, List<InventoryInfo>> bucketHitsMap = new HashMap<>();
+        HashMap<Long, List<InventoryInfo>> bucketHitsMap = new HashMap<>();
         for (Aggregation aggregation : map.values()) {
             Terms terms1 = aggregations.get(aggregation.getName());
             for (Terms.Bucket bucket : terms1.getBuckets()) {
@@ -889,7 +889,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     InventoryInfo inventoryInfo = objectMapper.readValue(json, InventoryInfo.class);
                     bucketHitList.add(inventoryInfo);
                 }
-                bucketHitsMap.put(key, bucketHitList);
+                bucketHitsMap.put(Long.valueOf(key.toString()), bucketHitList);
             }
         }
 
