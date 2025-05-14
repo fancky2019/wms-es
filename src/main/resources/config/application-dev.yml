@@ -191,6 +191,9 @@ mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
   #  实体类所在的包
   type-aliases-package: gs.com.gses.demos.model.entity
+#  M_Str1  默认命中mStr1
+  configuration:
+    map-underscore-to-camel-case: false  #默认true
 
 logging:
   config: classpath:log4j2.xml

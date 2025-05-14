@@ -26,7 +26,5 @@ public interface OutBoundOrderService {
     LinkedHashMap<Object, Double> dateHistogramStatisticsQuery(ShipOrderInfoRequest request) throws JsonProcessingException;
 
 
-    void initInventoryInfoFromDb()  ;
-
 
 }

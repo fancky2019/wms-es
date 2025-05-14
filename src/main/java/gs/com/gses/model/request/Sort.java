@@ -11,5 +11,5 @@ public class Sort {
     /**
      * asc desc
      */
-    private  String sortOrder;
+    private  String sortType;
 }
