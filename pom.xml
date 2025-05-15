@@ -32,6 +32,7 @@
         <easyexcel.version>3.3.4</easyexcel.version>
         <xxl-job.version>2.4.1</xxl-job.version>
         <flink.version>1.19.0</flink.version>
+        <debezium.version>2.7.4.Final</debezium.version>
     </properties>
     <dependencies>
         <dependency>
@@ -47,11 +48,20 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+<!--        <dependency>-->
+<!--            <groupId>com.microsoft.sqlserver</groupId>-->
+<!--            <artifactId>mssql-jdbc</artifactId>-->
+<!--            <scope>runtime</scope>-->
+<!--        </dependency>-->
+
+        <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <scope>runtime</scope>
+            <version>12.10.0.jre8</version>
+            <scope>compile</scope>
         </dependency>
+
 <!--        for SqlServer-->
 <!--        <dependency>-->
 <!--            <groupId>com.microsoft.sqlserver</groupId>-->
@@ -222,17 +232,18 @@
 
 <!--        flink               -->
 
-<!--        &lt;!&ndash;        java.lang.ClassNotFoundException: org.apache.flink.connector.base.source.reader.RecordEmitter&ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.flink</groupId>-->
-<!--            <artifactId>flink-connector-base</artifactId>-->
-<!--            <version>${flink.version}</version>-->
-<!--        </dependency>-->
+        <!--        java.lang.ClassNotFoundException: org.apache.flink.connector.base.source.reader.RecordEmitter-->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-base</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
 
 
 
-<!--        &lt;!&ndash;       此依赖包含返回的数据处理结构&ndash;&gt;-->
-<!--        &lt;!&ndash; https://mvnrepository.com/artifact/com.ververica/flink-connector-mysql-cdc &ndash;&gt;-->
+        <!--       此依赖包含返回的数据处理结构-->
+        <!-- https://mvnrepository.com/artifact/com.ververica/flink-connector-mysql-cdc -->
+
 <!--        <dependency>-->
 <!--            <groupId>com.ververica</groupId>-->
 <!--            <artifactId>flink-connector-mysql-cdc</artifactId>-->
@@ -240,8 +251,7 @@
 <!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
 <!--        </dependency>-->
 
-
-<!--        &lt;!&ndash;         https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-mysql-cdc&ndash;&gt;-->
+        <!--         https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-mysql-cdc-->
 <!--        <dependency>-->
 <!--            <groupId>com.ververica</groupId>-->
 <!--            <artifactId>flink-sql-connector-mysql-cdc</artifactId>-->
@@ -250,46 +260,73 @@
 <!--        </dependency>-->
 
 
-<!--        <dependency>-->
-<!--            <groupId>org.apache.flink</groupId>-->
-<!--            <artifactId>flink-streaming-java</artifactId>-->
-<!--            <version>${flink.version}</version>-->
-<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--        </dependency>-->
 
-<!--        <dependency>-->
-<!--            <groupId>org.apache.flink</groupId>-->
-<!--            <artifactId>flink-clients</artifactId>-->
-<!--            <version>${flink.version}</version>-->
-<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.flink</groupId>-->
-<!--            <artifactId>flink-table-runtime</artifactId>-->
-<!--            <version>${flink.version}</version>-->
-<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>com.ververica</groupId>
+            <artifactId>flink-connector-sqlserver-cdc</artifactId>
+            <!-- The dependency is available only for stable releases, SNAPSHOT dependency need build by yourself. -->
+            <version>3.0.1</version>-->
+        </dependency>
+
+        <!--         https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-mysql-cdc-->
+        <dependency>
+            <groupId>com.ververica</groupId>
+            <artifactId>flink-sql-connector-sqlserver-cdc</artifactId>
+            <version>3.0.1</version>
+            <!--            <scope>provided</scope>-->
+        </dependency>
 
 
-<!--        &lt;!&ndash;        <dependency>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <groupId>org.apache.flink</groupId>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <artifactId>flink-java</artifactId>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <version>${flink.version}</version>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--        &lt;!&ndash;        </dependency>&ndash;&gt;-->
-<!--        &lt;!&ndash;        <dependency>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <groupId>org.apache.flink</groupId>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <artifactId>flink-table-planner_${scala.binary.version}</artifactId>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <version>${flink.version}</version>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--        &lt;!&ndash;        </dependency>&ndash;&gt;-->
 
+
+
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <version>${flink.version}</version>
+            <!--            <scope>provided</scope>-->
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-clients</artifactId>
+            <version>${flink.version}</version>
+            <!--            <scope>provided</scope>-->
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-runtime</artifactId>
+            <version>${flink.version}</version>
+            <!--            <scope>provided</scope>-->
+        </dependency>
+
+<!--        &lt;!&ndash; https://mvnrepository.com/artifact/io.debezium/debezium-storage-file &ndash;&gt;-->
 <!--        <dependency>-->
-<!--            <groupId>org.apache.flink</groupId>-->
-<!--            <artifactId>flink-core</artifactId>-->
-<!--            <version>${flink.version}</version>-->
-<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
+<!--            <groupId>io.debezium</groupId>-->
+<!--            <artifactId>debezium-storage-file</artifactId>-->
+<!--            <version>3.0.1.Final</version>-->
 <!--        </dependency>-->
+
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.flink</groupId>-->
+        <!--            <artifactId>flink-java</artifactId>-->
+        <!--            <version>${flink.version}</version>-->
+        <!--            <scope>provided</scope>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.flink</groupId>-->
+        <!--            <artifactId>flink-table-planner_${scala.binary.version}</artifactId>-->
+        <!--            <version>${flink.version}</version>-->
+        <!--            <scope>provided</scope>-->
+        <!--        </dependency>-->
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-core</artifactId>
+            <version>${flink.version}</version>
+            <!--            <scope>provided</scope>-->
+        </dependency>
 
 
 

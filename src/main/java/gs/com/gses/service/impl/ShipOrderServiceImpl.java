@@ -190,7 +190,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         List<ShipOrderResponse> list = pageData.getData();
         list = list.stream().filter(p -> p.getXStatus() == 1).collect(Collectors.toList());
 
-        list = list.stream().filter(p -> p.getId().equals(674145933246534L)).collect(Collectors.toList());
+//        list = list.stream().filter(p -> p.getId().equals(674145933246534L)).collect(Collectors.toList());
 
         if (CollectionUtils.isEmpty(list)) {
             log.info("ShipOrder data is empty");
