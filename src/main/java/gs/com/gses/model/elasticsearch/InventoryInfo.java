@@ -868,4 +868,8 @@ public class InventoryInfo {
     @Field(type = FieldType.Keyword)
     private String packageMethod;
     //endregion
+
+
+    @Field(type = FieldType.Integer)
+    private Integer deleted = 0; // 数值默认值
 }

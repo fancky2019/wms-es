@@ -719,4 +719,6 @@ public class InventoryInfoRequest  extends EsRequestPage{
     //endregion
 
     private List<Long> materialIdList;
+
+    private Integer deleted = 0; // 数值默认值
 }

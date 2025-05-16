@@ -21,6 +21,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -51,10 +52,13 @@ public class CommandLineImp implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        System.setProperty("java.io.tmpdir", "D:\\flnkcdc\\temp");  // 设置临时目录
+
+
+
+        System.setProperty("java.io.tmpdir", "D:\\flinkcdc\\temp");  // 设置临时目录
 // 先删除旧的历史文件再启动任务
         try {
-            Files.deleteIfExists(Paths.get("D:\\flnkcdc\\dbhistory.dat"));
+            Files.deleteIfExists(Paths.get("D:\\flinkcdc\\dbhistory.dat"));
         } catch (IOException e) {
             log.info("Could not delete history file", e);
         }
@@ -65,17 +69,26 @@ public class CommandLineImp implements CommandLineRunner {
         debeziumProps.setProperty("database.trustServerCertificate", "true"); // 跳过证书验证
 
 
-//        // 使用内存存储数据库历史（不持久化，重启后丢失）
+//        // 使用内存存储数据库历史（不持久化，重启后丢失） Debezium 默认使用 MemoryDatabaseHistory
 //        debeziumProps.setProperty("database.history", "io.debezium.relational.history.MemoryDatabaseHistory");
 //// 必须配置每次启动都执行快照
 //debeziumProps.setProperty("snapshot.mode", "initial");
 
 
-//        // 使用文件存储数据库历史
-//        //The db history topic or its content is fully or partially missing. Please check database history topic configuration and re-execute the snapshot.
-////        debeziumProps.setProperty("database.history", "io.debezium.relational.history.FileDatabaseHistory");
+        // 使用文件存储数据库历史
+        //The db history topic or its content is fully or partially missing. Please check database history topic configuration and re-execute the snapshot.
+        debeziumProps.setProperty("database.history", "io.debezium.relational.history.FileDatabaseHistory");
 //        debeziumProps.setProperty("database.history", "io.debezium.storage.file.history.FileDatabaseHistory");
-//        debeziumProps.setProperty("database.history.file.filename", "D:\\flnkcdc\\dbhistory.dat");
+//        debeziumProps.setProperty("database.history.file.filename", "D:\\flinkcdc\\dbhistory.txt");
+        debeziumProps.setProperty("database.history.file.filename", "D:\\flinkcdc\\dbhistory.dat"); // 使用正斜杠
+
+
+
+
+
+//        scan.interval.ms 控制增量数据扫描的时间间隔（毫秒），即两次增量数据捕获之间的间隔时间。
+//      .poll.interval.ms  控制从数据库日志（如 MySQL binlog）轮询新数据的频率（毫秒）
+//        poll.interval.ms 更底层，直接控制 Debezium 引擎轮询日志的间隔；scan.interval.ms 是 Flink CDC 对增量数据的全局扫描间隔
 
 //        1. 控制数据提取频率
 //scan.interval.ms：设置增量同步的时间间隔（毫秒）。例如设置为 5000 表示每5秒读取一次变更数据。
@@ -86,9 +99,22 @@ public class CommandLineImp implements CommandLineRunner {
 //对齐 Checkpoint：算子会等待所有输入流的 Barrier（屏障）到达后再快照状态，确保状态一致性。
 //非对齐 Checkpoint（Flink 1.11+）：允许在反压场景下跳过对齐，减少延迟，但可能牺牲部分一致性。
 
+        debeziumProps.setProperty("name", "your-connector-name12");  // 设置 Connector 名称
+        debeziumProps.setProperty("database.server.name", "your_server_name1");
 
-//        若历史文件缺失，此配置会重新生成数据, 每次启动都执行快照
+
+
+
+
+
+//        //kafka  kafka   localhost
+//        debeziumProps.setProperty("database.history", "io.debezium.relational.history.KafkaDatabaseHistory");
+//        debeziumProps.setProperty("database.history.kafka.bootstrap.servers", "localhost:9092");
+//        debeziumProps.setProperty("database.history.kafka.topic", "dbhistory");
+
+//        若历史文件缺失，此配置会重新生成数据, 每次启动都执行快照  initial   latest-offset
         debeziumProps.setProperty("snapshot.mode", "initial");
+//        debeziumProps.setProperty("snapshot.mode", "when_needed");
         debeziumProps.setProperty("snapshot.isolation.mode", "snapshot");
         debeziumProps.setProperty("scan.interval.ms", "200");
         debeziumProps.setProperty("poll.interval.ms", "200");
@@ -98,6 +124,8 @@ public class CommandLineImp implements CommandLineRunner {
         debeziumProps.setProperty("snapshot.new.tables", "parallel");
         debeziumProps.setProperty("schema.history.internal.store.only.captured.tables.ddl", "true");
         debeziumProps.setProperty("schema.history.internal.skip.unparseable.ddl", "true");
+
+        debeziumProps.setProperty("log.level", "DEBUG");
 
         SqlServerSourceBuilder.SqlServerIncrementalSource<DataChangeInfo> sqlServerSource =
                 new SqlServerSourceBuilder()
@@ -121,14 +149,14 @@ public class CommandLineImp implements CommandLineRunner {
         env.fromSource(
                         sqlServerSource,
                         WatermarkStrategy.noWatermarks(),
-                        "SqlServerIncrementalSource11")
-                .setParallelism(2)
+                        "f1")
+                .setParallelism(1)
 //                .print()
                 // 添加Sink
                 .addSink(dataChangeSink)
                 .setParallelism(1);
 
-        env.execute("name11");
+        env.execute("f1");
 
 
     }

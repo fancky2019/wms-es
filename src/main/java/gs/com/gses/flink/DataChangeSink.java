@@ -2,12 +2,18 @@ package gs.com.gses.flink;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import gs.com.gses.service.InventoryInfoService;
+import gs.com.gses.service.impl.InventoryInfoServiceImpl;
 import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Component
 @Slf4j
@@ -23,17 +29,22 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 //    @Autowired
 //    private transient InventoryInfoService inventoryInfoService;
 
+
+
     @Override
     public void invoke(DataChangeInfo value, Context context) throws JsonProcessingException {
-        log.info("收到变更原始数据:{}", value);
+        ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
+
+
+//        log.info("收到变更原始数据:{}", value);
 //        Object obj = applicationContext.getBean(value.getTableName());
         if ("InventoryItemDetail_copy1".equals(value.getTableName())) {
-            ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
+
             InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
 
 
-            inventoryInfoService.updateByInventory(value);
-           // InventoryItemDetail inventoryItemDetail = objectMapper.readValue(value.getAfterData(), InventoryItemDetail.class);
+            inventoryInfoService.updateByInventoryItemDetail(value);
+            // InventoryItemDetail inventoryItemDetail = objectMapper.readValue(value.getAfterData(), InventoryItemDetail.class);
 //            READ("r"),
 //                    CREATE("c"),
 //                    UPDATE("u"),

@@ -47,10 +47,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -105,9 +103,13 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     private static String SEPARATOR = "|";
 
+    public static LocalDateTime INIT_INVENTORY_TIME = null;
 
     @Override
     public void initInventoryInfoFromDb() {
+        INIT_INVENTORY_TIME = LocalDateTime.now();
+        String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        redisTemplate.opsForValue().set("InitInventoryTime", initInventoryTimeStr);
         StopWatch stopWatch = new StopWatch("initInventoryInfoFromDb");
         stopWatch.start("initInventoryInfoFromDb");
 
@@ -121,13 +123,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         createIndexAndMapping(InventoryInfo.class);
 
-        Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
-        Map<String, Laneway> lanewayMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.lanewayPrefix);
-        Map<String, Zone> zoneMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.zonePrefix);
-//        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
-        Map<String, Warehouse> warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.warehousePrefix);
-        Map<String, Orgnization> orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.orgnizationPrefix);
-//        Map<String, PackageUnit> packageUnitMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
 
         long count = this.inventoryItemDetailService.count();
         int step = 1000;
@@ -144,248 +139,12 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             times--;
             page.setCurrent(++pageIndex);
             page.setSearchCount(false);
-            List<InventoryInfo> inventoryInfos = new ArrayList<>();
-
             //page 内部调用selectPage
             IPage<InventoryItemDetail> inventoryItemDetailPage = this.inventoryItemDetailService.page(page);
-            List<InventoryItemDetail> inventoryItemDetailList = inventoryItemDetailPage.getRecords();
-            List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
-            List<InventoryItem> inventoryItemList = this.inventoryItemService.listByIds(inventoryItemIdList);
-            List<Long> inventoryIdList = inventoryItemList.stream().map(p -> p.getInventoryId()).distinct().collect(Collectors.toList());
-            List<Inventory> inventoryList = this.inventoryService.listByIds(inventoryIdList);
+            Integer size = addByInventoryItemDetailInfo(inventoryItemDetailPage.getRecords());
+            log.info("inventory_info size:" + size);
+            totalIndexSize += size;
 
-            InventoryInfo inventoryInfo = null;
-            for (InventoryItemDetail inventoryItemDetail : inventoryItemDetailList) {
-                if (inventoryItemDetail.getInventoryItemId().equals(509955479831320L)) {
-                    int nn = 0;
-                }
-                inventoryInfo = new InventoryInfo();
-                InventoryItem inventoryItem = inventoryItemList.stream().filter(p -> p.getId().equals(inventoryItemDetail.getInventoryItemId())).findFirst().orElse(null);
-                Inventory inventory = inventoryList.stream().filter(p -> p.getId().equals(inventoryItem.getInventoryId())).findFirst().orElse(null);
-                Location location = locationMap.get(inventory.getLocationId().toString());
-                Laneway laneway = lanewayMap.get(location.getLanewayId().toString());
-                Zone zone = zoneMap.get(laneway.getZoneId().toString());
-                // Material material = materialMap.get(inventoryItemDetail.getMaterialId().toString());
-
-                Material material = (Material) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.materialPrefix, inventoryItemDetail.getMaterialId().toString());
-
-
-                Warehouse warehouse = warehouseMap.get(inventory.getWhid().toString());
-
-                if (warehouse != null) {
-                    inventoryInfo.setWhid(warehouse.getId());
-                    inventoryInfo.setWhCode(warehouse.getXCode());
-                }
-
-                if (location == null) {
-                    log.info("location is null " + inventory.getLocationId().toString());
-                    continue;
-                }
-                inventoryInfo.setLocationId(location.getId());
-                inventoryInfo.setLocationCode(location.getXCode());
-                inventoryInfo.setLocationXStatus(location.getXStatus());
-                inventoryInfo.setLocationIsLocked(location.getIsLocked());
-                inventoryInfo.setForbidOutbound(location.getForbidOutbound());
-                inventoryInfo.setIsCountLocked(location.getIsCountLocked());
-                inventoryInfo.setLocationXType(location.getXType());
-
-
-                if (laneway != null) {
-                    inventoryInfo.setLanewayId(laneway.getId());
-                    inventoryInfo.setLanewayCode(laneway.getXCode());
-                    inventoryInfo.setLanewayXStatus(laneway.getXStatus());
-                }
-
-                if (zone != null) {
-                    inventoryInfo.setZoneId(zone.getId());
-                    inventoryInfo.setZoneCode(zone.getXCode());
-                }
-
-
-                //inventory
-                inventoryInfo.setPallet(inventory.getPallet());
-                inventoryInfo.setInventoryAllocatedSmallUnitQuantity(inventory.getAllocatedSmallUnitQuantity());
-                inventoryInfo.setInventoryAllocatedPackageQuantity(inventory.getAllocatedPackageQuantity());
-                inventoryInfo.setInventoryQCStatus(inventory.getQCStatus());
-                inventoryInfo.setInventoryXStatus(inventory.getXStatus());
-                inventoryInfo.setInventoryIsLocked(inventory.getIsLocked());
-                inventoryInfo.setInventoryIsSealed(inventory.getIsSealed());
-                inventoryInfo.setInventoryIsScattered(inventory.getIsScattered());
-                inventoryInfo.setInventoryIsExpired(inventory.getIsExpired());
-                inventoryInfo.setInventoryComments(inventory.getComments());
-                inventoryInfo.setWeight(inventory.getWeight());
-                inventoryInfo.setLength(inventory.getLength());
-                inventoryInfo.setWidth(inventory.getWidth());
-                inventoryInfo.setHeight(inventory.getHeight());
-                inventoryInfo.setInventoryStr1(inventory.getStr1());
-                inventoryInfo.setInventoryStr2(inventory.getStr2());
-                inventoryInfo.setInventoryStr3(inventory.getStr3());
-                inventoryInfo.setInventoryStr4(inventory.getStr4());
-                inventoryInfo.setInventoryStr5(inventory.getStr5());
-                inventoryInfo.setInventoryPackageQuantity(inventory.getPackageQuantity());
-                inventoryInfo.setInventorySmallUnitQuantity(inventory.getSmallUnitQuantity());
-                inventoryInfo.setLevelCount(inventory.getLevelCount());
-                inventoryInfo.setConveyorCode(inventory.getConveyorCode());
-                inventoryInfo.setApplyOrOrderCode(inventory.getApplyOrOrderCode());
-                inventoryInfo.setOrginAGVID(inventory.getOrginAGVID());
-                inventoryInfo.setOrginLocationCode(inventory.getOrginLocationCode());
-                inventoryInfo.setPalletType(inventory.getPalletType());
-                inventoryInfo.setVolume(inventory.getVolume());
-
-                //inventoryItem
-                inventoryInfo.setInventoryItemId(inventoryItem.getId());
-                if (inventoryItem.getExpiredTime() != null) {
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getExpiredTime()), ZoneOffset.of("+8"));
-                    inventoryInfo.setInventoryItemExpiredTime(localDateTime);
-                }
-                inventoryInfo.setInventoryItemAllocatedPackageQuantity(inventoryItem.getAllocatedPackageQuantity());
-                inventoryInfo.setInventoryItemPackageQuantity(inventoryItem.getPackageQuantity());
-                inventoryInfo.setInventoryItemIsLocked(inventoryItem.getIsLocked());
-                inventoryInfo.setInventoryItemXStatus(inventoryItem.getXStatus());
-                inventoryInfo.setInventoryItemIsExpired(inventoryItem.getIsExpired());
-                inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
-                inventoryInfo.setInventoryItemComments(inventoryItem.getComments());
-                inventoryInfo.setInventoryItemStr1(inventoryItem.getStr1());
-                inventoryInfo.setInventoryItemStr2(inventoryItem.getStr2());
-                inventoryInfo.setInventoryItemStr3(inventoryItem.getStr3());
-                inventoryInfo.setInventoryItemStr4(inventoryItem.getStr4());
-                inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
-
-
-                if (inventoryItem.getOrganiztionId() != null) {
-                    Orgnization orgnization = orgnizationMap.get(inventoryItem.getOrganiztionId());
-                    if (orgnization != null) {
-                        inventoryInfo.setOrganiztionId(orgnization.getId());
-                        inventoryInfo.setOrganiztionCode(orgnization.getXCode());
-                    }
-
-                }
-                if (inventoryItem.getOrganiztionSupplierId() != null) {
-                    Orgnization orgnization = orgnizationMap.get(inventoryItem.getOrganiztionSupplierId());
-                    if (orgnization != null) {
-                        inventoryInfo.setOrganiztionSupplierId(orgnization.getId());
-                        inventoryInfo.setOrganiztionSupplierCode(orgnization.getXCode());
-                    }
-
-                }
-
-                //inventoryItemDetail
-                inventoryInfo.setInventoryItemDetailId(inventoryItemDetail.getId());
-                inventoryInfo.setCarton(inventoryItemDetail.getCarton());
-                inventoryInfo.setSerialNo(inventoryItemDetail.getSerialNo());
-                if (material == null) {
-                    log.info("material is null " + inventoryItemDetail.getMaterialId().toString());
-                    continue;
-                }
-
-                inventoryInfo.setMaterialId(inventoryItemDetail.getMaterialId());
-                inventoryInfo.setMaterialCode(material.getXCode());
-                inventoryInfo.setBatchNo(inventoryItemDetail.getBatchNo());
-                inventoryInfo.setBatchNo2(inventoryItemDetail.getBatchNo2());
-                inventoryInfo.setBatchNo3(inventoryItemDetail.getBatchNo3());
-
-                if (inventoryItemDetail.getPackageUnitId() != null) {
-//                    PackageUnit packageUnit = packageUnitMap.get(inventoryItemDetail.getPackageUnitId());
-                    PackageUnit packageUnit = (PackageUnit) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.packageUnitPrefix, inventoryItemDetail.getPackageUnitId().toString());
-                    if (packageUnit != null) {
-                        inventoryInfo.setPackageUnitId(packageUnit.getId());
-                        inventoryInfo.setPackageUnitCode(packageUnit.getUnit());
-                    }
-
-                }
-
-                inventoryInfo.setSmallUnitQuantity(inventoryItemDetail.getSmallUnitQuantity());
-                inventoryInfo.setPackageQuantity(inventoryItemDetail.getPackageQuantity());
-                inventoryInfo.setAllocatedSmallUnitQuantity(inventoryItemDetail.getAllocatedSmallUnitQuantity());
-                inventoryInfo.setAllocatedPackageQuantity(inventoryItemDetail.getAllocatedPackageQuantity());
-                inventoryInfo.setQCStatus(inventoryItemDetail.getQCStatus());
-                inventoryInfo.setXStatus(inventoryItemDetail.getXStatus());
-                inventoryInfo.setIsLocked(inventoryItemDetail.getIsLocked());
-                inventoryInfo.setIsSealed(inventoryItemDetail.getIsSealed());
-                inventoryInfo.setIsScattered(inventoryItemDetail.getIsScattered());
-                inventoryInfo.setIsExpired(inventoryItemDetail.getIsExpired());
-
-                if (inventoryItemDetail.getExpiredTime() != null) {
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getExpiredTime()), ZoneOffset.of("+8"));
-                    inventoryInfo.setExpiredTime(localDateTime);
-                }
-                inventoryInfo.setComments(inventoryItemDetail.getComments());
-                inventoryInfo.setM_Str1(inventoryItemDetail.getM_Str1());
-                inventoryInfo.setM_Str2(inventoryItemDetail.getM_Str2());
-                inventoryInfo.setM_Str3(inventoryItemDetail.getM_Str3());
-                inventoryInfo.setM_Str4(inventoryItemDetail.getM_Str4());
-                inventoryInfo.setM_Str5(inventoryItemDetail.getM_Str5());
-                inventoryInfo.setM_Str6(inventoryItemDetail.getM_Str6());
-                inventoryInfo.setM_Str7(inventoryItemDetail.getM_Str7());
-                inventoryInfo.setM_Str8(inventoryItemDetail.getM_Str8());
-                inventoryInfo.setM_Str9(inventoryItemDetail.getM_Str9());
-                inventoryInfo.setM_Str10(inventoryItemDetail.getM_Str10());
-
-                inventoryInfo.setM_Str11(inventoryItemDetail.getM_Str11());
-                inventoryInfo.setM_Str12(inventoryItemDetail.getM_Str12());
-                inventoryInfo.setM_Str13(inventoryItemDetail.getM_Str13());
-                inventoryInfo.setM_Str14(inventoryItemDetail.getM_Str14());
-                inventoryInfo.setM_Str15(inventoryItemDetail.getM_Str15());
-                inventoryInfo.setM_Str16(inventoryItemDetail.getM_Str16());
-                inventoryInfo.setM_Str17(inventoryItemDetail.getM_Str17());
-                inventoryInfo.setM_Str18(inventoryItemDetail.getM_Str18());
-                inventoryInfo.setM_Str19(inventoryItemDetail.getM_Str19());
-                inventoryInfo.setM_Str20(inventoryItemDetail.getM_Str20());
-
-                inventoryInfo.setM_Str21(inventoryItemDetail.getM_Str21());
-                inventoryInfo.setM_Str22(inventoryItemDetail.getM_Str22());
-                inventoryInfo.setM_Str23(inventoryItemDetail.getM_Str23());
-                inventoryInfo.setM_Str24(inventoryItemDetail.getM_Str24());
-                inventoryInfo.setM_Str25(inventoryItemDetail.getM_Str25());
-                inventoryInfo.setM_Str26(inventoryItemDetail.getM_Str26());
-                inventoryInfo.setM_Str27(inventoryItemDetail.getM_Str27());
-                inventoryInfo.setM_Str28(inventoryItemDetail.getM_Str28());
-                inventoryInfo.setM_Str29(inventoryItemDetail.getM_Str29());
-                inventoryInfo.setM_Str30(inventoryItemDetail.getM_Str30());
-
-                inventoryInfo.setM_Str31(inventoryItemDetail.getM_Str31());
-                inventoryInfo.setM_Str32(inventoryItemDetail.getM_Str32());
-                inventoryInfo.setM_Str33(inventoryItemDetail.getM_Str33());
-                inventoryInfo.setM_Str34(inventoryItemDetail.getM_Str34());
-                inventoryInfo.setM_Str35(inventoryItemDetail.getM_Str35());
-                inventoryInfo.setM_Str36(inventoryItemDetail.getM_Str36());
-                inventoryInfo.setM_Str37(inventoryItemDetail.getM_Str37());
-                inventoryInfo.setM_Str38(inventoryItemDetail.getM_Str38());
-                inventoryInfo.setM_Str39(inventoryItemDetail.getM_Str39());
-                inventoryInfo.setM_Str40(inventoryItemDetail.getM_Str40());
-
-                inventoryInfo.setCreatorId(inventoryItemDetail.getCreatorId());
-                inventoryInfo.setCreatorName(inventoryItemDetail.getCreatorName());
-                inventoryInfo.setLastModifierId(inventoryItemDetail.getLastModifierId());
-                inventoryInfo.setLastModifierName(inventoryItemDetail.getLastModifierName());
-
-                if (inventoryItemDetail.getCreationTime() != null) {
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getCreationTime()), ZoneOffset.of("+8"));
-                    inventoryInfo.setCreationTime(localDateTime);
-                }
-
-                if (inventoryItemDetail.getLastModificationTime() != null) {
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
-                    inventoryInfo.setLastModificationTime(localDateTime);
-                }
-                if (inventoryItemDetail.getInboundTime() != null) {
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getInboundTime()), ZoneOffset.of("+8"));
-                    inventoryInfo.setInboundTime(localDateTime);
-                }
-                if (inventoryItemDetail.getProductTime() != null) {
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getProductTime()), ZoneOffset.of("+8"));
-                    inventoryInfo.setProductTime(localDateTime);
-                }
-
-                inventoryInfo.setPositionCode(inventoryItemDetail.getPositionCode());
-                inventoryInfo.setPositionLevel(inventoryItemDetail.getPositionLevel());
-                inventoryInfo.setPackageMethod(inventoryItemDetail.getPackageMethod());
-
-                inventoryInfos.add(inventoryInfo);
-            }
-            elasticsearchRestTemplate.save(inventoryInfos);
-            totalIndexSize += inventoryInfos.size();
-            log.info("inventory_info size:" + inventoryInfos.size());
         }
 
         stopWatch.stop();
@@ -394,6 +153,287 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         log.info("initInventoryInfoFromDb complete {} ms", mills);
 
         log.info("inventory_info total:" + totalIndexSize);
+    }
+
+
+    private Integer addByInventoryItemDetailInfo(List<InventoryItemDetail> inventoryItemDetailList) {
+        List<InventoryInfo> inventoryInfos = new ArrayList<>();
+        List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
+        List<InventoryItem> inventoryItemList = this.inventoryItemService.listByIds(inventoryItemIdList);
+        List<Long> inventoryIdList = inventoryItemList.stream().map(p -> p.getInventoryId()).distinct().collect(Collectors.toList());
+        List<Inventory> inventoryList = this.inventoryService.listByIds(inventoryIdList);
+
+        Map<String, Location> locationMap = new HashMap<>();
+        Map<String, Laneway> lanewayMap = new HashMap<>();
+        Map<String, Zone> zoneMap = new HashMap<>();
+//        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
+        Map<String, Warehouse> warehouseMap = new HashMap<>();
+        Map<String, Orgnization> orgnizationMap = new HashMap<>();
+//        Map<String, PackageUnit> packageUnitMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+
+        if (inventoryList.size() == 1) {
+            Inventory inventory = inventoryList.get(0);
+            Location location = (Location) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, inventory.getLocationId().toString());
+            locationMap.put(location.getId().toString(), location);
+            Laneway laneway = (Laneway) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, location.getLanewayId().toString());
+            lanewayMap.put(laneway.getId().toString(), laneway);
+            Zone zone = (Zone) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, laneway.getZoneId().toString());
+            zoneMap.put(zone.getId().toString(), zone);
+            Warehouse warehouse = (Warehouse) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, zone.getWarehouseId().toString());
+            warehouseMap.put(warehouse.getId().toString(), warehouse);
+
+
+            List<Long> organiztionSupplierIdList = inventoryItemList.stream().map(p -> p.getOrganiztionSupplierId()).distinct().collect(Collectors.toList());
+            List<Long> organiztionIdList = inventoryItemList.stream().map(p -> p.getOrganiztionId()).distinct().collect(Collectors.toList());
+
+            List<Long> allOrganiztionIdList = new ArrayList<>();
+            allOrganiztionIdList.addAll(organiztionSupplierIdList);
+            allOrganiztionIdList.addAll(organiztionIdList);
+
+            List<Orgnization> orgnizationList = redisTemplate.opsForHash().multiGet(BasicInfoCacheServiceImpl.orgnizationPrefix, allOrganiztionIdList);
+            orgnizationMap = orgnizationList.stream().collect(Collectors.toMap(p -> p.getId().toString(), item -> item));
+
+        } else {
+            locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
+            lanewayMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.lanewayPrefix);
+            zoneMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.zonePrefix);
+//        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
+            warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.warehousePrefix);
+            orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.orgnizationPrefix);
+//        Map<String, PackageUnit> packageUnitMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+        }
+
+        InventoryInfo inventoryInfo = null;
+        for (InventoryItemDetail inventoryItemDetail : inventoryItemDetailList) {
+            if (inventoryItemDetail.getInventoryItemId().equals(509955479831320L)) {
+                int nn = 0;
+            }
+            inventoryInfo = new InventoryInfo();
+            InventoryItem inventoryItem = inventoryItemList.stream().filter(p -> p.getId().equals(inventoryItemDetail.getInventoryItemId())).findFirst().orElse(null);
+            Inventory inventory = inventoryList.stream().filter(p -> p.getId().equals(inventoryItem.getInventoryId())).findFirst().orElse(null);
+            Location location = locationMap.get(inventory.getLocationId().toString());
+            Laneway laneway = lanewayMap.get(location.getLanewayId().toString());
+            Zone zone = zoneMap.get(laneway.getZoneId().toString());
+            // Material material = materialMap.get(inventoryItemDetail.getMaterialId().toString());
+
+            Material material = (Material) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.materialPrefix, inventoryItemDetail.getMaterialId().toString());
+
+
+            Warehouse warehouse = warehouseMap.get(inventory.getWhid().toString());
+
+            if (warehouse != null) {
+                inventoryInfo.setWhid(warehouse.getId());
+                inventoryInfo.setWhCode(warehouse.getXCode());
+            }
+
+            if (location == null) {
+                log.info("location is null " + inventory.getLocationId().toString());
+                continue;
+            }
+            inventoryInfo.setLocationId(location.getId());
+            inventoryInfo.setLocationCode(location.getXCode());
+            inventoryInfo.setLocationXStatus(location.getXStatus());
+            inventoryInfo.setLocationIsLocked(location.getIsLocked());
+            inventoryInfo.setForbidOutbound(location.getForbidOutbound());
+            inventoryInfo.setIsCountLocked(location.getIsCountLocked());
+            inventoryInfo.setLocationXType(location.getXType());
+
+
+            if (laneway != null) {
+                inventoryInfo.setLanewayId(laneway.getId());
+                inventoryInfo.setLanewayCode(laneway.getXCode());
+                inventoryInfo.setLanewayXStatus(laneway.getXStatus());
+            }
+
+            if (zone != null) {
+                inventoryInfo.setZoneId(zone.getId());
+                inventoryInfo.setZoneCode(zone.getXCode());
+            }
+
+
+            //inventory
+            inventoryInfo.setPallet(inventory.getPallet());
+            inventoryInfo.setInventoryAllocatedSmallUnitQuantity(inventory.getAllocatedSmallUnitQuantity());
+            inventoryInfo.setInventoryAllocatedPackageQuantity(inventory.getAllocatedPackageQuantity());
+            inventoryInfo.setInventoryQCStatus(inventory.getQCStatus());
+            inventoryInfo.setInventoryXStatus(inventory.getXStatus());
+            inventoryInfo.setInventoryIsLocked(inventory.getIsLocked());
+            inventoryInfo.setInventoryIsSealed(inventory.getIsSealed());
+            inventoryInfo.setInventoryIsScattered(inventory.getIsScattered());
+            inventoryInfo.setInventoryIsExpired(inventory.getIsExpired());
+            inventoryInfo.setInventoryComments(inventory.getComments());
+            inventoryInfo.setWeight(inventory.getWeight());
+            inventoryInfo.setLength(inventory.getLength());
+            inventoryInfo.setWidth(inventory.getWidth());
+            inventoryInfo.setHeight(inventory.getHeight());
+            inventoryInfo.setInventoryStr1(inventory.getStr1());
+            inventoryInfo.setInventoryStr2(inventory.getStr2());
+            inventoryInfo.setInventoryStr3(inventory.getStr3());
+            inventoryInfo.setInventoryStr4(inventory.getStr4());
+            inventoryInfo.setInventoryStr5(inventory.getStr5());
+            inventoryInfo.setInventoryPackageQuantity(inventory.getPackageQuantity());
+            inventoryInfo.setInventorySmallUnitQuantity(inventory.getSmallUnitQuantity());
+            inventoryInfo.setLevelCount(inventory.getLevelCount());
+            inventoryInfo.setConveyorCode(inventory.getConveyorCode());
+            inventoryInfo.setApplyOrOrderCode(inventory.getApplyOrOrderCode());
+            inventoryInfo.setOrginAGVID(inventory.getOrginAGVID());
+            inventoryInfo.setOrginLocationCode(inventory.getOrginLocationCode());
+            inventoryInfo.setPalletType(inventory.getPalletType());
+            inventoryInfo.setVolume(inventory.getVolume());
+
+            //inventoryItem
+            inventoryInfo.setInventoryItemId(inventoryItem.getId());
+            if (inventoryItem.getExpiredTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getExpiredTime()), ZoneOffset.of("+8"));
+                inventoryInfo.setInventoryItemExpiredTime(localDateTime);
+            }
+            inventoryInfo.setInventoryItemAllocatedPackageQuantity(inventoryItem.getAllocatedPackageQuantity());
+            inventoryInfo.setInventoryItemPackageQuantity(inventoryItem.getPackageQuantity());
+            inventoryInfo.setInventoryItemIsLocked(inventoryItem.getIsLocked());
+            inventoryInfo.setInventoryItemXStatus(inventoryItem.getXStatus());
+            inventoryInfo.setInventoryItemIsExpired(inventoryItem.getIsExpired());
+            inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
+            inventoryInfo.setInventoryItemComments(inventoryItem.getComments());
+            inventoryInfo.setInventoryItemStr1(inventoryItem.getStr1());
+            inventoryInfo.setInventoryItemStr2(inventoryItem.getStr2());
+            inventoryInfo.setInventoryItemStr3(inventoryItem.getStr3());
+            inventoryInfo.setInventoryItemStr4(inventoryItem.getStr4());
+            inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
+
+
+            if (inventoryItem.getOrganiztionId() != null) {
+                Orgnization orgnization = orgnizationMap.get(inventoryItem.getOrganiztionId());
+                if (orgnization != null) {
+                    inventoryInfo.setOrganiztionId(orgnization.getId());
+                    inventoryInfo.setOrganiztionCode(orgnization.getXCode());
+                }
+
+            }
+            if (inventoryItem.getOrganiztionSupplierId() != null) {
+                Orgnization orgnization = orgnizationMap.get(inventoryItem.getOrganiztionSupplierId());
+                if (orgnization != null) {
+                    inventoryInfo.setOrganiztionSupplierId(orgnization.getId());
+                    inventoryInfo.setOrganiztionSupplierCode(orgnization.getXCode());
+                }
+
+            }
+
+            //inventoryItemDetail
+            inventoryInfo.setInventoryItemDetailId(inventoryItemDetail.getId());
+            inventoryInfo.setCarton(inventoryItemDetail.getCarton());
+            inventoryInfo.setSerialNo(inventoryItemDetail.getSerialNo());
+            if (material == null) {
+                log.info("material is null " + inventoryItemDetail.getMaterialId().toString());
+                continue;
+            }
+
+            inventoryInfo.setMaterialId(inventoryItemDetail.getMaterialId());
+            inventoryInfo.setMaterialCode(material.getXCode());
+            inventoryInfo.setBatchNo(inventoryItemDetail.getBatchNo());
+            inventoryInfo.setBatchNo2(inventoryItemDetail.getBatchNo2());
+            inventoryInfo.setBatchNo3(inventoryItemDetail.getBatchNo3());
+
+            if (inventoryItemDetail.getPackageUnitId() != null) {
+//                    PackageUnit packageUnit = packageUnitMap.get(inventoryItemDetail.getPackageUnitId());
+                PackageUnit packageUnit = (PackageUnit) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.packageUnitPrefix, inventoryItemDetail.getPackageUnitId().toString());
+                if (packageUnit != null) {
+                    inventoryInfo.setPackageUnitId(packageUnit.getId());
+                    inventoryInfo.setPackageUnitCode(packageUnit.getUnit());
+                }
+
+            }
+
+            inventoryInfo.setSmallUnitQuantity(inventoryItemDetail.getSmallUnitQuantity());
+            inventoryInfo.setPackageQuantity(inventoryItemDetail.getPackageQuantity());
+            inventoryInfo.setAllocatedSmallUnitQuantity(inventoryItemDetail.getAllocatedSmallUnitQuantity());
+            inventoryInfo.setAllocatedPackageQuantity(inventoryItemDetail.getAllocatedPackageQuantity());
+            inventoryInfo.setQCStatus(inventoryItemDetail.getQCStatus());
+            inventoryInfo.setXStatus(inventoryItemDetail.getXStatus());
+            inventoryInfo.setIsLocked(inventoryItemDetail.getIsLocked());
+            inventoryInfo.setIsSealed(inventoryItemDetail.getIsSealed());
+            inventoryInfo.setIsScattered(inventoryItemDetail.getIsScattered());
+            inventoryInfo.setIsExpired(inventoryItemDetail.getIsExpired());
+
+            if (inventoryItemDetail.getExpiredTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getExpiredTime()), ZoneOffset.of("+8"));
+                inventoryInfo.setExpiredTime(localDateTime);
+            }
+            inventoryInfo.setComments(inventoryItemDetail.getComments());
+            inventoryInfo.setM_Str1(inventoryItemDetail.getM_Str1());
+            inventoryInfo.setM_Str2(inventoryItemDetail.getM_Str2());
+            inventoryInfo.setM_Str3(inventoryItemDetail.getM_Str3());
+            inventoryInfo.setM_Str4(inventoryItemDetail.getM_Str4());
+            inventoryInfo.setM_Str5(inventoryItemDetail.getM_Str5());
+            inventoryInfo.setM_Str6(inventoryItemDetail.getM_Str6());
+            inventoryInfo.setM_Str7(inventoryItemDetail.getM_Str7());
+            inventoryInfo.setM_Str8(inventoryItemDetail.getM_Str8());
+            inventoryInfo.setM_Str9(inventoryItemDetail.getM_Str9());
+            inventoryInfo.setM_Str10(inventoryItemDetail.getM_Str10());
+
+            inventoryInfo.setM_Str11(inventoryItemDetail.getM_Str11());
+            inventoryInfo.setM_Str12(inventoryItemDetail.getM_Str12());
+            inventoryInfo.setM_Str13(inventoryItemDetail.getM_Str13());
+            inventoryInfo.setM_Str14(inventoryItemDetail.getM_Str14());
+            inventoryInfo.setM_Str15(inventoryItemDetail.getM_Str15());
+            inventoryInfo.setM_Str16(inventoryItemDetail.getM_Str16());
+            inventoryInfo.setM_Str17(inventoryItemDetail.getM_Str17());
+            inventoryInfo.setM_Str18(inventoryItemDetail.getM_Str18());
+            inventoryInfo.setM_Str19(inventoryItemDetail.getM_Str19());
+            inventoryInfo.setM_Str20(inventoryItemDetail.getM_Str20());
+
+            inventoryInfo.setM_Str21(inventoryItemDetail.getM_Str21());
+            inventoryInfo.setM_Str22(inventoryItemDetail.getM_Str22());
+            inventoryInfo.setM_Str23(inventoryItemDetail.getM_Str23());
+            inventoryInfo.setM_Str24(inventoryItemDetail.getM_Str24());
+            inventoryInfo.setM_Str25(inventoryItemDetail.getM_Str25());
+            inventoryInfo.setM_Str26(inventoryItemDetail.getM_Str26());
+            inventoryInfo.setM_Str27(inventoryItemDetail.getM_Str27());
+            inventoryInfo.setM_Str28(inventoryItemDetail.getM_Str28());
+            inventoryInfo.setM_Str29(inventoryItemDetail.getM_Str29());
+            inventoryInfo.setM_Str30(inventoryItemDetail.getM_Str30());
+
+            inventoryInfo.setM_Str31(inventoryItemDetail.getM_Str31());
+            inventoryInfo.setM_Str32(inventoryItemDetail.getM_Str32());
+            inventoryInfo.setM_Str33(inventoryItemDetail.getM_Str33());
+            inventoryInfo.setM_Str34(inventoryItemDetail.getM_Str34());
+            inventoryInfo.setM_Str35(inventoryItemDetail.getM_Str35());
+            inventoryInfo.setM_Str36(inventoryItemDetail.getM_Str36());
+            inventoryInfo.setM_Str37(inventoryItemDetail.getM_Str37());
+            inventoryInfo.setM_Str38(inventoryItemDetail.getM_Str38());
+            inventoryInfo.setM_Str39(inventoryItemDetail.getM_Str39());
+            inventoryInfo.setM_Str40(inventoryItemDetail.getM_Str40());
+
+            inventoryInfo.setCreatorId(inventoryItemDetail.getCreatorId());
+            inventoryInfo.setCreatorName(inventoryItemDetail.getCreatorName());
+            inventoryInfo.setLastModifierId(inventoryItemDetail.getLastModifierId());
+            inventoryInfo.setLastModifierName(inventoryItemDetail.getLastModifierName());
+
+            if (inventoryItemDetail.getCreationTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getCreationTime()), ZoneOffset.of("+8"));
+                inventoryInfo.setCreationTime(localDateTime);
+            }
+
+            if (inventoryItemDetail.getLastModificationTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
+                inventoryInfo.setLastModificationTime(localDateTime);
+            }
+            if (inventoryItemDetail.getInboundTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getInboundTime()), ZoneOffset.of("+8"));
+                inventoryInfo.setInboundTime(localDateTime);
+            }
+            if (inventoryItemDetail.getProductTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getProductTime()), ZoneOffset.of("+8"));
+                inventoryInfo.setProductTime(localDateTime);
+            }
+
+            inventoryInfo.setPositionCode(inventoryItemDetail.getPositionCode());
+            inventoryInfo.setPositionLevel(inventoryItemDetail.getPositionLevel());
+            inventoryInfo.setPackageMethod(inventoryItemDetail.getPackageMethod());
+
+            inventoryInfos.add(inventoryInfo);
+        }
+        elasticsearchRestTemplate.save(inventoryInfos);
+        return inventoryInfos.size();
     }
 
 
@@ -423,7 +463,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Override
     public PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception {
-
+        request.setDeleted(0);
         request.setInventoryXStatus(0);
         request.setInventoryIsExpired(false);
         request.setInventoryIsLocked(false);
@@ -463,6 +503,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Override
     public HashMap<Long, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
+        request.setDeleted(0);
         request.setInventoryXStatus(0);
         request.setInventoryIsExpired(false);
         request.setInventoryIsLocked(false);
@@ -904,34 +945,66 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
-        InventoryItemDetail detail = this.inventoryItemDetailService.getById(509955479831328L);
-        String json = objectMapper.writeValueAsString(detail);
-        InventoryItemDetail changedInventoryItemDetail =null;
+    public void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+//        InventoryItemDetail detail = this.inventoryItemDetailService.getById(509955479831328L);
+//        String json = objectMapper.writeValueAsString(detail);
+        InventoryItemDetail changedInventoryItemDetail = null;
         try {
-          changedInventoryItemDetail = objectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
+            changedInventoryItemDetail = objectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
 
-     }
-       catch (Exception ex)
-       {
-           int m=0;
-       }
+            //更新时间
+            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
+
+                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+
+                } else {
+                    INIT_INVENTORY_TIME = LocalDateTime.now();
+                }
+
+            }
+
+            if (changedInventoryItemDetail.getLastModificationTime() != null) {
+                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
+
+                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                    return;
+                }
+            }
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        }
 
 
         switch (dataChangeInfo.getEventType()) {
             case "CREATE":
-
+                addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail));
                 break;
             case "UPDATE":
                 updateByInventoryItemDetail(changedInventoryItemDetail);
                 break;
             case "DELETE":
-
+                deletedByInventoryItemDetail(changedInventoryItemDetail);
                 break;
             case "READ":
 
                 break;
+            default:
+                break;
         }
+    }
+
+    @Override
+    public void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+
+    }
+
+    @Override
+    public void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+
     }
 
 
@@ -949,6 +1022,21 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 }
             } else {
                 //新增
+            }
+
+        }
+
+    }
+
+    private void deletedByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) {
+
+        InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
+
+        if (inventoryItemDetail.getLastModificationTime() != null) {
+
+            if (inventoryInfo != null) {
+                inventoryInfo.setDeleted(1);
+                updateFullDocument(inventoryInfo);
             }
 
         }
@@ -979,6 +1067,60 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
     }
 
+    private void copyInventoryUpdatedInfo(InventoryInfo inventoryInfo, Inventory inventory) {
+        //inventory
+        inventoryInfo.setPallet(inventory.getPallet());
+        inventoryInfo.setInventoryAllocatedSmallUnitQuantity(inventory.getAllocatedSmallUnitQuantity());
+        inventoryInfo.setInventoryAllocatedPackageQuantity(inventory.getAllocatedPackageQuantity());
+        inventoryInfo.setInventoryQCStatus(inventory.getQCStatus());
+        inventoryInfo.setInventoryXStatus(inventory.getXStatus());
+        inventoryInfo.setInventoryIsLocked(inventory.getIsLocked());
+        inventoryInfo.setInventoryIsSealed(inventory.getIsSealed());
+        inventoryInfo.setInventoryIsScattered(inventory.getIsScattered());
+        inventoryInfo.setInventoryIsExpired(inventory.getIsExpired());
+        inventoryInfo.setInventoryComments(inventory.getComments());
+        inventoryInfo.setWeight(inventory.getWeight());
+        inventoryInfo.setLength(inventory.getLength());
+        inventoryInfo.setWidth(inventory.getWidth());
+        inventoryInfo.setHeight(inventory.getHeight());
+        inventoryInfo.setInventoryStr1(inventory.getStr1());
+        inventoryInfo.setInventoryStr2(inventory.getStr2());
+        inventoryInfo.setInventoryStr3(inventory.getStr3());
+        inventoryInfo.setInventoryStr4(inventory.getStr4());
+        inventoryInfo.setInventoryStr5(inventory.getStr5());
+        inventoryInfo.setInventoryPackageQuantity(inventory.getPackageQuantity());
+        inventoryInfo.setInventorySmallUnitQuantity(inventory.getSmallUnitQuantity());
+        inventoryInfo.setLevelCount(inventory.getLevelCount());
+        inventoryInfo.setConveyorCode(inventory.getConveyorCode());
+        inventoryInfo.setApplyOrOrderCode(inventory.getApplyOrOrderCode());
+        inventoryInfo.setOrginAGVID(inventory.getOrginAGVID());
+        inventoryInfo.setOrginLocationCode(inventory.getOrginLocationCode());
+        inventoryInfo.setPalletType(inventory.getPalletType());
+        inventoryInfo.setVolume(inventory.getVolume());
+
+
+    }
+
+    private void copyInventoryItemUpdatedInfo(InventoryInfo inventoryInfo, InventoryItem inventoryItem) {
+        //inventoryItem
+        inventoryInfo.setInventoryItemId(inventoryItem.getId());
+        if (inventoryItem.getExpiredTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getExpiredTime()), ZoneOffset.of("+8"));
+            inventoryInfo.setInventoryItemExpiredTime(localDateTime);
+        }
+        inventoryInfo.setInventoryItemAllocatedPackageQuantity(inventoryItem.getAllocatedPackageQuantity());
+        inventoryInfo.setInventoryItemPackageQuantity(inventoryItem.getPackageQuantity());
+        inventoryInfo.setInventoryItemIsLocked(inventoryItem.getIsLocked());
+        inventoryInfo.setInventoryItemXStatus(inventoryItem.getXStatus());
+        inventoryInfo.setInventoryItemIsExpired(inventoryItem.getIsExpired());
+        inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
+        inventoryInfo.setInventoryItemComments(inventoryItem.getComments());
+        inventoryInfo.setInventoryItemStr1(inventoryItem.getStr1());
+        inventoryInfo.setInventoryItemStr2(inventoryItem.getStr2());
+        inventoryInfo.setInventoryItemStr3(inventoryItem.getStr3());
+        inventoryInfo.setInventoryItemStr4(inventoryItem.getStr4());
+        inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
+    }
 
     private void copyInventoryItemDetailUpdatedInfo(InventoryInfo inventoryInfo, InventoryItemDetail inventoryItemDetail) {
         inventoryInfo.setInventoryItemDetailId(inventoryItemDetail.getId());
