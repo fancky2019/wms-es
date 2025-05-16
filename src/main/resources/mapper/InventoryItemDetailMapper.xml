@@ -80,6 +80,10 @@
             <result property="forbidOutboundRemark" column="ForbidOutboundRemark" jdbcType="VARCHAR"/>
             <result property="isForbidOutbound" column="IsForbidOutbound" jdbcType="BIT"/>
             <result property="isBonded" column="IsBonded" jdbcType="BIT"/>
+            <result property="inboundDate" column="InboundDate" jdbcType="TIMESTAMP"/>
+            <result property="materialRackId" column="MaterialRackId" jdbcType="BIGINT"/>
+            <result property="days" column="Days" jdbcType="INTEGER"/>
+            <result property="imageFile" column="ImageFile" jdbcType="VARCHAR"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -107,6 +111,8 @@
         LastModifierId,LastModifierName,CreationTime,
         LastModificationTime,InboundTime,ProductTime,
         PositionCode,PositionLevel,PackageMethod,
-        ForbidOutboundRemark,IsForbidOutbound,IsBonded
+        ForbidOutboundRemark,IsForbidOutbound,IsBonded,
+        InboundDate,MaterialRackId,Days,
+        ImageFile
     </sql>
 </mapper>

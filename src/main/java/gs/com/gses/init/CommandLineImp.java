@@ -10,6 +10,7 @@ import gs.com.gses.flink.DataChangeSink;
 import gs.com.gses.flink.MysqlDeserialization;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.runtime.checkpoint.Checkpoint;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.logging.log4j.LogManager;
@@ -76,11 +77,21 @@ public class CommandLineImp implements CommandLineRunner {
 //        debeziumProps.setProperty("database.history", "io.debezium.storage.file.history.FileDatabaseHistory");
 //        debeziumProps.setProperty("database.history.file.filename", "D:\\flnkcdc\\dbhistory.dat");
 
+//        1. 控制数据提取频率
+//scan.interval.ms：设置增量同步的时间间隔（毫秒）。例如设置为 5000 表示每5秒读取一次变更数据。
+//poll.interval.ms（部分连接器）：控制轮询间隔，例如 debezium.poll.interval.ms=5000 实现每5秒轮询
+//        Checkpoint 2.  保证数据处理语义
+//Exactly-Once 语义：通过 Checkpoint 机制，Flink 可以确保每条数据仅被处理一次（即使发生故障），避免重复或丢失数据。这是通过 ​​分布式快照算法（Chandy-Lamport）​​ 实现的。
+//对齐与非对齐 Checkpoint：
+//对齐 Checkpoint：算子会等待所有输入流的 Barrier（屏障）到达后再快照状态，确保状态一致性。
+//非对齐 Checkpoint（Flink 1.11+）：允许在反压场景下跳过对齐，减少延迟，但可能牺牲部分一致性。
+
 
 //        若历史文件缺失，此配置会重新生成数据, 每次启动都执行快照
         debeziumProps.setProperty("snapshot.mode", "initial");
         debeziumProps.setProperty("snapshot.isolation.mode", "snapshot");
-        debeziumProps.setProperty("poll.interval.ms", "500");
+        debeziumProps.setProperty("scan.interval.ms", "200");
+        debeziumProps.setProperty("poll.interval.ms", "200");
         debeziumProps.setProperty("max.batch.size", "2048");
 
 
@@ -93,7 +104,7 @@ public class CommandLineImp implements CommandLineRunner {
                         .hostname("10.100.200.43")
                         .port(1433)
                         .databaseList("wms_liku") // monitor sqlserver database
-                        .tableList("dbo.MqMessage")
+                        .tableList("dbo.InventoryItemDetail_copy1")
                         .username("sa")
                         .password("gen@song123")
                         .debeziumProperties(debeziumProps)
@@ -105,7 +116,7 @@ public class CommandLineImp implements CommandLineRunner {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // enable checkpoint
-        env.enableCheckpointing(3000);
+        env.enableCheckpointing(1000);
         // set the source parallelism to 2
         env.fromSource(
                         sqlServerSource,

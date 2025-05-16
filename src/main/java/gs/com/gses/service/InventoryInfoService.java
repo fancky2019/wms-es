@@ -1,7 +1,10 @@
 package gs.com.gses.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.Inventory;
+import gs.com.gses.model.entity.InventoryItemDetail;
 import gs.com.gses.model.request.InventoryInfoRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
@@ -16,12 +19,13 @@ public interface InventoryInfoService {
 
     PageData<InventoryInfo> getInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
-    PageData<InventoryInfo>  getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
+    PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
 
-    void initInventoryInfoFromDb()  ;
+    void initInventoryInfoFromDb();
 
-    HashMap<Long, List<InventoryInfo>>   getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
+    HashMap<Long, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
     HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
+    void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 }

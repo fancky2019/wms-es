@@ -1,30 +1,39 @@
 package gs.com.gses.flink;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import gs.com.gses.model.entity.InventoryItemDetail;
+import gs.com.gses.service.InventoryInfoService;
+import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
 public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 
-    //使用 transient 关键字标记它，这样序列化时会跳过它
-    @Autowired
-    private transient  ObjectMapper objectMapper;
-
+//    //使用 transient 关键字标记它，这样序列化时会跳过它
+//    @Autowired
+//    private transient ObjectMapper objectMapper;
+//
+//    @Autowired
+//    private transient ApplicationContext applicationContext;
+//
+//    @Autowired
+//    private transient InventoryInfoService inventoryInfoService;
 
     @Override
     public void invoke(DataChangeInfo value, Context context) throws JsonProcessingException {
         log.info("收到变更原始数据:{}", value);
+//        Object obj = applicationContext.getBean(value.getTableName());
+        if ("InventoryItemDetail_copy1".equals(value.getTableName())) {
+            ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
+            InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
 
-        if("InventoryItemDetail" .equals(value.getTableName()))
-        {
-            InventoryItemDetail inventoryItemDetail=objectMapper.readValue(value.getAfterData(), InventoryItemDetail.class);
+
+            inventoryInfoService.updateByInventory(value);
+           // InventoryItemDetail inventoryItemDetail = objectMapper.readValue(value.getAfterData(), InventoryItemDetail.class);
 //            READ("r"),
 //                    CREATE("c"),
 //                    UPDATE("u"),

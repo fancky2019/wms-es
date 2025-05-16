@@ -1,12 +1,14 @@
 package gs.com.gses.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
-import lombok.Data;
+import java.util.Date;
 
 /**
  * 
@@ -96,12 +98,14 @@ public class InventoryItemDetail implements Serializable {
     /**
      * 质检状态（0待检，1已取样，2合格，-1不合格）
      */
+    @JsonProperty("QCStatus")
     @TableField(value = "QCStatus")
     private Integer QCStatus;
 
     /**
      * 状态 （0正常，-1禁用）
      */
+    @JsonProperty("XStatus")
     @TableField(value = "XStatus")
     private Integer XStatus;
 
@@ -464,6 +468,30 @@ public class InventoryItemDetail implements Serializable {
      */
     @TableField(value = "IsBonded")
     private Boolean isBonded;
+
+    /**
+     * 入库日期
+     */
+    @TableField(value = "InboundDate")
+    private Date inboundDate;
+
+    /**
+     * 料架格口ID
+     */
+    @TableField(value = "MaterialRackId")
+    private Long materialRackId;
+
+    /**
+     * 入库天数
+     */
+    @TableField(value = "Days")
+    private Integer days;
+
+    /**
+     * 图片文件地址
+     */
+    @TableField(value = "ImageFile")
+    private String imageFile;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

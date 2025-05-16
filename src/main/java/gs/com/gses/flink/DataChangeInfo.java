@@ -17,7 +17,7 @@ public class DataChangeInfo implements Serializable {
      */
     private String afterData;
     /**
-     * 变更类型 1新增 2修改 3删除
+     * 变更类型 CREATE UPDATE DELETE READ
      */
     private String eventType;
     /**

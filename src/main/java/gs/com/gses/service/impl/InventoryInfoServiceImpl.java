@@ -2,8 +2,10 @@ package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.elasticsearch.ShipOrderInfoRepository;
+import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.elasticsearch.ShipOrderInfo;
 import gs.com.gses.model.entity.*;
@@ -14,6 +16,8 @@ import gs.com.gses.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.stat.descriptive.summary.Product;
+import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
@@ -29,17 +33,16 @@ import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
-import org.springframework.data.elasticsearch.core.query.SourceFilter;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
+import org.springframework.data.elasticsearch.core.query.*;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -60,6 +63,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
+
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
 
     @Autowired
     private InventoryService inventoryService;
@@ -896,5 +902,182 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         return bucketHitsMap;
     }
+
+    @Override
+    public void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+        InventoryItemDetail detail = this.inventoryItemDetailService.getById(509955479831328L);
+        String json = objectMapper.writeValueAsString(detail);
+        InventoryItemDetail changedInventoryItemDetail =null;
+        try {
+          changedInventoryItemDetail = objectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
+
+     }
+       catch (Exception ex)
+       {
+           int m=0;
+       }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+
+                break;
+            case "UPDATE":
+                updateByInventoryItemDetail(changedInventoryItemDetail);
+                break;
+            case "DELETE":
+
+                break;
+            case "READ":
+
+                break;
+        }
+    }
+
+
+    private void updateByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) {
+
+        InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
+
+        if (inventoryItemDetail.getLastModificationTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
+
+            if (inventoryInfo != null) {
+                if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
+                    copyInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
+                    updateFullDocument(inventoryInfo);
+                }
+            } else {
+                //新增
+            }
+
+        }
+
+    }
+
+    //根据实体更新
+    public void updateFullDocument(InventoryInfo inventoryInfo) {
+        // 直接使用 index 方法会替换整个文档
+        IndexQuery indexQuery = new IndexQueryBuilder()
+                .withId(inventoryInfo.getInventoryItemDetailId().toString())
+                .withObject(inventoryInfo)
+                .build();
+
+        elasticsearchOperations.index(indexQuery, IndexCoordinates.of("inventory_info"));
+    }
+
+
+    // 更新方法2：使用字段映射
+    public void updateProductFields(String id, Map<String, Object> fields) {
+        Document document = Document.create();
+        document.putAll(fields);
+
+        UpdateQuery updateQuery = UpdateQuery.builder(id)
+                .withDocument(document)
+                .build();
+//InventoryInfo
+        UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
+    }
+
+
+    private void copyInventoryItemDetailUpdatedInfo(InventoryInfo inventoryInfo, InventoryItemDetail inventoryItemDetail) {
+        inventoryInfo.setInventoryItemDetailId(inventoryItemDetail.getId());
+        inventoryInfo.setCarton(inventoryItemDetail.getCarton());
+        inventoryInfo.setSerialNo(inventoryItemDetail.getSerialNo());
+
+
+        inventoryInfo.setBatchNo(inventoryItemDetail.getBatchNo());
+        inventoryInfo.setBatchNo2(inventoryItemDetail.getBatchNo2());
+        inventoryInfo.setBatchNo3(inventoryItemDetail.getBatchNo3());
+
+        inventoryInfo.setSmallUnitQuantity(inventoryItemDetail.getSmallUnitQuantity());
+        inventoryInfo.setPackageQuantity(inventoryItemDetail.getPackageQuantity());
+        inventoryInfo.setAllocatedSmallUnitQuantity(inventoryItemDetail.getAllocatedSmallUnitQuantity());
+        inventoryInfo.setAllocatedPackageQuantity(inventoryItemDetail.getAllocatedPackageQuantity());
+        inventoryInfo.setQCStatus(inventoryItemDetail.getQCStatus());
+        inventoryInfo.setXStatus(inventoryItemDetail.getXStatus());
+        inventoryInfo.setIsLocked(inventoryItemDetail.getIsLocked());
+        inventoryInfo.setIsSealed(inventoryItemDetail.getIsSealed());
+        inventoryInfo.setIsScattered(inventoryItemDetail.getIsScattered());
+        inventoryInfo.setIsExpired(inventoryItemDetail.getIsExpired());
+
+        if (inventoryItemDetail.getExpiredTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getExpiredTime()), ZoneOffset.of("+8"));
+            inventoryInfo.setExpiredTime(localDateTime);
+        }
+        inventoryInfo.setComments(inventoryItemDetail.getComments());
+        inventoryInfo.setM_Str1(inventoryItemDetail.getM_Str1());
+        inventoryInfo.setM_Str2(inventoryItemDetail.getM_Str2());
+        inventoryInfo.setM_Str3(inventoryItemDetail.getM_Str3());
+        inventoryInfo.setM_Str4(inventoryItemDetail.getM_Str4());
+        inventoryInfo.setM_Str5(inventoryItemDetail.getM_Str5());
+        inventoryInfo.setM_Str6(inventoryItemDetail.getM_Str6());
+        inventoryInfo.setM_Str7(inventoryItemDetail.getM_Str7());
+        inventoryInfo.setM_Str8(inventoryItemDetail.getM_Str8());
+        inventoryInfo.setM_Str9(inventoryItemDetail.getM_Str9());
+        inventoryInfo.setM_Str10(inventoryItemDetail.getM_Str10());
+
+        inventoryInfo.setM_Str11(inventoryItemDetail.getM_Str11());
+        inventoryInfo.setM_Str12(inventoryItemDetail.getM_Str12());
+        inventoryInfo.setM_Str13(inventoryItemDetail.getM_Str13());
+        inventoryInfo.setM_Str14(inventoryItemDetail.getM_Str14());
+        inventoryInfo.setM_Str15(inventoryItemDetail.getM_Str15());
+        inventoryInfo.setM_Str16(inventoryItemDetail.getM_Str16());
+        inventoryInfo.setM_Str17(inventoryItemDetail.getM_Str17());
+        inventoryInfo.setM_Str18(inventoryItemDetail.getM_Str18());
+        inventoryInfo.setM_Str19(inventoryItemDetail.getM_Str19());
+        inventoryInfo.setM_Str20(inventoryItemDetail.getM_Str20());
+
+        inventoryInfo.setM_Str21(inventoryItemDetail.getM_Str21());
+        inventoryInfo.setM_Str22(inventoryItemDetail.getM_Str22());
+        inventoryInfo.setM_Str23(inventoryItemDetail.getM_Str23());
+        inventoryInfo.setM_Str24(inventoryItemDetail.getM_Str24());
+        inventoryInfo.setM_Str25(inventoryItemDetail.getM_Str25());
+        inventoryInfo.setM_Str26(inventoryItemDetail.getM_Str26());
+        inventoryInfo.setM_Str27(inventoryItemDetail.getM_Str27());
+        inventoryInfo.setM_Str28(inventoryItemDetail.getM_Str28());
+        inventoryInfo.setM_Str29(inventoryItemDetail.getM_Str29());
+        inventoryInfo.setM_Str30(inventoryItemDetail.getM_Str30());
+
+        inventoryInfo.setM_Str31(inventoryItemDetail.getM_Str31());
+        inventoryInfo.setM_Str32(inventoryItemDetail.getM_Str32());
+        inventoryInfo.setM_Str33(inventoryItemDetail.getM_Str33());
+        inventoryInfo.setM_Str34(inventoryItemDetail.getM_Str34());
+        inventoryInfo.setM_Str35(inventoryItemDetail.getM_Str35());
+        inventoryInfo.setM_Str36(inventoryItemDetail.getM_Str36());
+        inventoryInfo.setM_Str37(inventoryItemDetail.getM_Str37());
+        inventoryInfo.setM_Str38(inventoryItemDetail.getM_Str38());
+        inventoryInfo.setM_Str39(inventoryItemDetail.getM_Str39());
+        inventoryInfo.setM_Str40(inventoryItemDetail.getM_Str40());
+
+        inventoryInfo.setCreatorId(inventoryItemDetail.getCreatorId());
+        inventoryInfo.setCreatorName(inventoryItemDetail.getCreatorName());
+        inventoryInfo.setLastModifierId(inventoryItemDetail.getLastModifierId());
+        inventoryInfo.setLastModifierName(inventoryItemDetail.getLastModifierName());
+
+        if (inventoryItemDetail.getCreationTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getCreationTime()), ZoneOffset.of("+8"));
+            inventoryInfo.setCreationTime(localDateTime);
+        }
+
+        if (inventoryItemDetail.getLastModificationTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
+            inventoryInfo.setLastModificationTime(localDateTime);
+        }
+        if (inventoryItemDetail.getInboundTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getInboundTime()), ZoneOffset.of("+8"));
+            inventoryInfo.setInboundTime(localDateTime);
+        }
+        if (inventoryItemDetail.getProductTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getProductTime()), ZoneOffset.of("+8"));
+            inventoryInfo.setProductTime(localDateTime);
+        }
+
+        inventoryInfo.setPositionCode(inventoryItemDetail.getPositionCode());
+        inventoryInfo.setPositionLevel(inventoryItemDetail.getPositionLevel());
+        inventoryInfo.setPackageMethod(inventoryItemDetail.getPackageMethod());
+
+    }
+
 
 }
