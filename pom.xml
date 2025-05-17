@@ -261,24 +261,33 @@
 
 
 
-        <dependency>
-            <groupId>com.ververica</groupId>
-            <artifactId>flink-connector-sqlserver-cdc</artifactId>
-            <!-- The dependency is available only for stable releases, SNAPSHOT dependency need build by yourself. -->
-            <version>3.0.1</version>-->
-        </dependency>
 
         <!--         https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-mysql-cdc-->
+<!--        <dependency>-->
+<!--            <groupId>com.ververica</groupId>-->
+<!--            <artifactId>flink-sql-connector-sqlserver-cdc</artifactId>-->
+<!--&lt;!&ndash;            <version>3.3.0</version>&ndash;&gt;-->
+<!--            <version>3.0.1</version>-->
+<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
+<!--&lt;!&ndash;            <scope>system</scope>&ndash;&gt;-->
+<!--&lt;!&ndash;            <systemPath>${project.basedir}/lib/flink-sql-connector-sqlserver-cdc-3.3.0.jar</systemPath>&ndash;&gt;-->
+<!--        </dependency>-->
+
+<!--        Flink CDC 3.x 版本的 groupId 已从 com.ververica 改为 org.apache.flink2-->
+        <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-sql-connector-sqlserver-cdc -->
         <dependency>
-            <groupId>com.ververica</groupId>
+            <groupId>org.apache.flink</groupId>
             <artifactId>flink-sql-connector-sqlserver-cdc</artifactId>
-            <version>3.0.1</version>
-            <!--            <scope>provided</scope>-->
+            <version>3.3.0</version>
+<!--            <scope>provided</scope>-->
         </dependency>
 
-
-
-
+<!--   可不要需要：     Flink 1.15 之前checkpoint设置-->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-statebackend-rocksdb</artifactId>
+            <version>${flink.version}</version> <!-- 根据你使用的 Flink 版本来改 -->
+        </dependency>
 
 
         <dependency>

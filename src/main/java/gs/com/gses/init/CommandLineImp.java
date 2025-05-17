@@ -1,18 +1,18 @@
 package gs.com.gses.init;
 
 
-import com.ververica.cdc.connectors.base.options.StartupOptions;
-import com.ververica.cdc.connectors.sqlserver.SqlServerSource;
-import com.ververica.cdc.connectors.sqlserver.source.SqlServerSourceBuilder;
-import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.flink.DataChangeSink;
 import gs.com.gses.flink.MysqlDeserialization;
+import io.debezium.relational.history.FileDatabaseHistory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.runtime.checkpoint.Checkpoint;
+import org.apache.flink.cdc.connectors.base.options.StartupOptions;
+import org.apache.flink.cdc.connectors.sqlserver.source.SqlServerSourceBuilder;
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
+import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
+import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -54,7 +53,6 @@ public class CommandLineImp implements CommandLineRunner {
     public void run(String... args) throws Exception {
 
 
-
         System.setProperty("java.io.tmpdir", "D:\\flinkcdc\\temp");  // 设置临时目录
 // 先删除旧的历史文件再启动任务
         try {
@@ -75,15 +73,12 @@ public class CommandLineImp implements CommandLineRunner {
 //debeziumProps.setProperty("snapshot.mode", "initial");
 
 
-        // 使用文件存储数据库历史
-        //The db history topic or its content is fully or partially missing. Please check database history topic configuration and re-execute the snapshot.
-        debeziumProps.setProperty("database.history", "io.debezium.relational.history.FileDatabaseHistory");
-//        debeziumProps.setProperty("database.history", "io.debezium.storage.file.history.FileDatabaseHistory");
-//        debeziumProps.setProperty("database.history.file.filename", "D:\\flinkcdc\\dbhistory.txt");
-        debeziumProps.setProperty("database.history.file.filename", "D:\\flinkcdc\\dbhistory.dat"); // 使用正斜杠
-
-
-
+//        // ddl 变更配置 使用文件存储数据库历史 SQL Server connector 不支持 FileDatabaseHistory
+//        //The db history topic or its content is fully or partially missing. Please check database history topic configuration and re-execute the snapshot.
+//        debeziumProps.setProperty("database.history", "io.debezium.relational.history.FileDatabaseHistory");
+////        debeziumProps.setProperty("database.history.file.filename", "D:\\flinkcdc\\dbhistory.txt");
+//        debeziumProps.setProperty("database.history.file.filename", "D:\\flinkcdc\\dbhistory.dat"); // 使用正斜杠
+//        debeziumProps.setProperty("database.history", FileDatabaseHistory.class.getName());
 
 
 //        scan.interval.ms 控制增量数据扫描的时间间隔（毫秒），即两次增量数据捕获之间的间隔时间。
@@ -99,31 +94,32 @@ public class CommandLineImp implements CommandLineRunner {
 //对齐 Checkpoint：算子会等待所有输入流的 Barrier（屏障）到达后再快照状态，确保状态一致性。
 //非对齐 Checkpoint（Flink 1.11+）：允许在反压场景下跳过对齐，减少延迟，但可能牺牲部分一致性。
 
-        debeziumProps.setProperty("name", "your-connector-name12");  // 设置 Connector 名称
-        debeziumProps.setProperty("database.server.name", "your_server_name1");
+//        debeziumProps.setProperty("name", "your-connector-name12");  // 设置 Connector 名称
+//        debeziumProps.setProperty("database.server.name", "your_server_name1");
 
 
-
-
-
-
-//        //kafka  kafka   localhost
+        //kafka  kafka   localhost  SQL Server connector 不支持 FileDatabaseHistory
 //        debeziumProps.setProperty("database.history", "io.debezium.relational.history.KafkaDatabaseHistory");
 //        debeziumProps.setProperty("database.history.kafka.bootstrap.servers", "localhost:9092");
 //        debeziumProps.setProperty("database.history.kafka.topic", "dbhistory");
 
-//        若历史文件缺失，此配置会重新生成数据, 每次启动都执行快照  initial   latest-offset
-        debeziumProps.setProperty("snapshot.mode", "initial");
+//        若历史文件缺失，此配置会重新生成数据, 每次启动都执行快照  initial   latest-offset .latest()
+//        debeziumProps.setProperty("snapshot.mode", "latest");
 //        debeziumProps.setProperty("snapshot.mode", "when_needed");
-        debeziumProps.setProperty("snapshot.isolation.mode", "snapshot");
+//        debeziumProps.setProperty("snapshot.isolation.mode", "snapshot");
         debeziumProps.setProperty("scan.interval.ms", "200");
         debeziumProps.setProperty("poll.interval.ms", "200");
         debeziumProps.setProperty("max.batch.size", "2048");
 
 
-        debeziumProps.setProperty("snapshot.new.tables", "parallel");
-        debeziumProps.setProperty("schema.history.internal.store.only.captured.tables.ddl", "true");
-        debeziumProps.setProperty("schema.history.internal.skip.unparseable.ddl", "true");
+//        debeziumProps.setProperty("snapshot.new.tables", "parallel");
+//        debeziumProps.setProperty("schema.history.internal.store.only.captured.tables.ddl", "true");
+//        debeziumProps.setProperty("schema.history.internal.skip.unparseable.ddl", "true");
+
+        // 推荐设置：避免 snapshot 冲突
+
+//        debeziumProps.setProperty("include.schema.changes", "true"); // 记录 DDL 变更
+
 
         debeziumProps.setProperty("log.level", "DEBUG");
 
@@ -139,7 +135,8 @@ public class CommandLineImp implements CommandLineRunner {
 //                        .deserializer(new JsonDebeziumDeserializationSchema())
 
                         .deserializer(new MysqlDeserialization())
-                        .startupOptions(StartupOptions.initial())
+//                        .startupOptions(StartupOptions.initial())
+                        .startupOptions(StartupOptions.latest())  // 改成 latest()  initial()
                         .build();
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -154,8 +151,22 @@ public class CommandLineImp implements CommandLineRunner {
 //                .print()
                 // 添加Sink
                 .addSink(dataChangeSink)
-                .setParallelism(1);
+        ;
 
+        // Flink 1.15 之前设置
+//        env.setStateBackend(new RocksDBStateBackend("file:///D:/flinkcdc/checkpoints", true));
+
+        // Flink 1.15+ 设置 Checkpoint 配置数据获取全量、增量
+        env.setStateBackend(new HashMapStateBackend());
+        env.getCheckpointConfig().setCheckpointStorage("file:///D:/flinkcdc/checkpoints");
+
+
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(2000);
+        env.getCheckpointConfig().setCheckpointTimeout(60000);
+        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+        env.getCheckpointConfig().enableExternalizedCheckpoints(
+                CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION
+        );
         env.execute("f1");
 
 
