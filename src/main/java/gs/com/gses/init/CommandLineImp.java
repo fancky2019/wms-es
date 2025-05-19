@@ -1,21 +1,21 @@
 package gs.com.gses.init;
 
 
+import gs.com.gses.config.FlinkConfig;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.flink.DataChangeSink;
-import gs.com.gses.flink.MysqlDeserialization;
-import io.debezium.relational.history.FileDatabaseHistory;
+import gs.com.gses.flink.SqlServerDeserialization;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.cdc.connectors.base.options.StartupOptions;
 import org.apache.flink.cdc.connectors.sqlserver.source.SqlServerSourceBuilder;
-import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
 import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
@@ -24,14 +24,18 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.List;
 import java.util.Properties;
-
 //import java.util.Properties;
 
 
 //容器初始化完成执行：ApplicationRunner-->CommandLineRunner-->ApplicationReadyEvent
 
 /**
+ * Flink DataStream API 方式
+ *
+ *
  * @author lirui
  */
 //@Order控制配置类的加载顺序，通过@Order指定执行顺序，值越小，越先执行
@@ -39,9 +43,11 @@ import java.util.Properties;
 @Order(1)
 @Slf4j
 public class CommandLineImp implements CommandLineRunner {
-    //    @Value("${config.configmodel.fist-Name}")
-//    private String fistName;
-    private static Logger LOGGER = LogManager.getLogger(CommandLineImp.class);
+
+//    private static Logger LOGGER = LogManager.getLogger(CommandLineImp.class);
+
+    @Autowired
+    private FlinkConfig flinkConfig;
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -53,13 +59,13 @@ public class CommandLineImp implements CommandLineRunner {
     public void run(String... args) throws Exception {
 
 
-        System.setProperty("java.io.tmpdir", "D:\\flinkcdc\\temp");  // 设置临时目录
-// 先删除旧的历史文件再启动任务
-        try {
-            Files.deleteIfExists(Paths.get("D:\\flinkcdc\\dbhistory.dat"));
-        } catch (IOException e) {
-            log.info("Could not delete history file", e);
-        }
+        System.setProperty("java.io.tmpdir", flinkConfig.getTmpdir());  // 设置临时目录
+//       // 先删除旧的历史文件再启动任务
+//        try {
+//            Files.deleteIfExists(Paths.get("D:\\flinkcdc\\dbhistory.dat"));
+//        } catch (IOException e) {
+//            log.info("Could not delete history file", e);
+//        }
 
         Properties debeziumProps = new Properties();
         //禁用证书
@@ -108,9 +114,9 @@ public class CommandLineImp implements CommandLineRunner {
 //        debeziumProps.setProperty("snapshot.mode", "when_needed");
 //        debeziumProps.setProperty("snapshot.isolation.mode", "snapshot");
         debeziumProps.setProperty("scan.interval.ms", "200");
-        debeziumProps.setProperty("poll.interval.ms", "200");
+        debeziumProps.setProperty("poll.interval.ms", "100");
         debeziumProps.setProperty("max.batch.size", "2048");
-
+        debeziumProps.setProperty("heartbeat.interval.ms", "500");
 
 //        debeziumProps.setProperty("snapshot.new.tables", "parallel");
 //        debeziumProps.setProperty("schema.history.internal.store.only.captured.tables.ddl", "true");
@@ -120,54 +126,70 @@ public class CommandLineImp implements CommandLineRunner {
 
 //        debeziumProps.setProperty("include.schema.changes", "true"); // 记录 DDL 变更
 
-
+        debeziumProps.setProperty("max.batch.size", "4096");
         debeziumProps.setProperty("log.level", "DEBUG");
-
+//        Flink DataStream API 方式
         SqlServerSourceBuilder.SqlServerIncrementalSource<DataChangeInfo> sqlServerSource =
                 new SqlServerSourceBuilder()
-                        .hostname("10.100.200.43")
-                        .port(1433)
-                        .databaseList("wms_liku") // monitor sqlserver database
-                        .tableList("dbo.InventoryItemDetail_copy1")
-                        .username("sa")
-                        .password("gen@song123")
+                        .hostname(flinkConfig.getHostname())
+                        .port(flinkConfig.getPort())
+                        .databaseList(flinkConfig.getDatabaseList()) // monitor sqlserver database
+                        .tableList(flinkConfig.getTableList())
+                        .username(flinkConfig.getUsername())
+                        .password(flinkConfig.getPassword())
                         .debeziumProperties(debeziumProps)
 //                        .deserializer(new JsonDebeziumDeserializationSchema())
-
-                        .deserializer(new MysqlDeserialization())
+                        .deserializer(new SqlServerDeserialization())
 //                        .startupOptions(StartupOptions.initial())
                         .startupOptions(StartupOptions.latest())  // 改成 latest()  initial()
+
+
+                        .fetchSize(1024)                   // 增大每次fetch行数
+                        .connectTimeout(Duration.ofSeconds(30 * 60)) // 增加连接超时
+                        .connectionPoolSize(20)             // 增加连接池大小
                         .build();
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // enable checkpoint
-        env.enableCheckpointing(1000);
+        env.enableCheckpointing(300);
+        env.setParallelism(4);// 根据表数量和大小调整
         // set the source parallelism to 2
         env.fromSource(
                         sqlServerSource,
                         WatermarkStrategy.noWatermarks(),
-                        "f1")
-                .setParallelism(1)
+                        "sqlserver43")
+                .setParallelism(Runtime.getRuntime().availableProcessors())
+                .keyBy(record -> {
+                    return record.getId(); // 按主键分组  .setParallelism(1) >1 解决增删改乱序
+                })
+
+
 //                .print()
                 // 添加Sink
-                .addSink(dataChangeSink)
-        ;
+                .addSink(dataChangeSink);
+
+        env.setBufferTimeout(50);  // 减少缓冲区超时
+        env.getConfig().setAutoWatermarkInterval(100); // 设置watermark间隔
+
 
         // Flink 1.15 之前设置
 //        env.setStateBackend(new RocksDBStateBackend("file:///D:/flinkcdc/checkpoints", true));
 
         // Flink 1.15+ 设置 Checkpoint 配置数据获取全量、增量
         env.setStateBackend(new HashMapStateBackend());
-        env.getCheckpointConfig().setCheckpointStorage("file:///D:/flinkcdc/checkpoints");
+        env.getCheckpointConfig().setCheckpointStorage("file:///"+flinkConfig.getCheckpointStoragePath());//file:///D:/flinkcdc/checkpoints
 
-
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(2000);
+        //当前 checkpoint 成功后，Flink 至少等待这个时间，再开始下一个 checkpoint。
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);
         env.getCheckpointConfig().setCheckpointTimeout(60000);
         env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+        //任务被手动取消后，保留 checkpoint 数据，可用来恢复
         env.getCheckpointConfig().enableExternalizedCheckpoints(
                 CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION
         );
-        env.execute("f1");
+
+
+        env.execute("WmsToEs");
 
 
     }

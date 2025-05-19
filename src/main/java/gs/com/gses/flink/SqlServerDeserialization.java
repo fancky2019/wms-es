@@ -19,7 +19,7 @@ import java.util.List;
  * @version 1.0
  * @description: mysql消息读取自定义序列化
  */
-public class MysqlDeserialization implements DebeziumDeserializationSchema<DataChangeInfo> {
+public class SqlServerDeserialization implements DebeziumDeserializationSchema<DataChangeInfo> {
 
     public static final String TS_MS = "ts_ms";
     public static final String BIN_FILE = "file";
@@ -100,6 +100,9 @@ public class MysqlDeserialization implements DebeziumDeserializationSchema<DataC
 
     @Override
     public void deserialize(SourceRecord sourceRecord, Collector<DataChangeInfo> collector) throws Exception {
+//     int m=0;
+//
+//     return;
         String topic = sourceRecord.topic();
         String[] fields = topic.split("\\.");
 //        String database = fields[1];
@@ -110,8 +113,12 @@ public class MysqlDeserialization implements DebeziumDeserializationSchema<DataC
 
         DataChangeInfo dataChangeInfo = new DataChangeInfo();
         ObjectMapper objectMapper = new ObjectMapper();
-        String beforeJson = objectMapper.writeValueAsString(getJsonObject(struct, BEFORE));
-        String afterJson = objectMapper.writeValueAsString(getJsonObject(struct, AFTER));
+        HashMap<String, Object>  beforeMap= getJsonObject(struct, BEFORE);
+        String beforeJson = objectMapper.writeValueAsString(beforeMap);
+        HashMap<String, Object>  afterMap= getJsonObject(struct, AFTER);
+        String afterJson = objectMapper.writeValueAsString(afterMap);
+
+        dataChangeInfo.setId(afterMap.get("Id").toString());
 
 
 //        dataChangeInfo.setBeforeData(getJsonObject(struct, BEFORE).toJSONString());

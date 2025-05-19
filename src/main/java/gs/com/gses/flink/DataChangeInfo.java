@@ -9,6 +9,11 @@ import java.io.Serializable;
 public class DataChangeInfo implements Serializable {
 
     /**
+     * binlog当前读取点位
+     */
+    private String id;
+
+    /**
      * 变更前数据
      */
     private String beforeData;

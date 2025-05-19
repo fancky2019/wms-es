@@ -1,5 +1,7 @@
 package gs.com.gses.init;
 
+import gs.com.gses.model.entity.Orgnization;
+import gs.com.gses.model.entity.Warehouse;
 import gs.com.gses.service.BasicInfoCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
@@ -10,6 +12,9 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
 
 //容器初始化完成执行：ApplicationRunner-->CommandLineRunner-->ApplicationReadyEvent
 
@@ -27,6 +32,7 @@ public class ApplicationListenerImplement implements ApplicationListener<Applica
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
 
+        basicInfoCacheService.batch();
         return;
 //        basicInfoCacheService.initBasicInfoCache();
 //        log.info("初始化缓存完成");

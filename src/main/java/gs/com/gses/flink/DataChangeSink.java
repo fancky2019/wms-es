@@ -30,36 +30,34 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 //    private transient InventoryInfoService inventoryInfoService;
 
 
-
     @Override
     public void invoke(DataChangeInfo value, Context context) throws JsonProcessingException {
         ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
-
-
 //        log.info("收到变更原始数据:{}", value);
 //        Object obj = applicationContext.getBean(value.getTableName());
-        if ("InventoryItemDetail_copy1".equals(value.getTableName())) {
 
-            InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
+        InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
 
-
-            inventoryInfoService.updateByInventoryItemDetail(value);
-            // InventoryItemDetail inventoryItemDetail = objectMapper.readValue(value.getAfterData(), InventoryItemDetail.class);
-//            READ("r"),
-//                    CREATE("c"),
-//                    UPDATE("u"),
-//                    DELETE("d"),
-//                    TRUNCATE("t"),
-//                    MESSAGE("m");
+        switch (value.getTableName()) {
+            case "Location_copy1":
+                inventoryInfoService.updateByLocation(value);
+                break;
+            case "Laneway_copy1":
+                inventoryInfoService.updateByLaneway(value);
+                break;
+            case "Inventory_copy1":
+                inventoryInfoService.updateByInventory(value);
+                break;
+            case "InventoryItem_copy1":
+                inventoryInfoService.updateByInventoryItem(value);
+                break;
+            case "InventoryItemDetail_copy1":
+                inventoryInfoService.updateByInventoryItemDetail(value);
+                break;
+            default:
+                break;
         }
-//        //转换后发送到对应的MQ
-//        if (MIGRATION_TABLE_CACHE.containsKey(value.getTableName())) {
-//            String routingKey = MIGRATION_TABLE_CACHE.get(value.getTableName());
-//            //可根据需要自行进行confirmService的设计
-//            rabbitTemplate.setReturnsCallback(confirmService);
-//            rabbitTemplate.setConfirmCallback(confirmService);
-//            rabbitTemplate.convertAndSend(EXCHANGE_NAME, routingKey, tableDataConvertService.convertSqlByDataChangeInfo(value));
-//        }
+
     }
 
     /**

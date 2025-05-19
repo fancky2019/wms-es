@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.math.BigDecimal;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
@@ -66,12 +68,14 @@ public class InventoryItem implements Serializable {
     /**
      * 质检状态（0待检，1已取样，2合格，-1不合格）
      */
+    @JsonProperty("QCStatus")
     @TableField(value = "QCStatus")
     private Integer QCStatus;
 
     /**
      * 状态 （0正常，-1禁用）
      */
+    @JsonProperty("XStatus")
     @TableField(value = "XStatus")
     private Integer XStatus;
 

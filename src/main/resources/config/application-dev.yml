@@ -5,34 +5,34 @@ server:
   shutdown: GRACEFUL # GRACEFUL/IMMEDIATE (默认:IMMEDIATE)
 #开发配
 spring:
-#  mvc:
-#    pathmatch:
-#      matching-strategy: ant_path_matcher
-#  main:
-#    allow-bean-definition-overriding: true #当遇到相同名字的时候，是否允许覆盖注册 bean
+  #  mvc:
+  #    pathmatch:
+  #      matching-strategy: ant_path_matcher
+  #  main:
+  #    allow-bean-definition-overriding: true #当遇到相同名字的时候，是否允许覆盖注册 bean
   application:
     name: springBootProject
 
   datasource:
-#    # sqlserver
-#    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB_test05;integratedSecurity=true;encrypt=true;trustServerCertificate=true
+    #    # sqlserver
+    #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB_test05;integratedSecurity=true;encrypt=true;trustServerCertificate=true
     url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
-        #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
+    #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
     password: gen@song123
 
-#    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-#    username: root
-#    password: 123456
-#    #mysql
-#    #具体参见类DynamicDataSourceAspect 说明
-#    #不用此默认，默认就是写库,多数据源用jdbcUrl，不是url,spring 默认用的是url，用多数据源用url会报错。
-#    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-#    username: root
-#    password: 123456
+    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+    #    driver-class-name: com.mysql.cj.jdbc.Driver
+    #    username: root
+    #    password: 123456
+    #    #mysql
+    #    #具体参见类DynamicDataSourceAspect 说明
+    #    #不用此默认，默认就是写库,多数据源用jdbcUrl，不是url,spring 默认用的是url，用多数据源用url会报错。
+    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+    #    driver-class-name: com.mysql.cj.jdbc.Driver
+    #    username: root
+    #    password: 123456
 
 
     #要引入mybatis
@@ -53,7 +53,7 @@ spring:
     #  数据库索引
     database: 0
 
-#    单机
+    #    单机
     # 远程服务器地址
     host: 127.0.0.1
     # 远程服务器端口
@@ -65,7 +65,7 @@ spring:
     timeout: 300000
 
     #redis连接池 lettuce、jedis。连接池 单机配置。默认集成lettuce
-#    jedis:
+    #    jedis:
     lettuce:
       pool:
         # 最大空闲连接
@@ -78,23 +78,23 @@ spring:
         max-wait: 0
 
 
-  #    ##集群 注意：密码用上面密码配置
-  #    cluster:
-  #      nodes:
-  #        - 127.0.0.1:7000
-  #        - 127.0.0.1:7001
-  #        - 127.0.0.1:7002
-  #        - 127.0.0.1:7003
-  #        - 127.0.0.1:7004
-  #      max-redirects: 3
+    #    ##集群 注意：密码用上面密码配置
+    #    cluster:
+    #      nodes:
+    #        - 127.0.0.1:7000
+    #        - 127.0.0.1:7001
+    #        - 127.0.0.1:7002
+    #        - 127.0.0.1:7003
+    #        - 127.0.0.1:7004
+    #      max-redirects: 3
 
-  #    ##哨兵 密码用上面密码配置
-  #    sentinel:
-  #      master: mymaster
-  #      nodes:
-  #        - 127.0.0.1:60001
-  #        - 127.0.0.1:60002
-  #        - 127.0.0.1:60003
+    #    ##哨兵 密码用上面密码配置
+    #    sentinel:
+    #      master: mymaster
+    #      nodes:
+    #        - 127.0.0.1:60001
+    #        - 127.0.0.1:60002
+    #        - 127.0.0.1:60003
 
 
     #springboot 配置未成功，参见代码的配置
@@ -105,7 +105,7 @@ spring:
 
   rabbitmq:
     ##集群配置 ip:port,ip:port 。多个配置之间用逗号隔开
-   # addresses: 127.0.0.1:5673,127.0.0.1:5674,127.0.0.1:5675 #指定client连接到的server的地址，多个以逗号分隔(优先取addresses，然后再取host)
+    # addresses: 127.0.0.1:5673,127.0.0.1:5674,127.0.0.1:5675 #指定client连接到的server的地址，多个以逗号分隔(优先取addresses，然后再取host)
 
     host: 127.0.0.1
     port: 5672
@@ -124,7 +124,7 @@ spring:
     #设置成默认的自动Ack,springboot会加入死信队列，一定设置死信队列。
     #    listener.simple.acknowledge-mode: manual
     listener:
-    #全局SimpleRabbitListenerContainerFactory 配置
+      #全局SimpleRabbitListenerContainerFactory 配置
       simple:
         retry:
           #是否开启消费者重试（为false时关闭消费者重试，这时消费端代码异常会一直重复收到消息）
@@ -140,7 +140,7 @@ spring:
         #默认 auto，不然消费异常业务ack掉。尽管配置重新入队auto还是会重试入队之后ack掉
         acknowledge-mode: manual
         #消费异常的数据重新入队。
-#        default-requeue-rejected: true
+    #        default-requeue-rejected: true
 
     #    listener:
     #      direct:
@@ -169,11 +169,27 @@ sbp:
   ordermigratedbtoolurl: http://localhost:8101
   ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
   hostAndPort: 10.100.200.43:9200
+  flink:
+    databaseList:
+      - wms_liku
+    tableList:
+      - dbo.InventoryItemDetail_copy1
+      - dbo.InventoryItem_copy1
+      - dbo.Inventory_copy1
+      - dbo.Location_copy1
+      - dbo.Laneway_copy1
+    hostname: 10.100.200.43
+    port: 1433
+    username: sa
+    password: gen@song123
+    checkpointStoragePath: D:/flinkcdc/checkpoints
+    tmpdir: D:\\flinkcdc\\temp
+
 xxl:
   job:
     accessToken: default_token
     admin:
-#      addresses: http://xxljob.com:8182/xxl-job-admin
+      #      addresses: http://xxljob.com:8182/xxl-job-admin
       addresses: http://127.0.0.1:8182/xxl-job-admin
     executor:
       address:
@@ -185,13 +201,13 @@ xxl:
 
 
 mybatis-plus:
-##  mybatis全局配置文件
-#  config-location: classpath:mybatis-config.xml
+  ##  mybatis全局配置文件
+  #  config-location: classpath:mybatis-config.xml
   #  Mapper文件存放的位置，多了层文件夹，默认不用配置
   mapper-locations: classpath:mapper/*.xml
   #  实体类所在的包
   type-aliases-package: gs.com.gses.demos.model.entity
-#  M_Str1  默认命中mStr1
+  #  M_Str1  默认命中mStr1
   configuration:
     map-underscore-to-camel-case: false  #默认true
 

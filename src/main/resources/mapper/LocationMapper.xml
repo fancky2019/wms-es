@@ -47,6 +47,9 @@
             <result property="pickMode" column="PickMode" jdbcType="INTEGER"/>
             <result property="shipMode" column="ShipMode" jdbcType="INTEGER"/>
             <result property="workOrderSendCounts" column="WorkOrderSendCounts" jdbcType="INTEGER"/>
+            <result property="receivedPalletType" column="ReceivedPalletType" jdbcType="VARCHAR"/>
+            <result property="locationNearOrFar" column="LocationNearOrFar" jdbcType="INTEGER"/>
+            <result property="sorting" column="Sorting" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -63,6 +66,7 @@
         LastModifierId,LastModifierName,CreationTime,
         LastModificationTime,ColoumGroup,GroupMaxLength,
         GroupMaxWeight,GroupMaxWidth,RackGroup,
-        PickMode,ShipMode,WorkOrderSendCounts
+        PickMode,ShipMode,WorkOrderSendCounts,
+        ReceivedPalletType,LocationNearOrFar,Sorting
     </sql>
 </mapper>

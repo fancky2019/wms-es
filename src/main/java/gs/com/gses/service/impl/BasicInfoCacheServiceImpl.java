@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -137,6 +138,15 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         Map<String, PackageUnit> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(packageUnitPrefix, map);
         log.info("init PackageUnit complete");
+    }
+
+    @Override
+    public void batch() {
+        //        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
+        Map<String, Warehouse> warehouseMap = new HashMap<>();
+        Map<String, Orgnization> orgnizationMap = new HashMap<>();
+        Map<String, PackageUnit> packageUnitMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+
     }
 
 

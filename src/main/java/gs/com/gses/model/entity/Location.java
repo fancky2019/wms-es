@@ -1,12 +1,13 @@
 package gs.com.gses.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
-import lombok.Data;
 
 /**
  * 
@@ -25,24 +26,28 @@ public class Location implements Serializable {
      * 货位代码
      */
     @TableField(value = "XCode")
+    @JsonProperty("XCode")
     private String XCode;
 
     /**
      * 货位名称
      */
     @TableField(value = "XName")
+    @JsonProperty("XName")
     private String XName;
 
     /**
      * 状态（DISABLED 0禁用 ENABLED 1正常，Exception2异常，NOEXIST -1不存在）
      */
     @TableField(value = "XStatus")
+    @JsonProperty("XStatus")
     private Integer XStatus;
 
     /**
      * 货位类型 （0未知,1存储，2越库，3地面，4收货区,5月台）
      */
     @TableField(value = "XType")
+    @JsonProperty("XType")
     private Integer XType;
 
     /**
@@ -61,24 +66,28 @@ public class Location implements Serializable {
      * 货架编号
      */
     @TableField(value = "XRack")
+    @JsonProperty("XRack")
     private Integer XRack;
 
     /**
      * 列
      */
     @TableField(value = "XColumn")
+    @JsonProperty("XColumn")
     private Integer XColumn;
 
     /**
      * 层
      */
     @TableField(value = "XLevel")
+    @JsonProperty("XLevel")
     private Integer XLevel;
 
     /**
      * 深度
      */
     @TableField(value = "XDepth")
+    @JsonProperty("XDepth")
     private Integer XDepth;
 
     /**
@@ -266,6 +275,24 @@ public class Location implements Serializable {
      */
     @TableField(value = "WorkOrderSendCounts")
     private Integer workOrderSendCounts;
+
+    /**
+     * 收货区位置对应的托盘类型
+     */
+    @TableField(value = "ReceivedPalletType")
+    private String receivedPalletType;
+
+    /**
+     * 用来标记多伸堆垛机/地堆/密集货位同一个通道的远近关系，比如一个8深的货位，深度1是Near1，8是Far3，其他是Middle2
+     */
+    @TableField(value = "LocationNearOrFar")
+    private Integer locationNearOrFar;
+
+    /**
+     * 自定义排序，空则按照ID排序
+     */
+    @TableField(value = "Sorting")
+    private Integer sorting;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

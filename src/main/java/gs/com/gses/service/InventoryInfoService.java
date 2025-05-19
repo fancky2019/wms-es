@@ -31,11 +31,10 @@ public interface InventoryInfoService {
 
     void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 
-
     void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 
+    void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 
-
-
+    void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 
 }

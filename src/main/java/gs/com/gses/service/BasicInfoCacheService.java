@@ -9,4 +9,6 @@ public interface BasicInfoCacheService {
     void initWarehouse();
     void initOrgnization();
     void initPackageUnit();
+
+    void batch();
 }

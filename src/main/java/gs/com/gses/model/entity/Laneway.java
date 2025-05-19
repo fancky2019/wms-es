@@ -1,12 +1,13 @@
 package gs.com.gses.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
-import lombok.Data;
 
 /**
  * 
@@ -25,12 +26,14 @@ public class Laneway implements Serializable {
      * 巷道代码
      */
     @TableField(value = "XCode")
+    @JsonProperty("XCode")
     private Integer XCode;
 
     /**
      * 巷道名称
      */
     @TableField(value = "XName")
+    @JsonProperty("XName")
     private String XName;
 
     /**
@@ -139,12 +142,14 @@ public class Laneway implements Serializable {
      * 类型（1单申单货位，2双申单货位，3单申双叉双货位，4双申双叉双货位，5多申位地推）
      */
     @TableField(value = "XType")
+    @JsonProperty("XType")
     private Integer XType;
 
     /**
      * 状态（DISABLED 0禁用 ENABLED 1正常，Exception2异常，NOEXIST -1不存在）
      */
     @TableField(value = "XStatus")
+    @JsonProperty("XStatus")
     private Integer XStatus;
 
     /**

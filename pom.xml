@@ -62,12 +62,11 @@
             <scope>compile</scope>
         </dependency>
 
-<!--        for SqlServer-->
-<!--        <dependency>-->
-<!--            <groupId>com.microsoft.sqlserver</groupId>-->
-<!--            <artifactId>sqljdbc4</artifactId>-->
-<!--            <version>4.0</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>com.baomidou</groupId>

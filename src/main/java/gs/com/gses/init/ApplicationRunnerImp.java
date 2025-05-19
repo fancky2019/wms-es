@@ -1,6 +1,7 @@
 package gs.com.gses.init;
 
 import gs.com.gses.rabbitMQ.mqtt.MqttConsume;
+import gs.com.gses.service.BasicInfoCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,11 +30,17 @@ public class ApplicationRunnerImp implements ApplicationRunner {
     @Resource
     ApplicationContext applicationContext;
 
+    @Autowired
+    private BasicInfoCacheService basicInfoCacheService;
     @Override
     public void run(ApplicationArguments args) throws Exception {
 
         LOGGER.info("ApplicationRunnerImp");
         log.info("threadId - {}",Thread.currentThread().getId());
+
+        return;
+//        basicInfoCacheService.initBasicInfoCache();
+//        log.info("初始化缓存完成");
 //        mqttConsume.init();
 
     }

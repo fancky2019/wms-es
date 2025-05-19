@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.elasticsearch.ShipOrderInfoRepository;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
-import gs.com.gses.model.elasticsearch.ShipOrderInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
@@ -17,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.stat.descriptive.summary.Product;
-import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
@@ -33,7 +31,6 @@ import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
@@ -42,8 +39,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
-import java.lang.reflect.Field;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -252,6 +247,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
             //inventory
+            inventoryInfo.setInventoryId(inventory.getId());
             inventoryInfo.setPallet(inventory.getPallet());
             inventoryInfo.setInventoryAllocatedSmallUnitQuantity(inventory.getAllocatedSmallUnitQuantity());
             inventoryInfo.setInventoryAllocatedPackageQuantity(inventory.getAllocatedPackageQuantity());
@@ -292,7 +288,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setInventoryItemIsLocked(inventoryItem.getIsLocked());
             inventoryInfo.setInventoryItemXStatus(inventoryItem.getXStatus());
             inventoryInfo.setInventoryItemIsExpired(inventoryItem.getIsExpired());
-            inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
             inventoryInfo.setInventoryItemComments(inventoryItem.getComments());
             inventoryInfo.setInventoryItemStr1(inventoryItem.getStr1());
             inventoryInfo.setInventoryItemStr2(inventoryItem.getStr2());
@@ -951,7 +946,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         InventoryItemDetail changedInventoryItemDetail = null;
         try {
             changedInventoryItemDetail = objectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
-
             //更新时间
             if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -984,13 +978,12 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail));
                 break;
             case "UPDATE":
-                updateByInventoryItemDetail(changedInventoryItemDetail);
+                updateInventoryInfoOfDetail(changedInventoryItemDetail, dataChangeInfo);
                 break;
             case "DELETE":
                 deletedByInventoryItemDetail(changedInventoryItemDetail);
                 break;
             case "READ":
-
                 break;
             default:
                 break;
@@ -1000,25 +993,209 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     @Override
     public void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
 
+        InventoryItem changedInventoryItem = null;
+        try {
+            changedInventoryItem = objectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItem.class);
+            //更新时间
+            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
+
+                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+
+                } else {
+                    INIT_INVENTORY_TIME = LocalDateTime.now();
+                }
+
+            }
+
+            if (changedInventoryItem.getLastModificationTime() != null) {
+                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
+
+                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                    return;
+                }
+            }
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfItem(changedInventoryItem, dataChangeInfo);
+                break;
+            case "DELETE":
+
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
     }
 
     @Override
     public void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
 
+        Inventory changedInventory = null;
+        try {
+            changedInventory = objectMapper.readValue(dataChangeInfo.getAfterData(), Inventory.class);
+            //更新时间
+            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
+
+                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+
+                } else {
+                    INIT_INVENTORY_TIME = LocalDateTime.now();
+                }
+
+            }
+
+            if (changedInventory.getLastModificationTime() != null) {
+                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventory.getLastModificationTime()), ZoneOffset.of("+8"));
+
+                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                    return;
+                }
+            }
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfInventory(changedInventory, dataChangeInfo);
+                break;
+            case "DELETE":
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+        Location changedLocation = null;
+        try {
+            changedLocation = objectMapper.readValue(dataChangeInfo.getAfterData(), Location.class);
+            //更新时间
+            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
+
+                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+
+                } else {
+                    INIT_INVENTORY_TIME = LocalDateTime.now();
+                }
+
+            }
+
+            if (changedLocation.getLastModificationTime() != null) {
+                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedLocation.getLastModificationTime()), ZoneOffset.of("+8"));
+                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                    return;
+                }
+            }
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
+                break;
+            case "DELETE":
+
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+
+        Laneway changedILaneway = null;
+        try {
+            changedILaneway = objectMapper.readValue(dataChangeInfo.getAfterData(), Laneway.class);
+            //更新时间
+            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
+
+                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+
+                } else {
+                    INIT_INVENTORY_TIME = LocalDateTime.now();
+                }
+
+            }
+
+            if (changedILaneway.getLastModificationTime() != null) {
+                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedILaneway.getLastModificationTime()), ZoneOffset.of("+8"));
+
+                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                    return;
+                }
+            }
+
+
+            switch (dataChangeInfo.getEventType()) {
+                case "CREATE":
+                    // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
+                    break;
+                case "UPDATE":
+                    updateInventoryInfoOfLaneway(changedILaneway, dataChangeInfo);
+                    break;
+                case "DELETE":
+                    break;
+                case "READ":
+                    break;
+                default:
+                    break;
+            }
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        }
     }
 
 
-    private void updateByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) {
+    private void updateInventoryInfoOfDetail(InventoryItemDetail inventoryItemDetail, DataChangeInfo dataChangeInfo) {
 
         InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
 
         if (inventoryItemDetail.getLastModificationTime() != null) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
-
             if (inventoryInfo != null) {
                 if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
-                    copyInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
-                    updateFullDocument(inventoryInfo);
+                    Map<String, Object> updatedMap = prepareInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
+                    updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, dataChangeInfo.getTableName());
                 }
             } else {
                 //新增
@@ -1028,22 +1205,160 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
-    private void deletedByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) {
+    private void updateInventoryInfoOfItem(InventoryItem inventoryItem, DataChangeInfo dataChangeInfo) {
 
-        InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
+        //        CriteriaQuery 适合简单的查询场景，对于复杂的聚合查询，建议使用 NativeSearchQuery
+        Criteria criteria = new Criteria("inventoryItemId").is(inventoryItem.getId());
 
-        if (inventoryItemDetail.getLastModificationTime() != null) {
-
-            if (inventoryInfo != null) {
-                inventoryInfo.setDeleted(1);
-                updateFullDocument(inventoryInfo);
+        CriteriaQuery query = new CriteriaQuery(criteria);
+        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
+        List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+        for (InventoryInfo inventoryInfo : inventoryInfoList) {
+            if (inventoryItem.getLastModificationTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
+                if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
+                    Map<String, Object> updatedMap = prepareInventoryItemUpdatedInfo(inventoryInfo, inventoryItem);
+                    updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
+                }
             }
+        }
+    }
+
+
+    private void updateInventoryInfoOfInventory(Inventory inventory, DataChangeInfo dataChangeInfo) {
+
+        Criteria criteria = new Criteria("inventoryId").is(inventory.getId());
+
+        CriteriaQuery query = new CriteriaQuery(criteria);
+        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
+        List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+        for (InventoryInfo inventoryInfo : inventoryInfoList) {
+            if (inventory.getLastModificationTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventory.getLastModificationTime()), ZoneOffset.of("+8"));
+                if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
+                    Map<String, Object> updatedMap = prepareInventoryUpdatedInfo(inventoryInfo, inventory);
+                    updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
+                }
+            }
+        }
+
+    }
+
+    private void updateInventoryInfoOfLocation(Location location, DataChangeInfo dataChangeInfo) {
+
+        Criteria criteria = new Criteria("locationId").is(location.getId());
+        CriteriaQuery query = new CriteriaQuery(criteria);
+        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
+        List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+        for (InventoryInfo inventoryInfo : inventoryInfoList) {
+            Map<String, Object> updatedMap = prepareLocationUpdatedInfo(inventoryInfo, location);
+            updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
+
+
+//            Document document = Document.create();
+//            document.putAll(updatedMap);
+//
+//            UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
+//                    .withDocument(document)
+//                    .build();
 
         }
 
     }
 
-    //根据实体更新
+    private void updateInventoryInfoOfLaneway(Laneway laneway, DataChangeInfo dataChangeInfo) {
+        StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLaneway");
+        stopWatch.start("updateInventoryInfoOfLaneway");
+
+        List<String> sourceFieldList = new ArrayList<>();
+        sourceFieldList.add("inventoryItemDetailId");
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", laneway.getId()));
+
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder)
+                .withPageable(PageRequest.of(0, 10001)) // 返回前100条（page=0, size=100）
+                .withSourceFilter(new SourceFilter() {
+                    //返回的字段
+                    @Override
+                    public String[] getIncludes() {
+                        if (CollectionUtils.isNotEmpty(sourceFieldList)) {
+                            return sourceFieldList.toArray(new String[0]);
+                        } else {
+                            return new String[0];
+                        }
+
+                    }
+                    //不需要返回的字段
+                    @Override
+                    public String[] getExcludes() {
+                        return new String[0];
+                    }
+                })
+                .withTrackTotalHits(true)//返回命中的总行数
+                .build();
+        //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
+        SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
+        long totalHits = search.getTotalHits();
+        List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+
+
+        //有10000限制
+//        Criteria criteria = new Criteria("lanewayId").is(laneway.getId());
+//        CriteriaQuery query = new CriteriaQuery(criteria);
+//        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
+//        List<InventoryInfo> inventoryInfoList1 = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+
+
+        long count = inventoryInfoList.size();
+        int step = 1000;
+        long times = count / step;
+        long left = count / step;
+        if (left > 0) {
+            times++;
+        }
+
+        long pageIndex = 0L;
+        long totalIndexSize = 0L;
+        while (times > 0) {
+
+            long skip = (++pageIndex - 1) * step;
+            times--;
+
+            List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(skip).collect(Collectors.toList());
+
+            List<UpdateQuery> updateQueries = new ArrayList<>();
+            for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
+                Map<String, Object> updatedMap = prepareLanewayUpdatedInfo(inventoryInfo, laneway);
+//                updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
+                Document document = Document.create();
+                document.putAll(updatedMap);
+                UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
+                        .withDocument(document)
+                        .build();
+                updateQueries.add(updateQuery);
+            }
+            if (updateQueries.size() > 0) {
+                // 执行批量更新
+                elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+            }
+
+        }
+
+
+        stopWatch.stop();
+        long mills = stopWatch.getTotalTimeMillis();
+        log.info("updateInventoryInfoOfLaneway complete {} ms", mills);
+    }
+
+
+    private void deletedByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) {
+        Map<String, Object> updatedMap = new HashMap<>();
+        updatedMap.put("deleted", 1);
+        updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, "InventoryItemDetail");
+    }
+
+    //region 根据实体更新
     public void updateFullDocument(InventoryInfo inventoryInfo) {
         // 直接使用 index 方法会替换整个文档
         IndexQuery indexQuery = new IndexQueryBuilder()
@@ -1053,172 +1368,210 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         elasticsearchOperations.index(indexQuery, IndexCoordinates.of("inventory_info"));
     }
-
+//endregion
 
     // 更新方法2：使用字段映射
-    public void updateProductFields(String id, Map<String, Object> fields) {
+    public void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) {
+        Document document = Document.create();
+        document.putAll(fieldsMap);
+
+        UpdateQuery updateQuery = UpdateQuery.builder(id)
+                .withDocument(document)
+                .build();
+        //InventoryInfo
+        UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
+        if (response.getResult().equals(UpdateResponse.Result.UPDATED)) {
+            log.info("update table - {} id - {} success", table, id);
+        } else {
+            log.info("update table - {} id - {} fail", table, id);
+        }
+        int n = 0;
+    }
+
+    public void updateInventoryInfoBatch(String id, Map<String, Object> fields, String table) {
         Document document = Document.create();
         document.putAll(fields);
 
         UpdateQuery updateQuery = UpdateQuery.builder(id)
                 .withDocument(document)
                 .build();
-//InventoryInfo
+        //InventoryInfo
         UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
+        if (response.getResult().equals(UpdateResponse.Result.UPDATED)) {
+            log.info("update table - {} id - {} success", table, id);
+        } else {
+            log.info("update table - {} id - {} fail", table, id);
+        }
+        int n = 0;
     }
 
-    private void copyInventoryUpdatedInfo(InventoryInfo inventoryInfo, Inventory inventory) {
+    private Map<String, Object> prepareLocationUpdatedInfo(InventoryInfo inventoryInfo, Location location) {
+
+        Map<String, Object> updatedMap = new HashMap<>();
+        updatedMap.put("locationCode", location.getXCode());
+        updatedMap.put("locationXStatus", location.getXStatus());
+        updatedMap.put("locationIsLocked", location.getIsLocked());
+        updatedMap.put("forbidOutbound", location.getForbidOutbound());
+        updatedMap.put("isCountLocked", location.getIsCountLocked());
+        updatedMap.put("locationXType", location.getXType());
+        return updatedMap;
+    }
+
+
+    private Map<String, Object> prepareLanewayUpdatedInfo(InventoryInfo inventoryInfo, Laneway laneway) {
+        Map<String, Object> updatedMap = new HashMap<>();
+        updatedMap.put("lanewayCode", laneway.getXCode());
+        updatedMap.put("lanewayXStatus", laneway.getXStatus());
+        return updatedMap;
+    }
+
+
+    private Map<String, Object> prepareInventoryUpdatedInfo(InventoryInfo inventoryInfo, Inventory inventory) {
         //inventory
-        inventoryInfo.setPallet(inventory.getPallet());
-        inventoryInfo.setInventoryAllocatedSmallUnitQuantity(inventory.getAllocatedSmallUnitQuantity());
-        inventoryInfo.setInventoryAllocatedPackageQuantity(inventory.getAllocatedPackageQuantity());
-        inventoryInfo.setInventoryQCStatus(inventory.getQCStatus());
-        inventoryInfo.setInventoryXStatus(inventory.getXStatus());
-        inventoryInfo.setInventoryIsLocked(inventory.getIsLocked());
-        inventoryInfo.setInventoryIsSealed(inventory.getIsSealed());
-        inventoryInfo.setInventoryIsScattered(inventory.getIsScattered());
-        inventoryInfo.setInventoryIsExpired(inventory.getIsExpired());
-        inventoryInfo.setInventoryComments(inventory.getComments());
-        inventoryInfo.setWeight(inventory.getWeight());
-        inventoryInfo.setLength(inventory.getLength());
-        inventoryInfo.setWidth(inventory.getWidth());
-        inventoryInfo.setHeight(inventory.getHeight());
-        inventoryInfo.setInventoryStr1(inventory.getStr1());
-        inventoryInfo.setInventoryStr2(inventory.getStr2());
-        inventoryInfo.setInventoryStr3(inventory.getStr3());
-        inventoryInfo.setInventoryStr4(inventory.getStr4());
-        inventoryInfo.setInventoryStr5(inventory.getStr5());
-        inventoryInfo.setInventoryPackageQuantity(inventory.getPackageQuantity());
-        inventoryInfo.setInventorySmallUnitQuantity(inventory.getSmallUnitQuantity());
-        inventoryInfo.setLevelCount(inventory.getLevelCount());
-        inventoryInfo.setConveyorCode(inventory.getConveyorCode());
-        inventoryInfo.setApplyOrOrderCode(inventory.getApplyOrOrderCode());
-        inventoryInfo.setOrginAGVID(inventory.getOrginAGVID());
-        inventoryInfo.setOrginLocationCode(inventory.getOrginLocationCode());
-        inventoryInfo.setPalletType(inventory.getPalletType());
-        inventoryInfo.setVolume(inventory.getVolume());
+        Map<String, Object> updatedMap = new HashMap<>();
+        updatedMap.put("pallet", inventory.getPallet());
+        updatedMap.put("inventoryAllocatedSmallUnitQuantity", inventory.getAllocatedSmallUnitQuantity());
+        updatedMap.put("inventoryAllocatedPackageQuantity", inventory.getAllocatedPackageQuantity());
+        updatedMap.put("inventoryQCStatus", inventory.getQCStatus());
+        updatedMap.put("inventoryXStatus", inventory.getXStatus());
+        updatedMap.put("inventoryIsLocked", inventory.getIsLocked());
+        updatedMap.put("inventoryIsSealed", inventory.getIsSealed());
+        updatedMap.put("inventoryIsScattered", inventory.getIsScattered());
+        updatedMap.put("inventoryIsExpired", inventory.getIsExpired());
+        updatedMap.put("inventoryComments", inventory.getComments());
 
+        updatedMap.put("weight", inventory.getWeight());
+        updatedMap.put("length", inventory.getLength());
+        updatedMap.put("width", inventory.getWidth());
+        updatedMap.put("height", inventory.getHeight());
+        updatedMap.put("inventoryStr1", inventory.getStr1());
+        updatedMap.put("inventoryStr2", inventory.getStr2());
+        updatedMap.put("inventoryStr3", inventory.getStr3());
+        updatedMap.put("inventoryStr4", inventory.getStr4());
+        updatedMap.put("inventoryStr5", inventory.getStr5());
 
+        updatedMap.put("inventoryPackageQuantity", inventory.getPackageQuantity());
+        updatedMap.put("inventorySmallUnitQuantity", inventory.getSmallUnitQuantity());
+        updatedMap.put("levelCount", inventory.getLevelCount());
+        updatedMap.put("conveyorCode", inventory.getConveyorCode());
+        updatedMap.put("applyOrOrderCode", inventory.getApplyOrOrderCode());
+        updatedMap.put("orginAGVID", inventory.getOrginAGVID());
+        updatedMap.put("orginLocationCode", inventory.getOrginLocationCode());
+        updatedMap.put("palletType", inventory.getPalletType());
+        updatedMap.put("volume", inventory.getVolume());
+
+        return updatedMap;
     }
 
-    private void copyInventoryItemUpdatedInfo(InventoryInfo inventoryInfo, InventoryItem inventoryItem) {
+    private Map<String, Object> prepareInventoryItemUpdatedInfo(InventoryInfo inventoryInfo, InventoryItem inventoryItem) {
         //inventoryItem
-        inventoryInfo.setInventoryItemId(inventoryItem.getId());
+        Map<String, Object> updatedMap = new HashMap<>();
         if (inventoryItem.getExpiredTime() != null) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getExpiredTime()), ZoneOffset.of("+8"));
-            inventoryInfo.setInventoryItemExpiredTime(localDateTime);
+            updatedMap.put("inventoryItemExpiredTime", inventoryItem.getExpiredTime());
         }
-        inventoryInfo.setInventoryItemAllocatedPackageQuantity(inventoryItem.getAllocatedPackageQuantity());
-        inventoryInfo.setInventoryItemPackageQuantity(inventoryItem.getPackageQuantity());
-        inventoryInfo.setInventoryItemIsLocked(inventoryItem.getIsLocked());
-        inventoryInfo.setInventoryItemXStatus(inventoryItem.getXStatus());
-        inventoryInfo.setInventoryItemIsExpired(inventoryItem.getIsExpired());
-        inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
-        inventoryInfo.setInventoryItemComments(inventoryItem.getComments());
-        inventoryInfo.setInventoryItemStr1(inventoryItem.getStr1());
-        inventoryInfo.setInventoryItemStr2(inventoryItem.getStr2());
-        inventoryInfo.setInventoryItemStr3(inventoryItem.getStr3());
-        inventoryInfo.setInventoryItemStr4(inventoryItem.getStr4());
-        inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
+        updatedMap.put("inventoryItemAllocatedPackageQuantity", inventoryItem.getAllocatedPackageQuantity());
+        updatedMap.put("inventoryItemPackageQuantity", inventoryItem.getPackageQuantity());
+        updatedMap.put("inventoryItemIsLocked", inventoryItem.getIsLocked());
+        updatedMap.put("inventoryItemXStatus", inventoryItem.getXStatus());
+        updatedMap.put("inventoryItemIsExpired", inventoryItem.getIsExpired());
+        updatedMap.put("inventoryItemComments", inventoryItem.getComments());
+        updatedMap.put("inventoryItemStr1", inventoryItem.getStr1());
+        updatedMap.put("inventoryItemStr2", inventoryItem.getStr2());
+        updatedMap.put("inventoryItemStr3", inventoryItem.getStr3());
+        updatedMap.put("inventoryItemStr4", inventoryItem.getStr4());
+        updatedMap.put("inventoryItemStr5", inventoryItem.getStr5());
+        return updatedMap;
     }
 
-    private void copyInventoryItemDetailUpdatedInfo(InventoryInfo inventoryInfo, InventoryItemDetail inventoryItemDetail) {
-        inventoryInfo.setInventoryItemDetailId(inventoryItemDetail.getId());
-        inventoryInfo.setCarton(inventoryItemDetail.getCarton());
-        inventoryInfo.setSerialNo(inventoryItemDetail.getSerialNo());
+    private Map<String, Object> prepareInventoryItemDetailUpdatedInfo(InventoryInfo inventoryInfo, InventoryItemDetail inventoryItemDetail) {
 
+        Map<String, Object> updatedMap = new HashMap<>();
+        updatedMap.put("carton", inventoryItemDetail.getCarton());
+        updatedMap.put("serialNo", inventoryItemDetail.getSerialNo());
+        updatedMap.put("batchNo", inventoryItemDetail.getBatchNo());
+        updatedMap.put("batchNo2", inventoryItemDetail.getBatchNo2());
+        updatedMap.put("batchNo3", inventoryItemDetail.getBatchNo3());
+        updatedMap.put("smallUnitQuantity", inventoryItemDetail.getSmallUnitQuantity());
+        updatedMap.put("packageQuantity", inventoryItemDetail.getPackageQuantity());
+        updatedMap.put("allocatedSmallUnitQuantity", inventoryItemDetail.getAllocatedSmallUnitQuantity());
+        updatedMap.put("allocatedPackageQuantity", inventoryItemDetail.getAllocatedPackageQuantity());
+        updatedMap.put("qcStatus", inventoryItemDetail.getQCStatus());
+        updatedMap.put("xStatus", inventoryItemDetail.getXStatus());
+        updatedMap.put("isLocked", inventoryItemDetail.getIsLocked());
+        updatedMap.put("isSealed", inventoryItemDetail.getIsSealed());
 
-        inventoryInfo.setBatchNo(inventoryItemDetail.getBatchNo());
-        inventoryInfo.setBatchNo2(inventoryItemDetail.getBatchNo2());
-        inventoryInfo.setBatchNo3(inventoryItemDetail.getBatchNo3());
-
-        inventoryInfo.setSmallUnitQuantity(inventoryItemDetail.getSmallUnitQuantity());
-        inventoryInfo.setPackageQuantity(inventoryItemDetail.getPackageQuantity());
-        inventoryInfo.setAllocatedSmallUnitQuantity(inventoryItemDetail.getAllocatedSmallUnitQuantity());
-        inventoryInfo.setAllocatedPackageQuantity(inventoryItemDetail.getAllocatedPackageQuantity());
-        inventoryInfo.setQCStatus(inventoryItemDetail.getQCStatus());
-        inventoryInfo.setXStatus(inventoryItemDetail.getXStatus());
-        inventoryInfo.setIsLocked(inventoryItemDetail.getIsLocked());
-        inventoryInfo.setIsSealed(inventoryItemDetail.getIsSealed());
-        inventoryInfo.setIsScattered(inventoryItemDetail.getIsScattered());
-        inventoryInfo.setIsExpired(inventoryItemDetail.getIsExpired());
+        updatedMap.put("isScattered", inventoryItemDetail.getIsScattered());
+        updatedMap.put("isExpired", inventoryItemDetail.getIsExpired());
 
         if (inventoryItemDetail.getExpiredTime() != null) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getExpiredTime()), ZoneOffset.of("+8"));
-            inventoryInfo.setExpiredTime(localDateTime);
+            updatedMap.put("expiredTime", localDateTime);
         }
-        inventoryInfo.setComments(inventoryItemDetail.getComments());
-        inventoryInfo.setM_Str1(inventoryItemDetail.getM_Str1());
-        inventoryInfo.setM_Str2(inventoryItemDetail.getM_Str2());
-        inventoryInfo.setM_Str3(inventoryItemDetail.getM_Str3());
-        inventoryInfo.setM_Str4(inventoryItemDetail.getM_Str4());
-        inventoryInfo.setM_Str5(inventoryItemDetail.getM_Str5());
-        inventoryInfo.setM_Str6(inventoryItemDetail.getM_Str6());
-        inventoryInfo.setM_Str7(inventoryItemDetail.getM_Str7());
-        inventoryInfo.setM_Str8(inventoryItemDetail.getM_Str8());
-        inventoryInfo.setM_Str9(inventoryItemDetail.getM_Str9());
-        inventoryInfo.setM_Str10(inventoryItemDetail.getM_Str10());
+        updatedMap.put("comments", inventoryItemDetail.getComments());
+        updatedMap.put("m_Str1", inventoryItemDetail.getM_Str1());
+        updatedMap.put("m_Str2", inventoryItemDetail.getM_Str2());
+        updatedMap.put("m_Str3", inventoryItemDetail.getM_Str3());
+        updatedMap.put("m_Str4", inventoryItemDetail.getM_Str4());
+        updatedMap.put("m_Str5", inventoryItemDetail.getM_Str5());
+        updatedMap.put("m_Str6", inventoryItemDetail.getM_Str6());
+        updatedMap.put("m_Str7", inventoryItemDetail.getM_Str7());
+        updatedMap.put("m_Str8", inventoryItemDetail.getM_Str8());
+        updatedMap.put("m_Str9", inventoryItemDetail.getM_Str9());
+        updatedMap.put("m_Str10", inventoryItemDetail.getM_Str10());
+        updatedMap.put("m_Str11", inventoryItemDetail.getM_Str11());
+        updatedMap.put("m_Str12", inventoryItemDetail.getM_Str12());
+        updatedMap.put("m_Str13", inventoryItemDetail.getM_Str13());
+        updatedMap.put("m_Str14", inventoryItemDetail.getM_Str14());
 
-        inventoryInfo.setM_Str11(inventoryItemDetail.getM_Str11());
-        inventoryInfo.setM_Str12(inventoryItemDetail.getM_Str12());
-        inventoryInfo.setM_Str13(inventoryItemDetail.getM_Str13());
-        inventoryInfo.setM_Str14(inventoryItemDetail.getM_Str14());
-        inventoryInfo.setM_Str15(inventoryItemDetail.getM_Str15());
-        inventoryInfo.setM_Str16(inventoryItemDetail.getM_Str16());
-        inventoryInfo.setM_Str17(inventoryItemDetail.getM_Str17());
-        inventoryInfo.setM_Str18(inventoryItemDetail.getM_Str18());
-        inventoryInfo.setM_Str19(inventoryItemDetail.getM_Str19());
-        inventoryInfo.setM_Str20(inventoryItemDetail.getM_Str20());
+        updatedMap.put("m_Str15", inventoryItemDetail.getM_Str15());
+        updatedMap.put("m_Str16", inventoryItemDetail.getM_Str16());
+        updatedMap.put("m_Str17", inventoryItemDetail.getM_Str17());
+        updatedMap.put("m_Str18", inventoryItemDetail.getM_Str18());
+        updatedMap.put("m_Str19", inventoryItemDetail.getM_Str19());
+        updatedMap.put("m_Str20", inventoryItemDetail.getM_Str20());
+        updatedMap.put("m_Str21", inventoryItemDetail.getM_Str21());
+        updatedMap.put("m_Str22", inventoryItemDetail.getM_Str22());
+        updatedMap.put("m_Str23", inventoryItemDetail.getM_Str23());
+        updatedMap.put("m_Str24", inventoryItemDetail.getM_Str24());
+        updatedMap.put("m_Str25", inventoryItemDetail.getM_Str25());
+        updatedMap.put("m_Str26", inventoryItemDetail.getM_Str26());
+        updatedMap.put("m_Str27", inventoryItemDetail.getM_Str27());
+        updatedMap.put("m_Str28", inventoryItemDetail.getM_Str28());
+        updatedMap.put("m_Str29", inventoryItemDetail.getM_Str29());
+        updatedMap.put("m_Str30", inventoryItemDetail.getM_Str30());
+        updatedMap.put("m_Str31", inventoryItemDetail.getM_Str31());
+        updatedMap.put("m_Str32", inventoryItemDetail.getM_Str32());
+        updatedMap.put("m_Str33", inventoryItemDetail.getM_Str33());
+        updatedMap.put("m_Str34", inventoryItemDetail.getM_Str34());
+        updatedMap.put("m_Str35", inventoryItemDetail.getM_Str35());
+        updatedMap.put("m_Str36", inventoryItemDetail.getM_Str36());
+        updatedMap.put("m_Str37", inventoryItemDetail.getM_Str37());
+        updatedMap.put("m_Str38", inventoryItemDetail.getM_Str38());
+        updatedMap.put("m_Str39", inventoryItemDetail.getM_Str39());
+        updatedMap.put("m_Str40", inventoryItemDetail.getM_Str40());
 
-        inventoryInfo.setM_Str21(inventoryItemDetail.getM_Str21());
-        inventoryInfo.setM_Str22(inventoryItemDetail.getM_Str22());
-        inventoryInfo.setM_Str23(inventoryItemDetail.getM_Str23());
-        inventoryInfo.setM_Str24(inventoryItemDetail.getM_Str24());
-        inventoryInfo.setM_Str25(inventoryItemDetail.getM_Str25());
-        inventoryInfo.setM_Str26(inventoryItemDetail.getM_Str26());
-        inventoryInfo.setM_Str27(inventoryItemDetail.getM_Str27());
-        inventoryInfo.setM_Str28(inventoryItemDetail.getM_Str28());
-        inventoryInfo.setM_Str29(inventoryItemDetail.getM_Str29());
-        inventoryInfo.setM_Str30(inventoryItemDetail.getM_Str30());
+        updatedMap.put("lastModifierId", inventoryItemDetail.getLastModifierId());
+        updatedMap.put("lastModifierName", inventoryItemDetail.getLastModifierName());
 
-        inventoryInfo.setM_Str31(inventoryItemDetail.getM_Str31());
-        inventoryInfo.setM_Str32(inventoryItemDetail.getM_Str32());
-        inventoryInfo.setM_Str33(inventoryItemDetail.getM_Str33());
-        inventoryInfo.setM_Str34(inventoryItemDetail.getM_Str34());
-        inventoryInfo.setM_Str35(inventoryItemDetail.getM_Str35());
-        inventoryInfo.setM_Str36(inventoryItemDetail.getM_Str36());
-        inventoryInfo.setM_Str37(inventoryItemDetail.getM_Str37());
-        inventoryInfo.setM_Str38(inventoryItemDetail.getM_Str38());
-        inventoryInfo.setM_Str39(inventoryItemDetail.getM_Str39());
-        inventoryInfo.setM_Str40(inventoryItemDetail.getM_Str40());
-
-        inventoryInfo.setCreatorId(inventoryItemDetail.getCreatorId());
-        inventoryInfo.setCreatorName(inventoryItemDetail.getCreatorName());
-        inventoryInfo.setLastModifierId(inventoryItemDetail.getLastModifierId());
-        inventoryInfo.setLastModifierName(inventoryItemDetail.getLastModifierName());
-
-        if (inventoryItemDetail.getCreationTime() != null) {
-            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getCreationTime()), ZoneOffset.of("+8"));
-            inventoryInfo.setCreationTime(localDateTime);
-        }
 
         if (inventoryItemDetail.getLastModificationTime() != null) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
-            inventoryInfo.setLastModificationTime(localDateTime);
+            updatedMap.put("lastModificationTime", localDateTime);
+        }
+
+        if (inventoryItemDetail.getProductTime() != null) {
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getProductTime()), ZoneOffset.of("+8"));
+            updatedMap.put("productTime", localDateTime);
         }
         if (inventoryItemDetail.getInboundTime() != null) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getInboundTime()), ZoneOffset.of("+8"));
-            inventoryInfo.setInboundTime(localDateTime);
+            updatedMap.put("inboundTime", localDateTime);
         }
-        if (inventoryItemDetail.getProductTime() != null) {
-            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getProductTime()), ZoneOffset.of("+8"));
-            inventoryInfo.setProductTime(localDateTime);
-        }
-
-        inventoryInfo.setPositionCode(inventoryItemDetail.getPositionCode());
-        inventoryInfo.setPositionLevel(inventoryItemDetail.getPositionLevel());
-        inventoryInfo.setPackageMethod(inventoryItemDetail.getPackageMethod());
-
+        updatedMap.put("positionCode", inventoryItemDetail.getPositionCode());
+        updatedMap.put("positionLevel", inventoryItemDetail.getPositionLevel());
+        updatedMap.put("packageMethod", inventoryItemDetail.getPackageMethod());
+        return updatedMap;
     }
 
 
