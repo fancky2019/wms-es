@@ -1392,7 +1392,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         } else {
             log.info("update table - {} id - {} fail", table, id);
         }
-        int n = 0;
+        log.info("updateInventoryInfo complete {} - {}",table ,id );
+
     }
 
     public void updateInventoryInfoBatch(String id, Map<String, Object> fields, String table) {

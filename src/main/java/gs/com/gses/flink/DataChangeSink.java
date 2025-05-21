@@ -38,20 +38,40 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 
         InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
 
+//        switch (value.getTableName()) {
+//            case "Location_copy1":
+//                inventoryInfoService.updateByLocation(value);
+//                break;
+//            case "Laneway_copy1":
+//                inventoryInfoService.updateByLaneway(value);
+//                break;
+//            case "Inventory_copy1":
+//                inventoryInfoService.updateByInventory(value);
+//                break;
+//            case "InventoryItem_copy1":
+//                inventoryInfoService.updateByInventoryItem(value);
+//                break;
+//            case "InventoryItemDetail_copy1":
+//                inventoryInfoService.updateByInventoryItemDetail(value);
+//                break;
+//            default:
+//                break;
+//        }
+
         switch (value.getTableName()) {
-            case "Location_copy1":
+            case "Location":
                 inventoryInfoService.updateByLocation(value);
                 break;
-            case "Laneway_copy1":
+            case "Laneway":
                 inventoryInfoService.updateByLaneway(value);
                 break;
-            case "Inventory_copy1":
+            case "Inventory":
                 inventoryInfoService.updateByInventory(value);
                 break;
-            case "InventoryItem_copy1":
+            case "InventoryItem":
                 inventoryInfoService.updateByInventoryItem(value);
                 break;
-            case "InventoryItemDetail_copy1":
+            case "InventoryItemDetail":
                 inventoryInfoService.updateByInventoryItemDetail(value);
                 break;
             default:

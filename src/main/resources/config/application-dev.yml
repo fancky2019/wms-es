@@ -175,10 +175,10 @@ sbp:
     databaseList:
       - wms_liku
     tableList:
-      - dbo.InventoryItemDetail_copy1
-      - dbo.InventoryItem_copy1
-      - dbo.Inventory_copy1
-      - dbo.Location_copy1
+      - dbo.InventoryItemDetail
+      - dbo.InventoryItem
+      - dbo.Inventory
+      - dbo.Location
       - dbo.Laneway_copy1
     hostname: 10.100.200.43
     port: 1433

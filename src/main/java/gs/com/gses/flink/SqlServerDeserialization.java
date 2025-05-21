@@ -1,8 +1,10 @@
 package gs.com.gses.flink;
 
+import com.esotericsoftware.minlog.Log;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.debezium.data.Envelope;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.cdc.connectors.shaded.org.apache.kafka.connect.source.SourceRecord;
 import org.apache.flink.cdc.debezium.DebeziumDeserializationSchema;
@@ -19,6 +21,7 @@ import java.util.List;
  * @version 1.0
  * @description: mysql消息读取自定义序列化
  */
+@Slf4j
 public class SqlServerDeserialization implements DebeziumDeserializationSchema<DataChangeInfo> {
 
     public static final String TS_MS = "ts_ms";
@@ -141,5 +144,6 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
 //        dataChangeInfo.setChangeTime(Optional.ofNullable(struct.get(TS_MS)).map(x -> Long.parseLong(x.toString())).orElseGet(System::currentTimeMillis));
         //7.输出数据
         collector.collect(dataChangeInfo);
+        log.info("receive {} - {} - {} ",dataChangeInfo.getTableName(),dataChangeInfo.getId(),dataChangeInfo.getEventType());
     }
 }
