@@ -11,12 +11,15 @@ import gs.com.gses.service.ShipOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 
 @RestController
 @RequestMapping("/shipOrder")
 public class ShipOrderController {
+//    org.apache.flink.util.InstantiationUtil
 
+//    org.apache.flink.api.common.ExecutionConfig
     @Autowired
     private ShipOrderService shipOrderService;
 
@@ -38,9 +41,8 @@ public class ShipOrderController {
     }
 
     @PostMapping("/allocateDesignatedShipOrders")
-    public MessageResult<Void> allocateDesignatedShipOrders(@RequestBody ShipOrderRequest request) throws Exception {
-        shipOrderService.allocateDesignatedShipOrders(request);
-        return MessageResult.success();
+    public MessageResult<HashMap<String, String>> allocateDesignatedShipOrders(@RequestBody ShipOrderRequest request) throws Exception {
+        return MessageResult.success(shipOrderService.allocateDesignatedShipOrders(request));
     }
 
 }

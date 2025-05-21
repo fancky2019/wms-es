@@ -295,10 +295,10 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
     }
 
     @Override
-    public void allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception {
+    public HashMap<String, String> allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception {
         StopWatch stopWatch = new StopWatch("allocateDesignatedShipOrders");
         stopWatch.start("allocateDesignatedShipOrders");
-
+        HashMap<String, String> shipOrderPreparePercentMap = new HashMap<>();
 //        ShipOrderRequest request = new ShipOrderRequest();
         request.setSearchCount(false);
 //        request.setShipOrderIdList(shipOrderIdList);
@@ -312,7 +312,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 
         if (CollectionUtils.isEmpty(list)) {
             log.info("ShipOrder data is empty");
-            return;
+            return shipOrderPreparePercentMap;
         }
 
         List<String> shipOrderCodeList = list.stream().map(p -> p.getXCode()).distinct().collect(Collectors.toList());
@@ -321,7 +321,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         List<ShipOrderItem> shipOrderItemList = shipOrderItemService.getByShipOrderIds(request.getShipOrderIdList());
 //        Map<Integer, ShipOrderItem> shipOrderItemMap = list.stream().collect(Collectors.toMap(ShipOrderItem::getId, item -> item));
         Map<Long, List<ShipOrderItem>> shipOrderItemMap = shipOrderItemList.stream().collect(Collectors.groupingBy(ShipOrderItem::getShipOrderId));
-        HashMap<String, String> shipOrderPreparePercentMap = new HashMap<>();
+
         for (ShipOrderResponse shipOrderResponse : list) {
 
             List<ShipOrderItem> currentShipOrderItemList = shipOrderItemMap.get(shipOrderResponse.getId());
@@ -390,7 +390,9 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
             long enoughCount = shipOrderItemInventoryMap.values().stream().filter(p -> p.compareTo(0) > 0).count();
 
             double result = (double) enoughCount / total;
-            DecimalFormat df = new DecimalFormat("0.0000");  // 四位小数
+            result *= 100;
+            //两位小数
+            DecimalFormat df = new DecimalFormat("0.00");
             String formatted = df.format(result);
             shipOrderPreparePercentMap.put(shipOrderResponse.getId().toString(), formatted);
             int m = 0;
@@ -404,6 +406,8 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 //        stopWatch.start("BatchInsert_Trace2");
         long mills = stopWatch.getTotalTimeMillis();
         log.info("allocate complete {} ms", mills);
+
+        return shipOrderPreparePercentMap;
     }
 
 

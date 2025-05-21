@@ -8,6 +8,7 @@ import gs.com.gses.model.request.ShipOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -22,5 +23,5 @@ public interface ShipOrderService extends IService<ShipOrder> {
 
     void allocate() throws Exception;
 
-    void allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception;
+    HashMap<String, String> allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception;
 }

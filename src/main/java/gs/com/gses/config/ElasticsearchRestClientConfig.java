@@ -64,9 +64,10 @@ public class ElasticsearchRestClientConfig extends AbstractElasticsearchConfigur
 //            "900n+h6GhcDPC0ARbzGNr9lB64tsQTE5+ZKxpeORiNwUQWqhK5jKv9iCyeQS/4qv\n" +
 //            "N7LYCILrsXsHbk2gic0C8K38jv6jfOndwgBQs4GP";
 
-    @Value("${sbp.ESCertPath}")
-    private String eSCertPath;
 
+//    @Value("${sbp.ESCertPath}")
+//    private String eSCertPath;
+//
     @Value("${sbp.hostAndPort}")
     private String hostAndPort;
 
@@ -76,24 +77,28 @@ public class ElasticsearchRestClientConfig extends AbstractElasticsearchConfigur
     public RestHighLevelClient elasticsearchClient() {
 
 
-        File file = new File(eSCertPath);
-        List<String> lines = new ArrayList<>();
-        String certificateBase64 = "";
-        try {
-            lines = FileUtils.readLines(file, "UTF-8");
-            StringBuilder stringBuilder = new StringBuilder();
-           for(int i=0;i<lines.size();i++)
-           {
-               if(i==0||i==lines.size()-1)
-               {
-                   continue;
-               }
-               stringBuilder.append(lines.get(i));
-           }
-            certificateBase64 = stringBuilder.toString();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        File file = new File(eSCertPath);
+//        List<String> lines = new ArrayList<>();
+//        String certificateBase64 = "";
+//        try {
+//            lines = FileUtils.readLines(file, "UTF-8");
+//            StringBuilder stringBuilder = new StringBuilder();
+//           for(int i=0;i<lines.size();i++)
+//           {
+//               if(i==0||i==lines.size()-1)
+//               {
+//                   continue;
+//               }
+//               stringBuilder.append(lines.get(i));
+//           }
+//            certificateBase64 = stringBuilder.toString();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+
+
+
+
 
         final ClientConfiguration clientConfiguration = ClientConfiguration.builder()
                //127 连不上就换IP 127.0.0.1   192.168.8.85
