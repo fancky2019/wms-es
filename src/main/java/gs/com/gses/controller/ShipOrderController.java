@@ -37,4 +37,10 @@ public class ShipOrderController {
         return MessageResult.success();
     }
 
+    @PostMapping("/allocateDesignatedShipOrders")
+    public MessageResult<Void> allocateDesignatedShipOrders(@RequestBody ShipOrderRequest request) throws Exception {
+        shipOrderService.allocateDesignatedShipOrders(request);
+        return MessageResult.success();
+    }
+
 }

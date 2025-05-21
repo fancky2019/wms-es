@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class InventoryInfoRequest  extends EsRequestPage{
+public class InventoryInfoRequest extends RequestPage {
     private static final long serialVersionUID = 1L;
 
     //region location

@@ -6,6 +6,6 @@ import java.io.Serializable;
 
 @Data
 public class Page implements Serializable {
-    private Integer pageSize;
-    private Integer pageIndex;
+    private Integer pageSize=10;
+    private Integer pageIndex=1;
 }

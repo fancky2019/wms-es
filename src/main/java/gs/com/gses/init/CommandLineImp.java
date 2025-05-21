@@ -58,7 +58,10 @@ public class CommandLineImp implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-
+        if (!flinkConfig.getEnable()) {
+            log.info("flink is not enable");
+            return;
+        }
         System.setProperty("java.io.tmpdir", flinkConfig.getTmpdir());  // 设置临时目录
 //       // 先删除旧的历史文件再启动任务
 //        try {
@@ -177,7 +180,7 @@ public class CommandLineImp implements CommandLineRunner {
 
         // Flink 1.15+ 设置 Checkpoint 配置数据获取全量、增量
         env.setStateBackend(new HashMapStateBackend());
-        env.getCheckpointConfig().setCheckpointStorage("file:///"+flinkConfig.getCheckpointStoragePath());//file:///D:/flinkcdc/checkpoints
+        env.getCheckpointConfig().setCheckpointStorage("file:///" + flinkConfig.getCheckpointStoragePath());//file:///D:/flinkcdc/checkpoints
 
         //当前 checkpoint 成功后，Flink 至少等待这个时间，再开始下一个 checkpoint。
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);

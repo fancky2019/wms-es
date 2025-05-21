@@ -63,8 +63,9 @@
         <logger name="org.apache" level="INFO"/>
         <logger name="io.netty.channel.nio" level="INFO"/>
         <logger name="io.debezium" level="INFO"/>
-        <logger name=" com.ververica.cdc" level="INFO"/>
-        <Logger name="org.elasticsearch.client" level="INFO" additivity="false">
+        <logger name="com.ververica.cdc" level="INFO"/>
+        <Logger name="org.elasticsearch.client" level="INFO" additivity="false"/>
+        <Logger name="org.apache.flink" level="INFO" additivity="false">
 <!--            <AppenderRef ref="Console"/>-->
         </Logger>
 

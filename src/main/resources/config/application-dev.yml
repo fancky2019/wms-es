@@ -169,7 +169,9 @@ sbp:
   ordermigratedbtoolurl: http://localhost:8101
   ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
   hostAndPort: 10.100.200.43:9200
+  initCache: false
   flink:
+    enable: true
     databaseList:
       - wms_liku
     tableList:

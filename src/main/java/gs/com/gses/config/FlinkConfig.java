@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+
 import java.util.List;
 
 @Configuration
@@ -12,6 +13,7 @@ import java.util.List;
 @Data
 public class FlinkConfig {
 
+    private Boolean enable;
     private String hostname;
 
     private Integer port = 1433;

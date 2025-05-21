@@ -87,10 +87,17 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
             }
         }
 
+        if (CollectionUtils.isNotEmpty(request.getShipOrderIdList())) {
+            queryWrapper.in("Id", request.getShipOrderIdList());
+        }
+
         // 创建分页对象 (当前页, 每页大小)
         Page<ShipOrder> page = new Page<>(request.getPageIndex(), request.getPageSize());
-        // 关键设置：不执行 COUNT 查询
-//        page.setSearchCount(false);
+        if (request.getSearchCount() != null) {
+            // 关键设置：不执行 COUNT 查询
+            page.setSearchCount(request.getSearchCount());
+        }
+
         // 执行分页查询, sqlserver 使用通用表达式 WITH selectTemp AS
         IPage<ShipOrder> shipOrderPage = this.baseMapper.selectPage(page, queryWrapper);
 
@@ -262,6 +269,118 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
                     }
                 }
                 boolean enough = currentAllocatedPackageQuantity.compareTo(item.getRequiredPkgQuantity()) >= 0;
+                int zeroOne = enough ? 1 : 0;
+                shipOrderItemInventoryMap.put(item.getId(), zeroOne);
+                BigDecimal materialAllocatedPackageQuantity = allocatedPackageQuantity.add(currentAllocatedPackageQuantity);
+                allocatedPackageQuantityMap.put(item.getMaterialId(), materialAllocatedPackageQuantity);
+            }
+            long total = shipOrderItemInventoryMap.keySet().size();
+            long enoughCount = shipOrderItemInventoryMap.values().stream().filter(p -> p.compareTo(0) > 0).count();
+
+            double result = (double) enoughCount / total;
+            DecimalFormat df = new DecimalFormat("0.0000");  // 四位小数
+            String formatted = df.format(result);
+            shipOrderPreparePercentMap.put(shipOrderResponse.getId().toString(), formatted);
+            int m = 0;
+        }
+
+        HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
+        redisTemplate.delete(shipOrderPreparePercent);
+        hashOps.putAll(shipOrderPreparePercent, shipOrderPreparePercentMap);
+
+        stopWatch.stop();
+//        stopWatch.start("BatchInsert_Trace2");
+        long mills = stopWatch.getTotalTimeMillis();
+        log.info("allocate complete {} ms", mills);
+    }
+
+    @Override
+    public void allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception {
+        StopWatch stopWatch = new StopWatch("allocateDesignatedShipOrders");
+        stopWatch.start("allocateDesignatedShipOrders");
+
+//        ShipOrderRequest request = new ShipOrderRequest();
+        request.setSearchCount(false);
+//        request.setShipOrderIdList(shipOrderIdList);
+
+        PageData<ShipOrderResponse> pageData = getShipOrderPage(request);
+
+        List<ShipOrderResponse> list = pageData.getData();
+        list = list.stream().filter(p -> p.getXStatus() == 1).collect(Collectors.toList());
+
+//        list = list.stream().filter(p -> p.getId().equals(674145933246534L)).collect(Collectors.toList());
+
+        if (CollectionUtils.isEmpty(list)) {
+            log.info("ShipOrder data is empty");
+            return;
+        }
+
+        List<String> shipOrderCodeList = list.stream().map(p -> p.getXCode()).distinct().collect(Collectors.toList());
+        log.info("shipOrderCode:{}", String.join(",", shipOrderCodeList));
+
+        List<ShipOrderItem> shipOrderItemList = shipOrderItemService.getByShipOrderIds(request.getShipOrderIdList());
+//        Map<Integer, ShipOrderItem> shipOrderItemMap = list.stream().collect(Collectors.toMap(ShipOrderItem::getId, item -> item));
+        Map<Long, List<ShipOrderItem>> shipOrderItemMap = shipOrderItemList.stream().collect(Collectors.groupingBy(ShipOrderItem::getShipOrderId));
+        HashMap<String, String> shipOrderPreparePercentMap = new HashMap<>();
+        for (ShipOrderResponse shipOrderResponse : list) {
+
+            List<ShipOrderItem> currentShipOrderItemList = shipOrderItemMap.get(shipOrderResponse.getId());
+            List<Long> materialIdList = currentShipOrderItemList.stream()
+                    .map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
+            InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
+            inventoryInfoRequest.setMaterialIdList(materialIdList);
+            HashMap<Long, List<InventoryInfo>> materialInventoryInfoMap = this.inventoryInfoService.getDefaultAllocatedInventoryInfoList(inventoryInfoRequest);
+            HashMap<Long, BigDecimal> allocatedPackageQuantityMap = new HashMap<>();
+            HashMap<Long, Integer> shipOrderItemInventoryMap = new HashMap<>();
+            for (ShipOrderItem item : currentShipOrderItemList) {
+                List<InventoryInfo> materialInventoryInfoList = materialInventoryInfoMap.get(item.getMaterialId());
+                if (CollectionUtils.isEmpty(materialInventoryInfoList)) {
+                    log.info("materialId:{} can't get available inventory", item.getMaterialId());
+                    continue;
+                }
+
+                Map<Long, BigDecimal> materialPackQuantity = materialInventoryInfoList.stream()
+                        .collect(Collectors.groupingBy(
+                                InventoryInfo::getMaterialId,
+                                Collectors.reducing(
+                                        BigDecimal.ZERO,
+                                        InventoryInfo::getPackageQuantity,
+                                        BigDecimal::add
+                                )
+                        ));
+                Long materialId = item.getMaterialId();
+                //当前分配数量
+                BigDecimal currentAllocatedPackageQuantity = BigDecimal.ZERO;
+                //库存总数量
+                BigDecimal inventoryPackageQuantity = materialPackQuantity.get(materialId);
+                if (inventoryPackageQuantity == null) {
+                    inventoryPackageQuantity = BigDecimal.ZERO;
+                }
+                //已分配数量
+                BigDecimal allocatedPackageQuantity = BigDecimal.ZERO;
+                //
+                BigDecimal itemNeedAllocatedPackageQuantity = item.getRequiredPkgQuantity().subtract(item.getAlloactedPkgQuantity());
+                //是否分配过
+                if (allocatedPackageQuantityMap.containsKey(materialId)) {
+                    allocatedPackageQuantity = allocatedPackageQuantityMap.get(item.getMaterialId());
+                    BigDecimal leftPackageQuantity = inventoryPackageQuantity.subtract(allocatedPackageQuantity);
+                    //还有剩余数量
+                    if (leftPackageQuantity.compareTo(BigDecimal.ZERO) >= 0) {
+                        //剩余数量大于需求数量
+                        if (leftPackageQuantity.compareTo(itemNeedAllocatedPackageQuantity) >= 0) {
+                            currentAllocatedPackageQuantity = itemNeedAllocatedPackageQuantity;
+                        } else {
+                            currentAllocatedPackageQuantity = inventoryPackageQuantity;
+                        }
+                    }
+                } else {
+                    if (inventoryPackageQuantity.compareTo(itemNeedAllocatedPackageQuantity) >= 0) {
+                        currentAllocatedPackageQuantity = itemNeedAllocatedPackageQuantity;
+                    } else {
+                        currentAllocatedPackageQuantity = inventoryPackageQuantity;
+                    }
+                }
+                boolean enough = currentAllocatedPackageQuantity.compareTo(itemNeedAllocatedPackageQuantity) >= 0;
                 int zeroOne = enough ? 1 : 0;
                 shipOrderItemInventoryMap.put(item.getId(), zeroOne);
                 BigDecimal materialAllocatedPackageQuantity = allocatedPackageQuantity.add(currentAllocatedPackageQuantity);

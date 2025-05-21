@@ -1,6 +1,11 @@
 package gs.com.gses.model.request;
 
-public class ShipOrderRequest  extends EsRequestPage{
-    private static final long serialVersionUID = 1L;
+import lombok.Data;
 
+import java.util.List;
+
+@Data
+public class ShipOrderRequest extends RequestPage {
+    private static final long serialVersionUID = 1L;
+    private List<Long> shipOrderIdList;
 }

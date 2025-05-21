@@ -21,4 +21,6 @@ public interface ShipOrderService extends IService<ShipOrder> {
     List<ShipOrderResponse> getShipOrderList(ShipOrderRequest request);
 
     void allocate() throws Exception;
+
+    void allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception;
 }

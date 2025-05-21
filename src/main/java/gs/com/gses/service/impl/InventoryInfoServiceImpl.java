@@ -94,6 +94,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     private ObjectMapper objectMapper;
 
     @Autowired
+    private ObjectMapper upperObjectMapper;
+
+
+    @Autowired
     private RedisTemplate redisTemplate;
 
     private static String SEPARATOR = "|";
@@ -945,7 +949,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //        String json = objectMapper.writeValueAsString(detail);
         InventoryItemDetail changedInventoryItemDetail = null;
         try {
-            changedInventoryItemDetail = objectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
+            changedInventoryItemDetail = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
             //更新时间
             if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -967,27 +971,28 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     return;
                 }
             }
+
+
+            switch (dataChangeInfo.getEventType()) {
+                case "CREATE":
+                    addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail));
+                    break;
+                case "UPDATE":
+                    updateInventoryInfoOfDetail(changedInventoryItemDetail, dataChangeInfo);
+                    break;
+                case "DELETE":
+                    deletedByInventoryItemDetail(changedInventoryItemDetail);
+                    break;
+                case "READ":
+                    break;
+                default:
+                    break;
+            }
         } catch (Exception ex) {
             log.error("", ex);
-            throw ex;
+//            throw ex;
         }
 
-
-        switch (dataChangeInfo.getEventType()) {
-            case "CREATE":
-                addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail));
-                break;
-            case "UPDATE":
-                updateInventoryInfoOfDetail(changedInventoryItemDetail, dataChangeInfo);
-                break;
-            case "DELETE":
-                deletedByInventoryItemDetail(changedInventoryItemDetail);
-                break;
-            case "READ":
-                break;
-            default:
-                break;
-        }
     }
 
     @Override
@@ -995,7 +1000,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         InventoryItem changedInventoryItem = null;
         try {
-            changedInventoryItem = objectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItem.class);
+            changedInventoryItem = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItem.class);
             //更新时间
             if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -1017,27 +1022,28 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     return;
                 }
             }
+
+
+            switch (dataChangeInfo.getEventType()) {
+                case "CREATE":
+                    // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
+                    break;
+                case "UPDATE":
+                    updateInventoryInfoOfItem(changedInventoryItem, dataChangeInfo);
+                    break;
+                case "DELETE":
+
+                    break;
+                case "READ":
+                    break;
+                default:
+                    break;
+            }
         } catch (Exception ex) {
             log.error("", ex);
-            throw ex;
+//            throw ex;
         }
 
-
-        switch (dataChangeInfo.getEventType()) {
-            case "CREATE":
-                // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
-                break;
-            case "UPDATE":
-                updateInventoryInfoOfItem(changedInventoryItem, dataChangeInfo);
-                break;
-            case "DELETE":
-
-                break;
-            case "READ":
-                break;
-            default:
-                break;
-        }
     }
 
     @Override
@@ -1045,7 +1051,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         Inventory changedInventory = null;
         try {
-            changedInventory = objectMapper.readValue(dataChangeInfo.getAfterData(), Inventory.class);
+            changedInventory = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Inventory.class);
             //更新时间
             if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -1067,24 +1073,24 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     return;
                 }
             }
+
+
+            switch (dataChangeInfo.getEventType()) {
+                case "CREATE":
+                    break;
+                case "UPDATE":
+                    updateInventoryInfoOfInventory(changedInventory, dataChangeInfo);
+                    break;
+                case "DELETE":
+                    break;
+                case "READ":
+                    break;
+                default:
+                    break;
+            }
         } catch (Exception ex) {
             log.error("", ex);
-            throw ex;
-        }
-
-
-        switch (dataChangeInfo.getEventType()) {
-            case "CREATE":
-                break;
-            case "UPDATE":
-                updateInventoryInfoOfInventory(changedInventory, dataChangeInfo);
-                break;
-            case "DELETE":
-                break;
-            case "READ":
-                break;
-            default:
-                break;
+//            throw ex;
         }
     }
 
@@ -1092,7 +1098,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     public void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
         Location changedLocation = null;
         try {
-            changedLocation = objectMapper.readValue(dataChangeInfo.getAfterData(), Location.class);
+            changedLocation = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Location.class);
             //更新时间
             if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -1113,26 +1119,26 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     return;
                 }
             }
+
+
+            switch (dataChangeInfo.getEventType()) {
+                case "CREATE":
+                    // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
+                    break;
+                case "UPDATE":
+                    updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
+                    break;
+                case "DELETE":
+
+                    break;
+                case "READ":
+                    break;
+                default:
+                    break;
+            }
         } catch (Exception ex) {
             log.error("", ex);
-            throw ex;
-        }
-
-
-        switch (dataChangeInfo.getEventType()) {
-            case "CREATE":
-                // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
-                break;
-            case "UPDATE":
-                updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
-                break;
-            case "DELETE":
-
-                break;
-            case "READ":
-                break;
-            default:
-                break;
+//            throw ex;
         }
     }
 
@@ -1141,7 +1147,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         Laneway changedILaneway = null;
         try {
-            changedILaneway = objectMapper.readValue(dataChangeInfo.getAfterData(), Laneway.class);
+            changedILaneway = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Laneway.class);
             //更新时间
             if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -1181,7 +1187,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             }
         } catch (Exception ex) {
             log.error("", ex);
-            throw ex;
+//            throw ex;
         }
     }
 
@@ -1277,7 +1283,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
                 .withQuery(boolQueryBuilder)
-                .withPageable(PageRequest.of(0, 10001)) // 返回前100条（page=0, size=100）
+                .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
                 .withSourceFilter(new SourceFilter() {
                     //返回的字段
                     @Override
@@ -1289,6 +1295,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                         }
 
                     }
+
                     //不需要返回的字段
                     @Override
                     public String[] getExcludes() {

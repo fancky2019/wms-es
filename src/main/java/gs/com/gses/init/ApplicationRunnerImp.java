@@ -32,15 +32,22 @@ public class ApplicationRunnerImp implements ApplicationRunner {
 
     @Autowired
     private BasicInfoCacheService basicInfoCacheService;
+
+
+    @Value("${sbp.initCache}")
+    private Boolean initCache;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
 
         LOGGER.info("ApplicationRunnerImp");
-        log.info("threadId - {}",Thread.currentThread().getId());
-
-        return;
-//        basicInfoCacheService.initBasicInfoCache();
-//        log.info("初始化缓存完成");
+        log.info("threadId - {}", Thread.currentThread().getId());
+        if (!initCache) {
+            log.info("Don't run initCache");
+            return;
+        }
+        basicInfoCacheService.initBasicInfoCache();
+        log.info("ApplicationRunnerImp Complete");
 //        mqttConsume.init();
 
     }
