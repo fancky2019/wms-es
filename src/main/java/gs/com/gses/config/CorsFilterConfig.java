@@ -1,5 +1,6 @@
 package gs.com.gses.config;
 
+import org.elasticsearch.core.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -48,17 +49,30 @@ public class CorsFilterConfig {
     // 解决原理：一个http请求，先走filter，到达servlet后才进行拦截器的处理，所以我们可以把cors放在filter里，就可以优先于权限拦截器执行。
     @Bean
     public CorsFilter corsFilter() {
+//        CorsConfiguration config = new CorsConfiguration();
+//        config.addAllowedOrigin("*");
+//        config.setAllowCredentials(true);
+//        config.addAllowedMethod("*");
+//        config.addAllowedHeader("*");
+//        //暴露哪些头部信息（因为跨域访问默认不能获取全部头部信息）,不然前端获取不到头部信息
+//        config.addExposedHeader("token");
+//        config.addExposedHeader("RedirectUrl");
+//        UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
+//        configSource.registerCorsConfiguration("/**", config);
+//        return new CorsFilter(configSource);
+
+
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOrigin("*");
+        // 使用 allowedOriginPatterns 替代 allowedOrigins
+        config.setAllowedOriginPatterns(List.of("*")); // 或者具体的前端地址如 "http://localhost:8080"
         config.setAllowCredentials(true);
-        config.addAllowedMethod("*");
-        config.addAllowedHeader("*");
-        //暴露哪些头部信息（因为跨域访问默认不能获取全部头部信息）,不然前端获取不到头部信息
-        config.addExposedHeader("token");
-        config.addExposedHeader("RedirectUrl");
-        UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
-        configSource.registerCorsConfiguration("/**", config);
-        return new CorsFilter(configSource);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("token", "RedirectUrl"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
     }
 
 

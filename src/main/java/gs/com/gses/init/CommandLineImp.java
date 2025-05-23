@@ -144,6 +144,7 @@ public class CommandLineImp implements CommandLineRunner {
 //                        .deserializer(new JsonDebeziumDeserializationSchema())
                         .deserializer(new SqlServerDeserialization())
 //                        .startupOptions(StartupOptions.initial())
+                        //latest ： 程序启动后最新的变更，启动前的变更捕捉不到
                         .startupOptions(StartupOptions.latest())  // 改成 latest()  initial()
 
 

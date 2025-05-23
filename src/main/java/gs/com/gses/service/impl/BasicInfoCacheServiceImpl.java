@@ -1,19 +1,29 @@
 package gs.com.gses.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.service.*;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.PathVariable;
 
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -44,6 +54,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Autowired
     private RedisTemplate redisTemplate;
 
+    @Autowired
+    private RedissonClient redissonClient;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public static final String locationPrefix = "Location";
     public static final String lanewayPrefix = "Laneway";
@@ -52,6 +67,9 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     public static final String warehousePrefix = "Warehouse";
     public static final String orgnizationPrefix = "Orgnization";
     public static final String packageUnitPrefix = "PackageUnit";
+    public static final String DEMO_PRODUCT_PREFIX = "DemoProduct:";
+    //__NULL__
+    public static final String EMPTY_VALUE = "-1@.EmptyValue";
 
     @Async("threadPoolExecutor")
     @Override
@@ -141,11 +159,129 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     }
 
     @Override
+    public void loadFromDbLocation(Long locationId) {
+
+    }
+
+    @Override
+    public void loadFromDbLaneway(Long lanewayId) {
+
+    }
+
+    @Override
+    public void loadFromDbZone(Long zoneId) {
+
+    }
+
+
+    @Override
+    public Material loadFromDbMaterial(Long materialId) throws InterruptedException {
+//        Material material = (Material) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.materialPrefix, inventoryItemDetail.getMaterialId().toString());
+
+//boolean locked = redisTemplate.opsForValue().setIfAbsent("lock:material:123", "1", 10, TimeUnit.SECONDS);
+
+
+        HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
+        String key = materialPrefix;
+        Material material = (Material) hashOps.get(key, materialId.toString());
+        if (material == null) {
+
+            String lockKey = materialPrefix + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            try {
+
+                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                material = this.materialService.getById(materialId);
+                //穿透：设置个空值,待优化
+                if (material != null) {
+                    hashOps.put(key, materialId.toString(), material);
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+                lock.unlock();
+            }
+        }
+        return material;
+    }
+
+    @Override
+    public void loadFromDbWarehouse(Long wareHouseId) {
+
+//        HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
+//        String key = materialPrefix;
+//        Material material = (Material) hashOps.get(key, materialId.toString());
+//        if (material == null) {
+//
+//            String lockKey = materialPrefix + "redisson";
+//            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+//            RLock lock = redissonClient.getLock(lockKey);
+//            try {
+//
+//                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+//                if (!lockSuccessfully) {
+//                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+//
+//                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+////                    throw new Exception("服务器繁忙，稍后重试");
+//                    return null;
+//                }
+//                material = this.materialService.getById(materialId);
+//                //穿透：设置个空值
+//                if (material == null) {
+//                    hashOps.put(key, materialId.toString(),null);
+//                    redisTemplate.expire(key, materialId.toString(),60, TimeUnit.SECONDS);
+//                } else {
+//                    String json = objectMapper.writeValueAsString(productTest);
+//                    //要设置个过期时间
+//                    valueOperations.set(key, json);
+//                    //[100,2000)
+//                    long expireTime = ThreadLocalRandom.current().nextInt(3600, 24 * 3600);
+//                    redisTemplate.expire(key, expireTime, TimeUnit.SECONDS);
+//                }
+//            } catch (Exception e) {
+//                throw e;
+//            } finally {
+//                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+//                //unlock 删除key
+//                //如果锁因超时（leaseTime）会抛异常
+//                lock.unlock();
+//            }
+//
+//
+//        } else {
+//
+//        }
+    }
+
+    @Override
+    public void loadFromDbOrgnization(Long orgnizationd) {
+
+    }
+
+    @Override
+    public void loadFromDbPackageUnit(Long packageUnitId) {
+
+    }
+
+
+    @Override
     public void batch() {
         //        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
         Map<String, Warehouse> warehouseMap = new HashMap<>();
         Map<String, Orgnization> orgnizationMap = new HashMap<>();
-        Map<String, PackageUnit> packageUnitMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+        Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
 
     }
 
@@ -170,5 +306,70 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         basicInfoCacheService.initOrgnization();
         basicInfoCacheService.initPackageUnit();
         log.info("initBasicInfoCache complete");
+    }
+
+    //region redis
+
+    /**
+     * * 雪崩：随机过期时间
+     * * 击穿：分布式锁（表名），没有取到锁，sleep(50)+重试 .获取不到锁，抛异常处理 服务器繁忙，稍后重试
+     * * 穿透：分布式锁（表名）+设置一段时间的null值，没有取到锁，sleep(50)+重试
+     *
+     * @param id
+     * @return
+     * @throws Exception
+     */
+    public String loadFromDb(@PathVariable int id) throws Exception {
+//        ValueOperations<String, String> valueOperations = redisTemplate.opsForValue();
+//        String key = ConfigConst.DEMO_PRODUCT_PREFIX + id;
+//        String val = valueOperations.get(key);
+//        if (StringUtils.isEmpty(val)) {
+//
+//            String lockKey = DEMO_PRODUCT_PREFIX + "redisson";
+//            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+//            RLock lock = redissonClient.getLock(lockKey);
+//            try {
+//
+//                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+//                if (!lockSuccessfully) {
+//                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+//
+//                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+////                    throw new Exception("服务器繁忙，稍后重试");
+//                    return null;
+//                }
+//                BigInteger idB = BigInteger.valueOf(id);
+//                ProductTest productTest = this.getById(idB);
+//                //穿透：设置个空值
+//                if (productTest == null) {
+//                    valueOperations.set(key, EMPTY_VALUE);
+//                    redisTemplate.expire(key, 60, TimeUnit.SECONDS);
+//                } else {
+//                    String json = objectMapper.writeValueAsString(productTest);
+//                    //要设置个过期时间
+//                    valueOperations.set(key, json);
+//                    //[100,2000)
+//                    long expireTime = ThreadLocalRandom.current().nextInt(3600, 24 * 3600);
+//                    redisTemplate.expire(key, expireTime, TimeUnit.SECONDS);
+//                }
+//            } catch (Exception e) {
+//                throw e;
+//            } finally {
+//                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+//                //unlock 删除key
+//                //如果锁因超时（leaseTime）会抛异常
+//                lock.unlock();
+//            }
+//
+//
+//        } else {
+//            if (EMPTY_VALUE.equals(val)) {
+//                return null;
+//            }
+//        }
+//
+//
+//        return val;
+        return "";
     }
 }

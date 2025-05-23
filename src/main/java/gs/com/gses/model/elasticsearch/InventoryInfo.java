@@ -380,7 +380,7 @@ public class InventoryInfo {
      * 过期时间时间戳
      */
     @Transient
-    @Field(name = "inventoryItemExpiredTime", index = true, store = true, type = FieldType.Date, format = DateFormat.custom, pattern = pattern)
+//    @Field(name = "inventoryItemExpiredTime", index = true, store = true, type = FieldType.Date, format = DateFormat.custom, pattern = pattern)
     private LocalDateTime inventoryItemExpiredTime;
 
     /**
@@ -557,7 +557,7 @@ public class InventoryInfo {
      * 过期时间时间戳
      */
     @Transient
-    @Field(name = "expiredTime", index = true, store = true, type = FieldType.Date, format = DateFormat.custom, pattern = pattern)
+//    @Field(name = "expiredTime", index = true, store = true, type = FieldType.Date, format = DateFormat.custom, pattern = pattern)
     private LocalDateTime expiredTime;
 
     /**

@@ -12,6 +12,7 @@ import gs.com.gses.model.request.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.service.*;
+import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -98,14 +99,21 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
     @Autowired
+    private BasicInfoCacheService basicInfoCacheService;
+
+    @Autowired
     private RedisTemplate redisTemplate;
+
+    @Autowired
+    private RedisUtil redisUtil;
+
 
     private static String SEPARATOR = "|";
 
     public static LocalDateTime INIT_INVENTORY_TIME = null;
 
     @Override
-    public void initInventoryInfoFromDb() {
+    public void initInventoryInfoFromDb() throws InterruptedException {
         INIT_INVENTORY_TIME = LocalDateTime.now();
         String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         redisTemplate.opsForValue().set("InitInventoryTime", initInventoryTimeStr);
@@ -122,6 +130,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         createIndexAndMapping(InventoryInfo.class);
 
+        Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
+        Map<String, Laneway> lanewayMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.lanewayPrefix);
+        Map<String, Zone> zoneMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.zonePrefix);
+        Map<String, Warehouse> warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.warehousePrefix);
+        Map<String, Orgnization> orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.orgnizationPrefix);
+
+        Map<String, Material> materialMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
+        Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
 
         long count = this.inventoryItemDetailService.count();
         int step = 1000;
@@ -140,35 +156,41 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             page.setSearchCount(false);
             //page 内部调用selectPage
             IPage<InventoryItemDetail> inventoryItemDetailPage = this.inventoryItemDetailService.page(page);
-            Integer size = addByInventoryItemDetailInfo(inventoryItemDetailPage.getRecords());
-            log.info("inventory_info size:" + size);
+            Integer size = addByInventoryItemDetailInfo(inventoryItemDetailPage.getRecords(),
+                    materialMap,
+                    packageUnitMap,
+                    locationMap,
+                    lanewayMap,
+                    zoneMap,
+                    warehouseMap,
+                    orgnizationMap
+            );
             totalIndexSize += size;
-
+            log.info("totalIndexSize - {} inventory_info - {}", totalIndexSize, size);
         }
 
         stopWatch.stop();
 //        stopWatch.start("BatchInsert_Trace2");
         long mills = stopWatch.getTotalTimeMillis();
         log.info("initInventoryInfoFromDb complete {} ms", mills);
-
         log.info("inventory_info total:" + totalIndexSize);
     }
 
 
-    private Integer addByInventoryItemDetailInfo(List<InventoryItemDetail> inventoryItemDetailList) {
+    private Integer addByInventoryItemDetailInfo(List<InventoryItemDetail> inventoryItemDetailList,
+                                                 Map<String, Material> materialMap,
+                                                 Map<String, PackageUnit> packageUnitMap,
+                                                 Map<String, Location> locationMap,
+                                                 Map<String, Laneway> lanewayMap,
+                                                 Map<String, Zone> zoneMap,
+                                                 Map<String, Warehouse> warehouseMap,
+                                                 Map<String, Orgnization> orgnizationMap) throws InterruptedException {
         List<InventoryInfo> inventoryInfos = new ArrayList<>();
         List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
         List<InventoryItem> inventoryItemList = this.inventoryItemService.listByIds(inventoryItemIdList);
         List<Long> inventoryIdList = inventoryItemList.stream().map(p -> p.getInventoryId()).distinct().collect(Collectors.toList());
         List<Inventory> inventoryList = this.inventoryService.listByIds(inventoryIdList);
 
-        Map<String, Location> locationMap = new HashMap<>();
-        Map<String, Laneway> lanewayMap = new HashMap<>();
-        Map<String, Zone> zoneMap = new HashMap<>();
-//        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
-        Map<String, Warehouse> warehouseMap = new HashMap<>();
-        Map<String, Orgnization> orgnizationMap = new HashMap<>();
-//        Map<String, PackageUnit> packageUnitMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
 
         if (inventoryList.size() == 1) {
             Inventory inventory = inventoryList.get(0);
@@ -191,32 +213,33 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             List<Orgnization> orgnizationList = redisTemplate.opsForHash().multiGet(BasicInfoCacheServiceImpl.orgnizationPrefix, allOrganiztionIdList);
             orgnizationMap = orgnizationList.stream().collect(Collectors.toMap(p -> p.getId().toString(), item -> item));
+            List<String> materialIdList = inventoryItemDetailList.stream().map(p -> p.getMaterialId().toString()).distinct().collect(Collectors.toList());
+            materialMap = redisUtil.getHashEntries(BasicInfoCacheServiceImpl.materialPrefix, materialIdList);
 
-        } else {
-            locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
-            lanewayMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.lanewayPrefix);
-            zoneMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.zonePrefix);
-//        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
-            warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.warehousePrefix);
-            orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.orgnizationPrefix);
-//        Map<String, PackageUnit> packageUnitMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+            List<String> packageUnitMapIdList = inventoryItemDetailList.stream().map(p -> p.getPackageUnitId().toString()).distinct().collect(Collectors.toList());
+            packageUnitMap = redisUtil.getHashEntries(BasicInfoCacheServiceImpl.packageUnitPrefix, packageUnitMapIdList);
+        }
+        if (materialMap == null || materialMap.keySet().isEmpty()) {
+            log.info("addByInventoryItemDetailInfo fail,materialMap is empty");
+            return 0;
         }
 
+
         InventoryInfo inventoryInfo = null;
+        List<Long> materialIdList = inventoryItemDetailList.stream().map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
         for (InventoryItemDetail inventoryItemDetail : inventoryItemDetailList) {
-            if (inventoryItemDetail.getInventoryItemId().equals(509955479831320L)) {
-                int nn = 0;
-            }
             inventoryInfo = new InventoryInfo();
             InventoryItem inventoryItem = inventoryItemList.stream().filter(p -> p.getId().equals(inventoryItemDetail.getInventoryItemId())).findFirst().orElse(null);
             Inventory inventory = inventoryList.stream().filter(p -> p.getId().equals(inventoryItem.getInventoryId())).findFirst().orElse(null);
             Location location = locationMap.get(inventory.getLocationId().toString());
             Laneway laneway = lanewayMap.get(location.getLanewayId().toString());
             Zone zone = zoneMap.get(laneway.getZoneId().toString());
-            // Material material = materialMap.get(inventoryItemDetail.getMaterialId().toString());
+            Material material = materialMap.get(inventoryItemDetail.getMaterialId().toString());
 
-            Material material = (Material) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.materialPrefix, inventoryItemDetail.getMaterialId().toString());
-
+//            Material material = (Material) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.materialPrefix, inventoryItemDetail.getMaterialId().toString());
+            if (material == null) {
+                material = this.basicInfoCacheService.loadFromDbMaterial(inventoryItemDetail.getMaterialId());
+            }
 
             Warehouse warehouse = warehouseMap.get(inventory.getWhid().toString());
 
@@ -226,7 +249,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             }
 
             if (location == null) {
-                log.info("location is null " + inventory.getLocationId().toString());
+                log.error("location is null " + inventory.getLocationId().toString());
                 continue;
             }
             inventoryInfo.setLocationId(location.getId());
@@ -322,7 +345,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setCarton(inventoryItemDetail.getCarton());
             inventoryInfo.setSerialNo(inventoryItemDetail.getSerialNo());
             if (material == null) {
-                log.info("material is null " + inventoryItemDetail.getMaterialId().toString());
+                log.error("material is null " + inventoryItemDetail.getMaterialId().toString());
                 continue;
             }
 
@@ -333,8 +356,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setBatchNo3(inventoryItemDetail.getBatchNo3());
 
             if (inventoryItemDetail.getPackageUnitId() != null) {
-//                    PackageUnit packageUnit = packageUnitMap.get(inventoryItemDetail.getPackageUnitId());
-                PackageUnit packageUnit = (PackageUnit) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.packageUnitPrefix, inventoryItemDetail.getPackageUnitId().toString());
+                PackageUnit packageUnit = packageUnitMap.get(inventoryItemDetail.getPackageUnitId());
+//                PackageUnit packageUnit = (PackageUnit) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.packageUnitPrefix, inventoryItemDetail.getPackageUnitId().toString());
                 if (packageUnit != null) {
                     inventoryInfo.setPackageUnitId(packageUnit.getId());
                     inventoryInfo.setPackageUnitCode(packageUnit.getUnit());
@@ -932,7 +955,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //                    //字段名和对应的值
 //                    Map<String, Object> smap = searchHit.getSourceAsMap();
                     String json = searchHit.getSourceAsString();
-                    InventoryInfo inventoryInfo = objectMapper.readValue(json, InventoryInfo.class);
+                    InventoryInfo inventoryInfo = null;
+                    try {
+                        inventoryInfo = objectMapper.readValue(json, InventoryInfo.class);
+
+                    } catch (Exception ex) {
+                        log.error(json);
+                        throw ex;
+                    }
                     bucketHitList.add(inventoryInfo);
                 }
                 bucketHitsMap.put(Long.valueOf(key.toString()), bucketHitList);
@@ -975,7 +1005,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             switch (dataChangeInfo.getEventType()) {
                 case "CREATE":
-                    addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail));
+                    addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail), null, null, null, null, null, null, null);
                     break;
                 case "UPDATE":
                     updateInventoryInfoOfDetail(changedInventoryItemDetail, dataChangeInfo);
@@ -1026,7 +1056,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             switch (dataChangeInfo.getEventType()) {
                 case "CREATE":
-                    // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
                     break;
                 case "UPDATE":
                     updateInventoryInfoOfItem(changedInventoryItem, dataChangeInfo);
@@ -1123,7 +1152,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             switch (dataChangeInfo.getEventType()) {
                 case "CREATE":
-                    // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
                     break;
                 case "UPDATE":
                     updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
@@ -1173,7 +1201,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             switch (dataChangeInfo.getEventType()) {
                 case "CREATE":
-                    // addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItem));
                     break;
                 case "UPDATE":
                     updateInventoryInfoOfLaneway(changedILaneway, dataChangeInfo);
@@ -1392,7 +1419,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         } else {
             log.info("update table - {} id - {} fail", table, id);
         }
-        log.info("updateInventoryInfo complete {} - {}",table ,id );
+        log.info("updateInventoryInfo complete {} - {}", table, id);
 
     }
 

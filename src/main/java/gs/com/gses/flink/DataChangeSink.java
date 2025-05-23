@@ -7,6 +7,7 @@ import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -77,7 +78,7 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
             default:
                 break;
         }
-
+        MDC.remove("traceId");
     }
 
     /**

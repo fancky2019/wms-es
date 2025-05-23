@@ -6,11 +6,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
-import gs.com.gses.model.entity.Location;
-import gs.com.gses.model.entity.MqMessage;
-import gs.com.gses.model.entity.ShipOrder;
-import gs.com.gses.model.entity.ShipOrderItem;
+import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.InventoryInfoRequest;
 import gs.com.gses.model.request.ShipOrderRequest;
 import gs.com.gses.model.request.Sort;
@@ -23,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -44,8 +43,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder>
-        implements ShipOrderService {
+public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder> implements ShipOrderService {
 
 
     @Autowired
@@ -59,6 +57,9 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 
 
     public static final String shipOrderPreparePercent = "ShipOrderPreparePercent";
+    @Qualifier("objectMapper")
+    @Autowired
+    private ObjectMapper objectMapper;
 
 
     @Override
@@ -117,10 +118,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         return pageData;
     }
 
-    public <T> LambdaQueryWrapper<T> orderByField(
-            LambdaQueryWrapper<T> wrapper,
-            String fieldName,
-            boolean isAsc) {
+    public <T> LambdaQueryWrapper<T> orderByField(LambdaQueryWrapper<T> wrapper, String fieldName, boolean isAsc) {
 
         try {
 //            Method method = LambdaQueryWrapper.class.getMethod(
@@ -128,8 +126,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 //                    SFunction.class );
 
             // 获取实体类字段对应的getter方法
-            String getter = "get" + fieldName.substring(0, 1).toUpperCase()
-                    + fieldName.substring(1);
+            String getter = "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
 
             // 创建方法引用
             SFunction<T, ?> function = entity -> {
@@ -215,8 +212,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         for (ShipOrderResponse shipOrderResponse : list) {
 
             List<ShipOrderItem> currentShipOrderItemList = shipOrderItemMap.get(shipOrderResponse.getId());
-            List<Long> materialIdList = currentShipOrderItemList.stream()
-                    .map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
+            List<Long> materialIdList = currentShipOrderItemList.stream().map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
             InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
             inventoryInfoRequest.setMaterialIdList(materialIdList);
             HashMap<Long, List<InventoryInfo>> materialInventoryInfoMap = this.inventoryInfoService.getDefaultAllocatedInventoryInfoList(inventoryInfoRequest);
@@ -229,15 +225,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
                     continue;
                 }
 
-                Map<Long, BigDecimal> materialPackQuantity = materialInventoryInfoList.stream()
-                        .collect(Collectors.groupingBy(
-                                InventoryInfo::getMaterialId,
-                                Collectors.reducing(
-                                        BigDecimal.ZERO,
-                                        InventoryInfo::getPackageQuantity,
-                                        BigDecimal::add
-                                )
-                        ));
+                Map<Long, BigDecimal> materialPackQuantity = materialInventoryInfoList.stream().collect(Collectors.groupingBy(InventoryInfo::getMaterialId, Collectors.reducing(BigDecimal.ZERO, InventoryInfo::getPackageQuantity, BigDecimal::add)));
                 Long materialId = item.getMaterialId();
                 //当前分配数量
                 BigDecimal currentAllocatedPackageQuantity = BigDecimal.ZERO;
@@ -296,6 +284,9 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 
     @Override
     public HashMap<String, String> allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception {
+
+//        Material material = (Material)null;
+
         StopWatch stopWatch = new StopWatch("allocateDesignatedShipOrders");
         stopWatch.start("allocateDesignatedShipOrders");
         HashMap<String, String> shipOrderPreparePercentMap = new HashMap<>();
@@ -306,7 +297,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         PageData<ShipOrderResponse> pageData = getShipOrderPage(request);
 
         List<ShipOrderResponse> list = pageData.getData();
-        list = list.stream().filter(p -> p.getXStatus() == 1).collect(Collectors.toList());
+        //  list = list.stream().filter(p -> p.getXStatus() == 1).collect(Collectors.toList());
 
 //        list = list.stream().filter(p -> p.getId().equals(674145933246534L)).collect(Collectors.toList());
 
@@ -325,29 +316,29 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         for (ShipOrderResponse shipOrderResponse : list) {
 
             List<ShipOrderItem> currentShipOrderItemList = shipOrderItemMap.get(shipOrderResponse.getId());
-            List<Long> materialIdList = currentShipOrderItemList.stream()
-                    .map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
+            List<Long> materialIdList = currentShipOrderItemList.stream().map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
             InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
             inventoryInfoRequest.setMaterialIdList(materialIdList);
             HashMap<Long, List<InventoryInfo>> materialInventoryInfoMap = this.inventoryInfoService.getDefaultAllocatedInventoryInfoList(inventoryInfoRequest);
             HashMap<Long, BigDecimal> allocatedPackageQuantityMap = new HashMap<>();
             HashMap<Long, Integer> shipOrderItemInventoryMap = new HashMap<>();
             for (ShipOrderItem item : currentShipOrderItemList) {
+                //520334173728837L
+                if (item.getMaterialId().equals(674167812272197L)) {
+                    int m = 0;
+                }
+                //
+                BigDecimal itemNeedAllocatedPackageQuantity = item.getRequiredPkgQuantity().subtract(item.getAlloactedPkgQuantity());
+
                 List<InventoryInfo> materialInventoryInfoList = materialInventoryInfoMap.get(item.getMaterialId());
                 if (CollectionUtils.isEmpty(materialInventoryInfoList)) {
                     log.info("materialId:{} can't get available inventory", item.getMaterialId());
+                    int zeroOne = itemNeedAllocatedPackageQuantity.compareTo(BigDecimal.ZERO) > 0 ? 0 : 1;
+                    shipOrderItemInventoryMap.put(item.getId(), zeroOne);
                     continue;
                 }
 
-                Map<Long, BigDecimal> materialPackQuantity = materialInventoryInfoList.stream()
-                        .collect(Collectors.groupingBy(
-                                InventoryInfo::getMaterialId,
-                                Collectors.reducing(
-                                        BigDecimal.ZERO,
-                                        InventoryInfo::getPackageQuantity,
-                                        BigDecimal::add
-                                )
-                        ));
+                Map<Long, BigDecimal> materialPackQuantity = materialInventoryInfoList.stream().collect(Collectors.groupingBy(InventoryInfo::getMaterialId, Collectors.reducing(BigDecimal.ZERO, InventoryInfo::getPackageQuantity, BigDecimal::add)));
                 Long materialId = item.getMaterialId();
                 //当前分配数量
                 BigDecimal currentAllocatedPackageQuantity = BigDecimal.ZERO;
@@ -358,8 +349,6 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
                 }
                 //已分配数量
                 BigDecimal allocatedPackageQuantity = BigDecimal.ZERO;
-                //
-                BigDecimal itemNeedAllocatedPackageQuantity = item.getRequiredPkgQuantity().subtract(item.getAlloactedPkgQuantity());
                 //是否分配过
                 if (allocatedPackageQuantityMap.containsKey(materialId)) {
                     allocatedPackageQuantity = allocatedPackageQuantityMap.get(item.getMaterialId());
@@ -386,6 +375,8 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
                 BigDecimal materialAllocatedPackageQuantity = allocatedPackageQuantity.add(currentAllocatedPackageQuantity);
                 allocatedPackageQuantityMap.put(item.getMaterialId(), materialAllocatedPackageQuantity);
             }
+            log.info("shipOrderItemInventoryMap - {} ", objectMapper.writeValueAsString(shipOrderItemInventoryMap));
+
             long total = shipOrderItemInventoryMap.keySet().size();
             long enoughCount = shipOrderItemInventoryMap.values().stream().filter(p -> p.compareTo(0) > 0).count();
 
@@ -401,7 +392,6 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
         redisTemplate.delete(shipOrderPreparePercent);
         hashOps.putAll(shipOrderPreparePercent, shipOrderPreparePercentMap);
-
         stopWatch.stop();
 //        stopWatch.start("BatchInsert_Trace2");
         long mills = stopWatch.getTotalTimeMillis();

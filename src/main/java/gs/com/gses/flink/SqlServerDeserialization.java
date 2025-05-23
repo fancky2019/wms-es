@@ -3,6 +3,7 @@ package gs.com.gses.flink;
 import com.esotericsoftware.minlog.Log;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import gs.com.gses.utility.TraceIdCreater;
 import io.debezium.data.Envelope;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -12,6 +13,7 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.cdc.connectors.shaded.org.apache.kafka.connect.data.Field;
 import org.apache.flink.cdc.connectors.shaded.org.apache.kafka.connect.data.Schema;
 import org.apache.flink.cdc.connectors.shaded.org.apache.kafka.connect.data.Struct;
+import org.slf4j.MDC;
 
 import java.util.HashMap;
 import java.util.List;
@@ -104,7 +106,8 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
     @Override
     public void deserialize(SourceRecord sourceRecord, Collector<DataChangeInfo> collector) throws Exception {
 //     int m=0;
-//
+        String traceId =  TraceIdCreater.getTraceId();
+        MDC.put("traceId", traceId);
 //     return;
         String topic = sourceRecord.topic();
         String[] fields = topic.split("\\.");
