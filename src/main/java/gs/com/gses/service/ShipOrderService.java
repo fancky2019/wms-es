@@ -17,6 +17,9 @@ import java.util.List;
  * @createDate 2024-08-11 10:23:06
  */
 public interface ShipOrderService extends IService<ShipOrder> {
+
+    ShipOrder test(Long id);
+
     PageData<ShipOrderResponse> getShipOrderPage(ShipOrderRequest request);
 
     List<ShipOrderResponse> getShipOrderList(ShipOrderRequest request);

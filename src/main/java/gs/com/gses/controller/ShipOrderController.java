@@ -1,6 +1,7 @@
 package gs.com.gses.controller;
 
 import gs.com.gses.model.elasticsearch.InventoryInfo;
+import gs.com.gses.model.entity.ShipOrder;
 import gs.com.gses.model.request.InventoryInfoRequest;
 import gs.com.gses.model.request.ShipOrderRequest;
 import gs.com.gses.model.response.MessageResult;
@@ -19,10 +20,14 @@ import java.util.List;
 public class ShipOrderController {
 //    org.apache.flink.util.InstantiationUtil
 
-//    org.apache.flink.api.common.ExecutionConfig
+    //    org.apache.flink.api.common.ExecutionConfig
     @Autowired
     private ShipOrderService shipOrderService;
 
+    @GetMapping("/test")
+    public MessageResult<ShipOrder> test(Long id) {
+        return MessageResult.success(shipOrderService.test(id));
+    }
 
     @GetMapping("/getShipOrderPage")
     public MessageResult<PageData<ShipOrderResponse>> getShipOrderPage(ShipOrderRequest request) {

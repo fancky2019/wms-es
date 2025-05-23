@@ -21,7 +21,7 @@ public class InventoryController {
     private InventoryInfoService inventoryInfoService;
 
 
-    @PostMapping("/initInventoryInfoFromDb")
+    @GetMapping("/initInventoryInfoFromDb")
     public MessageResult<Void> initInventoryInfoFromDb() throws Exception {
         inventoryInfoService.initInventoryInfoFromDb();
         return MessageResult.success();

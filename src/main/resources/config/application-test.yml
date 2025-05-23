@@ -55,7 +55,7 @@ spring:
 
     #    单机
     # 远程服务器地址 127.0.0.1 10.100.200.43
-    host: 10.100.200.43
+    host: 127.0.0.1
     # 远程服务器端口
     port: 6379
 
@@ -166,9 +166,9 @@ spring:
 
 
 sbp:
-#  true  false
-#  ordermigratedbtoolurl: http://localhost:8101
-#  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
+  #  true  false
+  #  ordermigratedbtoolurl: http://localhost:8101
+  #  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
   hostAndPort: 10.100.200.43:9200
   initCache: false
   flink:

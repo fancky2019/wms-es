@@ -63,6 +63,12 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 
 
     @Override
+    public ShipOrder test(Long id) {
+        ShipOrder shipOrder = this.getById(id);
+        return shipOrder;
+    }
+
+    @Override
     public PageData<ShipOrderResponse> getShipOrderPage(ShipOrderRequest request) {
 //        LambdaQueryWrapper<ShipOrder> queryWrapper = new LambdaQueryWrapper<>();
 //        queryWrapper.eq(MqMessage::getStatus, 2);

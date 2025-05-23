@@ -59,25 +59,34 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 //                break;
 //        }
 
-        switch (value.getTableName()) {
-            case "Location":
-                inventoryInfoService.updateByLocation(value);
-                break;
-            case "Laneway":
-                inventoryInfoService.updateByLaneway(value);
-                break;
-            case "Inventory":
-                inventoryInfoService.updateByInventory(value);
-                break;
-            case "InventoryItem":
-                inventoryInfoService.updateByInventoryItem(value);
-                break;
-            case "InventoryItemDetail":
-                inventoryInfoService.updateByInventoryItemDetail(value);
-                break;
-            default:
-                break;
+        try {
+
+
+            switch (value.getTableName()) {
+                case "Location":
+                    inventoryInfoService.updateByLocation(value);
+                    break;
+                case "Laneway":
+                    inventoryInfoService.updateByLaneway(value);
+                    break;
+                case "Inventory":
+                    inventoryInfoService.updateByInventory(value);
+                    break;
+                case "InventoryItem":
+                    inventoryInfoService.updateByInventoryItem(value);
+                    break;
+                case "InventoryItemDetail":
+                    inventoryInfoService.updateByInventoryItemDetail(value);
+                    break;
+                default:
+                    break;
+            }
+        } catch (Exception ex) {
+            log.info("Sink exception - {}", value.getAfterData());
+            //待优化处理
+            log.error("", ex);
         }
+
         MDC.remove("traceId");
     }
 

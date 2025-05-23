@@ -27,7 +27,7 @@ public interface InventoryInfoService {
 
     HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
-    void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
+    void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
 
     void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 

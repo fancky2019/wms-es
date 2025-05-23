@@ -974,54 +974,51 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+    public void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException {
 //        InventoryItemDetail detail = this.inventoryItemDetailService.getById(509955479831328L);
 //        String json = objectMapper.writeValueAsString(detail);
         InventoryItemDetail changedInventoryItemDetail = null;
-        try {
-            changedInventoryItemDetail = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
-            //更新时间
-            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
-                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+        changedInventoryItemDetail = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
+        //更新时间
+        if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                } else {
-                    INIT_INVENTORY_TIME = LocalDateTime.now();
-                }
+            String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+            if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
 
+            } else {
+                INIT_INVENTORY_TIME = LocalDateTime.now();
             }
 
-            if (changedInventoryItemDetail.getLastModificationTime() != null) {
-                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
-
-                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                    return;
-                }
-            }
-
-
-            switch (dataChangeInfo.getEventType()) {
-                case "CREATE":
-                    addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail), null, null, null, null, null, null, null);
-                    break;
-                case "UPDATE":
-                    updateInventoryInfoOfDetail(changedInventoryItemDetail, dataChangeInfo);
-                    break;
-                case "DELETE":
-                    deletedByInventoryItemDetail(changedInventoryItemDetail);
-                    break;
-                case "READ":
-                    break;
-                default:
-                    break;
-            }
-        } catch (Exception ex) {
-            log.error("", ex);
-//            throw ex;
         }
+
+        if (changedInventoryItemDetail.getLastModificationTime() != null) {
+            LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
+
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                return;
+            }
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                addByInventoryItemDetailInfo(Arrays.asList(changedInventoryItemDetail), null, null, null, null, null, null, null);
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfDetail(changedInventoryItemDetail, dataChangeInfo);
+                break;
+            case "DELETE":
+                deletedByInventoryItemDetail(changedInventoryItemDetail);
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
+
 
     }
 
@@ -1029,49 +1026,46 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     public void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
 
         InventoryItem changedInventoryItem = null;
-        try {
-            changedInventoryItem = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItem.class);
-            //更新时间
-            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
-                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+        changedInventoryItem = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItem.class);
+        //更新时间
+        if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                } else {
-                    INIT_INVENTORY_TIME = LocalDateTime.now();
-                }
+            String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+            if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
 
+            } else {
+                INIT_INVENTORY_TIME = LocalDateTime.now();
             }
 
-            if (changedInventoryItem.getLastModificationTime() != null) {
-                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
-
-                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                    return;
-                }
-            }
-
-
-            switch (dataChangeInfo.getEventType()) {
-                case "CREATE":
-                    break;
-                case "UPDATE":
-                    updateInventoryInfoOfItem(changedInventoryItem, dataChangeInfo);
-                    break;
-                case "DELETE":
-
-                    break;
-                case "READ":
-                    break;
-                default:
-                    break;
-            }
-        } catch (Exception ex) {
-            log.error("", ex);
-//            throw ex;
         }
+
+        if (changedInventoryItem.getLastModificationTime() != null) {
+            LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
+
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                return;
+            }
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfItem(changedInventoryItem, dataChangeInfo);
+                break;
+            case "DELETE":
+
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
+
 
     }
 
@@ -1079,143 +1073,134 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     public void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
 
         Inventory changedInventory = null;
-        try {
-            changedInventory = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Inventory.class);
-            //更新时间
-            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
-                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+        changedInventory = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Inventory.class);
+        //更新时间
+        if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                } else {
-                    INIT_INVENTORY_TIME = LocalDateTime.now();
-                }
+            String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+            if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
 
+            } else {
+                INIT_INVENTORY_TIME = LocalDateTime.now();
             }
 
-            if (changedInventory.getLastModificationTime() != null) {
-                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventory.getLastModificationTime()), ZoneOffset.of("+8"));
-
-                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                    return;
-                }
-            }
-
-
-            switch (dataChangeInfo.getEventType()) {
-                case "CREATE":
-                    break;
-                case "UPDATE":
-                    updateInventoryInfoOfInventory(changedInventory, dataChangeInfo);
-                    break;
-                case "DELETE":
-                    break;
-                case "READ":
-                    break;
-                default:
-                    break;
-            }
-        } catch (Exception ex) {
-            log.error("", ex);
-//            throw ex;
         }
+
+        if (changedInventory.getLastModificationTime() != null) {
+            LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventory.getLastModificationTime()), ZoneOffset.of("+8"));
+
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                return;
+            }
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfInventory(changedInventory, dataChangeInfo);
+                break;
+            case "DELETE":
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
+
     }
 
     @Override
     public void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
         Location changedLocation = null;
-        try {
-            changedLocation = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Location.class);
-            //更新时间
-            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
-                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+        changedLocation = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Location.class);
+        //更新时间
+        if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                } else {
-                    INIT_INVENTORY_TIME = LocalDateTime.now();
-                }
+            String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+            if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
 
+            } else {
+                INIT_INVENTORY_TIME = LocalDateTime.now();
             }
 
-            if (changedLocation.getLastModificationTime() != null) {
-                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedLocation.getLastModificationTime()), ZoneOffset.of("+8"));
-                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                    return;
-                }
-            }
-
-
-            switch (dataChangeInfo.getEventType()) {
-                case "CREATE":
-                    break;
-                case "UPDATE":
-                    updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
-                    break;
-                case "DELETE":
-
-                    break;
-                case "READ":
-                    break;
-                default:
-                    break;
-            }
-        } catch (Exception ex) {
-            log.error("", ex);
-//            throw ex;
         }
+
+        if (changedLocation.getLastModificationTime() != null) {
+            LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedLocation.getLastModificationTime()), ZoneOffset.of("+8"));
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                return;
+            }
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
+                break;
+            case "DELETE":
+
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
+
     }
 
     @Override
     public void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
 
         Laneway changedILaneway = null;
-        try {
-            changedILaneway = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Laneway.class);
-            //更新时间
-            if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
-                if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
+        changedILaneway = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Laneway.class);
+        //更新时间
+        if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
-                } else {
-                    INIT_INVENTORY_TIME = LocalDateTime.now();
-                }
+            String initInventoryTimeStr = (String) redisTemplate.opsForValue().get("InitInventoryTime");
+            if (StringUtils.isNotEmpty(initInventoryTimeStr)) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                INIT_INVENTORY_TIME = LocalDateTime.parse(initInventoryTimeStr, formatter);
 
+            } else {
+                INIT_INVENTORY_TIME = LocalDateTime.now();
             }
 
-            if (changedILaneway.getLastModificationTime() != null) {
-                LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedILaneway.getLastModificationTime()), ZoneOffset.of("+8"));
-
-                if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                    return;
-                }
-            }
-
-
-            switch (dataChangeInfo.getEventType()) {
-                case "CREATE":
-                    break;
-                case "UPDATE":
-                    updateInventoryInfoOfLaneway(changedILaneway, dataChangeInfo);
-                    break;
-                case "DELETE":
-                    break;
-                case "READ":
-                    break;
-                default:
-                    break;
-            }
-        } catch (Exception ex) {
-            log.error("", ex);
-//            throw ex;
         }
+
+        if (changedILaneway.getLastModificationTime() != null) {
+            LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedILaneway.getLastModificationTime()), ZoneOffset.of("+8"));
+
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                return;
+            }
+        }
+
+
+        switch (dataChangeInfo.getEventType()) {
+            case "CREATE":
+                break;
+            case "UPDATE":
+                updateInventoryInfoOfLaneway(changedILaneway, dataChangeInfo);
+                break;
+            case "DELETE":
+                break;
+            case "READ":
+                break;
+            default:
+                break;
+        }
+
     }
 
 
