@@ -125,8 +125,7 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
         String afterJson = objectMapper.writeValueAsString(afterMap);
 
         dataChangeInfo.setId(afterMap.get("Id").toString());
-
-
+        dataChangeInfo.setTraceId(traceId);
 //        dataChangeInfo.setBeforeData(getJsonObject(struct, BEFORE).toJSONString());
 //        dataChangeInfo.setAfterData(getJsonObject(struct, AFTER).toJSONString());
         dataChangeInfo.setBeforeData(beforeJson);
@@ -148,5 +147,6 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
         //7.输出数据
         collector.collect(dataChangeInfo);
         log.info("receive {} - {} - {} ",dataChangeInfo.getTableName(),dataChangeInfo.getId(),dataChangeInfo.getEventType());
+        MDC.remove("traceId");
     }
 }

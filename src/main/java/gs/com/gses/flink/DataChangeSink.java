@@ -5,6 +5,7 @@ import gs.com.gses.service.InventoryInfoService;
 import gs.com.gses.service.impl.InventoryInfoServiceImpl;
 import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.slf4j.MDC;
@@ -32,57 +33,61 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 
 
     @Override
-    public void invoke(DataChangeInfo value, Context context) throws JsonProcessingException {
+    public void invoke(DataChangeInfo dataChangeInfo, Context context) throws JsonProcessingException {
+        MDC.put("traceId", dataChangeInfo.getTraceId());
         ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
-//        log.info("收到变更原始数据:{}", value);
-//        Object obj = applicationContext.getBean(value.getTableName());
+//        log.info("收到变更原始数据:{}", dataChangeInfo);
+//        Object obj = applicationContext.getBean(dataChangeInfo.getTableName());
 
         InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
 
-//        switch (value.getTableName()) {
+//        switch (dataChangeInfo.getTableName()) {
 //            case "Location_copy1":
-//                inventoryInfoService.updateByLocation(value);
+//                inventoryInfoService.updateByLocation(dataChangeInfo);
 //                break;
 //            case "Laneway_copy1":
-//                inventoryInfoService.updateByLaneway(value);
+//                inventoryInfoService.updateByLaneway(dataChangeInfo);
 //                break;
 //            case "Inventory_copy1":
-//                inventoryInfoService.updateByInventory(value);
+//                inventoryInfoService.updateByInventory(dataChangeInfo);
 //                break;
 //            case "InventoryItem_copy1":
-//                inventoryInfoService.updateByInventoryItem(value);
+//                inventoryInfoService.updateByInventoryItem(dataChangeInfo);
 //                break;
 //            case "InventoryItemDetail_copy1":
-//                inventoryInfoService.updateByInventoryItemDetail(value);
+//                inventoryInfoService.updateByInventoryItemDetail(dataChangeInfo);
 //                break;
 //            default:
 //                break;
 //        }
 
         try {
-
-
-            switch (value.getTableName()) {
+            log.info("start sink - {}", dataChangeInfo.getId());
+            if (StringUtils.isEmpty(dataChangeInfo.getAfterData()) || "READ".equals(dataChangeInfo.getEventType())) {
+                log.info("read - {}", dataChangeInfo.getId());
+                return;
+            }
+            switch (dataChangeInfo.getTableName()) {
                 case "Location":
-                    inventoryInfoService.updateByLocation(value);
+                    inventoryInfoService.updateByLocation(dataChangeInfo);
                     break;
                 case "Laneway":
-                    inventoryInfoService.updateByLaneway(value);
+                    inventoryInfoService.updateByLaneway(dataChangeInfo);
                     break;
                 case "Inventory":
-                    inventoryInfoService.updateByInventory(value);
+                    inventoryInfoService.updateByInventory(dataChangeInfo);
                     break;
                 case "InventoryItem":
-                    inventoryInfoService.updateByInventoryItem(value);
+                    inventoryInfoService.updateByInventoryItem(dataChangeInfo);
                     break;
                 case "InventoryItemDetail":
-                    inventoryInfoService.updateByInventoryItemDetail(value);
+                    inventoryInfoService.updateByInventoryItemDetail(dataChangeInfo);
                     break;
                 default:
                     break;
             }
         } catch (Exception ex) {
-            log.info("Sink exception - {}", value.getAfterData());
+            log.info("Sink exception - {}", dataChangeInfo.getAfterData());
             //待优化处理
             log.error("", ex);
         }

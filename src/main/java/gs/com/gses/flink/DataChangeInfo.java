@@ -7,7 +7,7 @@ import java.io.Serializable;
 
 @Data
 public class DataChangeInfo implements Serializable {
-
+    private String traceId;
     /**
      * binlog当前读取点位
      */

@@ -75,6 +75,16 @@ public class CommandLineImp implements CommandLineRunner {
         debeziumProps.setProperty("database.encrypt", "false");
         debeziumProps.setProperty("database.trustServerCertificate", "true"); // 跳过证书验证
 
+        debeziumProps.setProperty("database.sslProtocol", "TLSv1.2");
+
+
+// 设置 JDBC 连接和 Socket 超时（单位：毫秒）
+        debeziumProps.setProperty("database.socketTimeout", "60000");      // 查询超时 60 秒
+        debeziumProps.setProperty("database.connectionTimeout", "30000"); // 连接超时 30 秒
+
+        debeziumProps.setProperty("database.keepAlive", "true");      //  # 启用 TCP 保活
+        debeziumProps.setProperty("database.keepAliveInterval", "2"); // 保活探测间隔（秒）
+
 
 //        // 使用内存存储数据库历史（不持久化，重启后丢失） Debezium 默认使用 MemoryDatabaseHistory
 //        debeziumProps.setProperty("database.history", "io.debezium.relational.history.MemoryDatabaseHistory");

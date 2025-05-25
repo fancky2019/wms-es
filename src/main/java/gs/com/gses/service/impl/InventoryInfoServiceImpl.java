@@ -998,6 +998,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
                 return;
             }
         }
@@ -1046,6 +1047,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
                 return;
             }
         }
@@ -1093,6 +1095,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventory.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
                 return;
             }
         }
@@ -1136,6 +1139,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (changedLocation.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedLocation.getLastModificationTime()), ZoneOffset.of("+8"));
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
                 return;
             }
         }
@@ -1182,6 +1186,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedILaneway.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
                 return;
             }
         }
@@ -1231,6 +1236,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         CriteriaQuery query = new CriteriaQuery(criteria);
         SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
         List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(inventoryInfoList)) {
+            log.info("can't get InventoryInfo by inventoryItemId - {} ", inventoryItem.getId());
+            return;
+        }
         for (InventoryInfo inventoryInfo : inventoryInfoList) {
             if (inventoryItem.getLastModificationTime() != null) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
@@ -1250,6 +1259,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         CriteriaQuery query = new CriteriaQuery(criteria);
         SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
         List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(inventoryInfoList)) {
+            log.info("can't get InventoryInfo by inventoryId - {} ", inventory.getId());
+            return;
+        }
         for (InventoryInfo inventoryInfo : inventoryInfoList) {
             if (inventory.getLastModificationTime() != null) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventory.getLastModificationTime()), ZoneOffset.of("+8"));
@@ -1268,6 +1281,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         CriteriaQuery query = new CriteriaQuery(criteria);
         SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
         List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(inventoryInfoList)) {
+            log.info("can't get InventoryInfo by locationId - {} ", location.getId());
+            return;
+        }
         for (InventoryInfo inventoryInfo : inventoryInfoList) {
             Map<String, Object> updatedMap = prepareLocationUpdatedInfo(inventoryInfo, location);
             updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
@@ -1399,12 +1416,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 .build();
         //InventoryInfo
         UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
-        if (response.getResult().equals(UpdateResponse.Result.UPDATED)) {
-            log.info("update table - {} id - {} success", table, id);
-        } else {
-            log.info("update table - {} id - {} fail", table, id);
-        }
-        log.info("updateInventoryInfo complete {} - {}", table, id);
+
+        log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
+
 
     }
 
@@ -1417,11 +1431,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 .build();
         //InventoryInfo
         UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
-        if (response.getResult().equals(UpdateResponse.Result.UPDATED)) {
-            log.info("update table - {} id - {} success", table, id);
-        } else {
-            log.info("update table - {} id - {} fail", table, id);
-        }
+        log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
+
         int n = 0;
     }
 

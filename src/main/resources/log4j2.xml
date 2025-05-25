@@ -41,8 +41,8 @@
             <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${log_pattern}"/>
             <Policies>
-                <TimeBasedTriggeringPolicy interval="6" modulate="true"/>
-                <SizeBasedTriggeringPolicy size="100 MB"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="5000 MB"/>
             </Policies>
             <DefaultRolloverStrategy max="20"/>
         </RollingFile>
@@ -62,7 +62,7 @@
         <logger name="io.lettuce.core" level="INFO"/>
         <logger name="org.apache" level="INFO"/>
         <logger name="io.netty.channel.nio" level="INFO"/>
-        <logger name="io.debezium" level="INFO"/>
+        <logger name="io.debezium" level="ERROR"/>
         <logger name="com.ververica.cdc" level="INFO"/>
         <Logger name="org.elasticsearch.client" level="INFO" additivity="false"/>
         <Logger name="org.apache.flink" level="INFO" additivity="false">
