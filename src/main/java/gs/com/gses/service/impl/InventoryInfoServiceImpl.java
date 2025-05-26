@@ -249,7 +249,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             }
 
             if (location == null) {
-                log.error("location is null " + inventory.getLocationId().toString());
+                log.error("ignoreIncrement location is null " + inventory.getLocationId().toString());
                 continue;
             }
             inventoryInfo.setLocationId(location.getId());
@@ -306,7 +306,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             //inventoryItem
             inventoryInfo.setInventoryItemId(inventoryItem.getId());
-            if (inventoryItem.getExpiredTime() != null) {
+            //1592409600000  过滤不合法的时间
+            if (inventoryItem.getExpiredTime() != null && inventoryItem.getExpiredTime().compareTo(1592409600000L) > 0) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getExpiredTime()), ZoneOffset.of("+8"));
                 inventoryInfo.setInventoryItemExpiredTime(localDateTime);
             }
@@ -345,7 +346,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setCarton(inventoryItemDetail.getCarton());
             inventoryInfo.setSerialNo(inventoryItemDetail.getSerialNo());
             if (material == null) {
-                log.error("material is null " + inventoryItemDetail.getMaterialId().toString());
+                log.error("ignoreIncrement material is null " + inventoryItemDetail.getMaterialId().toString());
                 continue;
             }
 
@@ -376,7 +377,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setIsScattered(inventoryItemDetail.getIsScattered());
             inventoryInfo.setIsExpired(inventoryItemDetail.getIsExpired());
 
-            if (inventoryItemDetail.getExpiredTime() != null) {
+            if (inventoryItemDetail.getExpiredTime() != null && inventoryItem.getExpiredTime().compareTo(1592409600000L) > 0) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getExpiredTime()), ZoneOffset.of("+8"));
                 inventoryInfo.setExpiredTime(localDateTime);
             }
@@ -621,6 +622,22 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (request.getLanewayXStatus() != null && request.getLanewayXStatus() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("lanewayXStatus", request.getLanewayXStatus()));
         }
+        if (request.getInventoryItemDetailId() != null && request.getInventoryItemDetailId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemDetailId", request.getInventoryItemDetailId()));
+        }
+        if (request.getInventoryItemId() != null && request.getInventoryItemId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemId", request.getInventoryItemId()));
+        }
+
+        if (request.getInventoryId() != null && request.getInventoryId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryId", request.getInventoryId()));
+        }
+        if (request.getLanewayId() != null && request.getLanewayId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", request.getLanewayId()));
+        }
+        if (request.getLocationId() != null && request.getLocationId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationId", request.getLocationId()));
+        }
         //rangeQuery gt  gte  lte
 
         boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryPackageQuantity").gt(0));
@@ -806,6 +823,23 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         }
         if (request.getLanewayXStatus() != null && request.getLanewayXStatus() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("lanewayXStatus", request.getLanewayXStatus()));
+        }
+
+        if (request.getInventoryItemDetailId() != null && request.getInventoryItemDetailId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemDetailId", request.getInventoryItemDetailId()));
+        }
+        if (request.getInventoryItemId() != null && request.getInventoryItemId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemId", request.getInventoryItemId()));
+        }
+
+        if (request.getInventoryId() != null && request.getInventoryId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryId", request.getInventoryId()));
+        }
+        if (request.getLanewayId() != null && request.getLanewayId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", request.getLanewayId()));
+        }
+        if (request.getLocationId() != null && request.getLocationId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationId", request.getLocationId()));
         }
         //rangeQuery gt  gte  lte
 
@@ -998,7 +1032,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
                 return;
             }
         }
@@ -1047,7 +1081,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
                 return;
             }
         }
@@ -1095,7 +1129,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventory.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
                 return;
             }
         }
@@ -1139,7 +1173,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (changedLocation.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedLocation.getLastModificationTime()), ZoneOffset.of("+8"));
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
                 return;
             }
         }
@@ -1186,7 +1220,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedILaneway.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ",dataChangeInfo.getId());
+                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
                 return;
             }
         }
@@ -1206,6 +1240,35 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 break;
         }
 
+    }
+
+    @Override
+    public void test() {
+
+    }
+
+    @Override
+    public void updateByInventoryItemDetailDb(Long id) {
+        InventoryItemDetail inventoryItemDetail = this.inventoryItemDetailService.getById(id);
+        DataChangeInfo dataChangeInfo = new DataChangeInfo();
+        dataChangeInfo.setTableName("InventoryItemDetail");
+        this.updateInventoryInfoOfDetail(inventoryItemDetail, dataChangeInfo);
+    }
+
+    @Override
+    public void updateByInventoryItemDb(Long id) {
+        InventoryItem inventoryItem = this.inventoryItemService.getById(id);
+        DataChangeInfo dataChangeInfo = new DataChangeInfo();
+        dataChangeInfo.setTableName("InventoryItem");
+        this.updateInventoryInfoOfItem(inventoryItem, dataChangeInfo);
+    }
+
+    @Override
+    public void updateByInventoryDb(Long id) {
+        Inventory inventory = this.inventoryService.getById(id);
+        DataChangeInfo dataChangeInfo = new DataChangeInfo();
+        dataChangeInfo.setTableName("Inventory");
+        this.updateInventoryInfoOfInventory(inventory, dataChangeInfo);
     }
 
 
@@ -1407,18 +1470,21 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //endregion
 
     // 更新方法2：使用字段映射
-    public void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) {
-        Document document = Document.create();
-        document.putAll(fieldsMap);
+    private void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) {
+        try {
+            Document document = Document.create();
+            document.putAll(fieldsMap);
 
-        UpdateQuery updateQuery = UpdateQuery.builder(id)
-                .withDocument(document)
-                .build();
-        //InventoryInfo
-        UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
-
-        log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
-
+            UpdateQuery updateQuery = UpdateQuery.builder(id)
+                    .withDocument(document)
+                    .build();
+            //InventoryInfo
+            UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
+            log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        }
 
     }
 
@@ -1497,7 +1563,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     private Map<String, Object> prepareInventoryItemUpdatedInfo(InventoryInfo inventoryInfo, InventoryItem inventoryItem) {
         //inventoryItem
         Map<String, Object> updatedMap = new HashMap<>();
-        if (inventoryItem.getExpiredTime() != null) {
+        if (inventoryItem.getExpiredTime() != null && inventoryItem.getExpiredTime().compareTo(1592409600000L) > 0) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getExpiredTime()), ZoneOffset.of("+8"));
             updatedMap.put("inventoryItemExpiredTime", inventoryItem.getExpiredTime());
         }
@@ -1535,7 +1601,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         updatedMap.put("isScattered", inventoryItemDetail.getIsScattered());
         updatedMap.put("isExpired", inventoryItemDetail.getIsExpired());
 
-        if (inventoryItemDetail.getExpiredTime() != null) {
+        if (inventoryItemDetail.getExpiredTime() != null && inventoryItemDetail.getExpiredTime().compareTo(1592409600000L) > 0) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getExpiredTime()), ZoneOffset.of("+8"));
             updatedMap.put("expiredTime", localDateTime);
         }

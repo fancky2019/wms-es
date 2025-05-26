@@ -33,7 +33,7 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 
 
     @Override
-    public void invoke(DataChangeInfo dataChangeInfo, Context context) throws JsonProcessingException {
+    public void invoke(DataChangeInfo dataChangeInfo, Context context) throws JsonProcessingException, InterruptedException {
         MDC.put("traceId", dataChangeInfo.getTraceId());
         ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
 //        log.info("收到变更原始数据:{}", dataChangeInfo);
@@ -63,6 +63,7 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 
         try {
             log.info("start sink - {}", dataChangeInfo.getId());
+//            Integer.parseInt("m");
             if (StringUtils.isEmpty(dataChangeInfo.getAfterData()) || "READ".equals(dataChangeInfo.getEventType())) {
                 log.info("read - {}", dataChangeInfo.getId());
                 return;
@@ -87,12 +88,15 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
                     break;
             }
         } catch (Exception ex) {
-            log.info("Sink exception - {}", dataChangeInfo.getAfterData());
+            log.error("Sink {} exception - {}", dataChangeInfo.getId(), dataChangeInfo.getAfterData());
             //待优化处理
             log.error("", ex);
+            throw ex;
+        } finally {
+            MDC.remove("traceId");
         }
+        log.info("Sink {} completed", dataChangeInfo.getId());
 
-        MDC.remove("traceId");
     }
 
     /**

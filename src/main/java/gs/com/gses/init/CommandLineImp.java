@@ -7,6 +7,8 @@ import gs.com.gses.flink.DataChangeSink;
 import gs.com.gses.flink.SqlServerDeserialization;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.cdc.connectors.base.options.StartupOptions;
 import org.apache.flink.cdc.connectors.sqlserver.source.SqlServerSourceBuilder;
 import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
@@ -75,7 +77,7 @@ public class CommandLineImp implements CommandLineRunner {
         debeziumProps.setProperty("database.encrypt", "false");
         debeziumProps.setProperty("database.trustServerCertificate", "true"); // 跳过证书验证
 
-        debeziumProps.setProperty("database.sslProtocol", "TLSv1.2");
+//        debeziumProps.setProperty("database.sslProtocol", "TLSv1.2");
 
 
 // 设置 JDBC 连接和 Socket 超时（单位：毫秒）
@@ -85,6 +87,14 @@ public class CommandLineImp implements CommandLineRunner {
         debeziumProps.setProperty("database.keepAlive", "true");      //  # 启用 TCP 保活
         debeziumProps.setProperty("database.keepAliveInterval", "2"); // 保活探测间隔（秒）
 
+
+
+        // 错误处理器配置
+        debeziumProps.setProperty("transforms", "errorHandler");
+        debeziumProps.setProperty("transforms.errorHandler.type", "io.debezium.transforms.ErrorHandler");
+        debeziumProps.setProperty("transforms.errorHandler.on.failure", "retry");
+        debeziumProps.setProperty("transforms.errorHandler.retry.delay.ms", "5000");
+        debeziumProps.setProperty("transforms.errorHandler.max.retries", "3");
 
 //        // 使用内存存储数据库历史（不持久化，重启后丢失） Debezium 默认使用 MemoryDatabaseHistory
 //        debeziumProps.setProperty("database.history", "io.debezium.relational.history.MemoryDatabaseHistory");
@@ -146,6 +156,7 @@ public class CommandLineImp implements CommandLineRunner {
                 new SqlServerSourceBuilder()
                         .hostname(flinkConfig.getHostname())
                         .port(flinkConfig.getPort())
+
                         .databaseList(flinkConfig.getDatabaseList()) // monitor sqlserver database
                         .tableList(flinkConfig.getTableList())
                         .username(flinkConfig.getUsername())
@@ -202,7 +213,12 @@ public class CommandLineImp implements CommandLineRunner {
                 CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION
         );
 
-
+        //重试
+        env.setRestartStrategy(
+                RestartStrategies.fixedDelayRestart(
+                        3, // 最大重试次数，总共尝试3次
+                        Time.seconds(2) // 重试间隔
+                ));
         env.execute("WmsToEs");
 
 

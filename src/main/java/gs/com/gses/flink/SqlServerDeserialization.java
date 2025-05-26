@@ -105,48 +105,62 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
 
     @Override
     public void deserialize(SourceRecord sourceRecord, Collector<DataChangeInfo> collector) throws Exception {
-//     int m=0;
-        String traceId =  TraceIdCreater.getTraceId();
-        MDC.put("traceId", traceId);
+
+        try {
+
+
+            //     int m=0;
+            String traceId = TraceIdCreater.getTraceId();
+            MDC.put("traceId", traceId);
 //     return;
-        String topic = sourceRecord.topic();
-        String[] fields = topic.split("\\.");
+            String topic = sourceRecord.topic();
+            String[] fields = topic.split("\\.");
 //        String database = fields[1];
-        String tableName = fields[2];
-        Struct struct = (Struct) sourceRecord.value();
-        final Struct source = struct.getStruct(SOURCE);
-        String database = "";
+            String tableName = fields[2];
+            Struct struct = (Struct) sourceRecord.value();
+            final Struct source = struct.getStruct(SOURCE);
+            String database = "";
 
-        DataChangeInfo dataChangeInfo = new DataChangeInfo();
-        ObjectMapper objectMapper = new ObjectMapper();
-        HashMap<String, Object>  beforeMap= getJsonObject(struct, BEFORE);
-        String beforeJson = objectMapper.writeValueAsString(beforeMap);
-        HashMap<String, Object>  afterMap= getJsonObject(struct, AFTER);
-        String afterJson = objectMapper.writeValueAsString(afterMap);
+            DataChangeInfo dataChangeInfo = new DataChangeInfo();
+            ObjectMapper objectMapper = new ObjectMapper();
+            HashMap<String, Object> beforeMap = getJsonObject(struct, BEFORE);
+            String beforeJson = objectMapper.writeValueAsString(beforeMap);
+            HashMap<String, Object> afterMap = getJsonObject(struct, AFTER);
+            String afterJson = objectMapper.writeValueAsString(afterMap);
 
-        dataChangeInfo.setId(afterMap.get("Id").toString());
-        dataChangeInfo.setTraceId(traceId);
+            Object id = afterMap.get("Id");
+            if (id != null) {
+                dataChangeInfo.setId(id.toString());
+            }
+
+            dataChangeInfo.setTraceId(traceId);
 //        dataChangeInfo.setBeforeData(getJsonObject(struct, BEFORE).toJSONString());
 //        dataChangeInfo.setAfterData(getJsonObject(struct, AFTER).toJSONString());
-        dataChangeInfo.setBeforeData(beforeJson);
-        dataChangeInfo.setAfterData(afterJson);
+            dataChangeInfo.setBeforeData(beforeJson);
+            dataChangeInfo.setAfterData(afterJson);
 
-        //5.获取操作类型  CREATE UPDATE DELETE
-        Envelope.Operation operation = Envelope.operationFor(sourceRecord);
+            //5.获取操作类型  CREATE UPDATE DELETE
+            Envelope.Operation operation = Envelope.operationFor(sourceRecord);
 //        String type = operation.toString().toUpperCase(
 //        String type = operation.toString().toUpperCase();
 //        int eventType = type.equals(CREATE) ? 1 : UPDATE.equals(type) ? 2 : 3;
-        dataChangeInfo.setEventType(operation.name());
+            dataChangeInfo.setEventType(operation.name());
 
 
 //        dataChangeInfo.setFileName(Optional.ofNullable(source.get(BIN_FILE)).map(Object::toString).orElse(""));
 //        dataChangeInfo.setFilePos(Optional.ofNullable(source.get(POS)).map(x -> Integer.parseInt(x.toString())).orElse(0));
-        dataChangeInfo.setDatabase(database);
-        dataChangeInfo.setTableName(tableName);
+            dataChangeInfo.setDatabase(database);
+            dataChangeInfo.setTableName(tableName);
 //        dataChangeInfo.setChangeTime(Optional.ofNullable(struct.get(TS_MS)).map(x -> Long.parseLong(x.toString())).orElseGet(System::currentTimeMillis));
-        //7.输出数据
-        collector.collect(dataChangeInfo);
-        log.info("receive {} - {} - {} ",dataChangeInfo.getTableName(),dataChangeInfo.getId(),dataChangeInfo.getEventType());
-        MDC.remove("traceId");
+            //7.输出数据
+            collector.collect(dataChangeInfo);
+            log.info("receive {} - {} - {} ", dataChangeInfo.getTableName(), dataChangeInfo.getId(), dataChangeInfo.getEventType());
+
+        } catch (Exception ex) {
+            log.error("deserialize err {}", sourceRecord.value());
+            log.error("", ex);
+        } finally {
+            MDC.remove("traceId");
+        }
     }
 }

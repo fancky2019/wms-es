@@ -37,4 +37,14 @@ public interface InventoryInfoService {
 
     void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 
+    void test();
+
+
+    void updateByInventoryItemDetailDb(Long id);
+    void updateByInventoryItemDb(Long id);
+    void updateByInventoryDb(Long id);
+
+
+
+
 }
