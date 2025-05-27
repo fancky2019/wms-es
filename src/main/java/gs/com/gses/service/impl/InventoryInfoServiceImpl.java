@@ -1,5 +1,6 @@
 package gs.com.gses.service.impl;
 
+import co.elastic.clients.elasticsearch.core.get.GetResult;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,6 +31,8 @@ import org.elasticsearch.search.aggregations.metrics.TopHitsAggregationBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.*;
@@ -45,6 +48,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -103,7 +107,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Autowired
     private RedisTemplate redisTemplate;
-
+    @Autowired
+    private RedissonClient redissonClient;
     @Autowired
     private RedisUtil redisUtil;
 
@@ -193,14 +198,40 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
         if (inventoryList.size() == 1) {
+            locationMap = new HashMap<>();
+            lanewayMap = new HashMap<>();
+            zoneMap = new HashMap<>();
+            materialMap = new HashMap<>();
+            warehouseMap = new HashMap<>();
+            orgnizationMap = new HashMap<>();
+            packageUnitMap = new HashMap<>();
+
+
             Inventory inventory = inventoryList.get(0);
             Location location = (Location) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, inventory.getLocationId().toString());
+            if (location == null) {
+                location = this.basicInfoCacheService.loadFromDbLocation(inventory.getLocationId());
+            }
             locationMap.put(location.getId().toString(), location);
+
+
             Laneway laneway = (Laneway) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, location.getLanewayId().toString());
+            if (laneway == null) {
+                laneway = this.basicInfoCacheService.loadFromDbLaneway(location.getLanewayId());
+            }
             lanewayMap.put(laneway.getId().toString(), laneway);
+
+
             Zone zone = (Zone) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, laneway.getZoneId().toString());
+            if (zone == null) {
+                zone = this.basicInfoCacheService.loadFromDbZone(laneway.getZoneId());
+            }
             zoneMap.put(zone.getId().toString(), zone);
+
             Warehouse warehouse = (Warehouse) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, zone.getWarehouseId().toString());
+            if (warehouse == null) {
+                warehouse = this.basicInfoCacheService.loadFromDbWarehouse(zone.getWarehouseId());
+            }
             warehouseMap.put(warehouse.getId().toString(), warehouse);
 
 
@@ -1014,6 +1045,27 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         InventoryItemDetail changedInventoryItemDetail = null;
 
         changedInventoryItemDetail = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), InventoryItemDetail.class);
+
+//        if ("DELETE".equals(dataChangeInfo.getEventType())) {
+//            if (changedInventoryItemDetail != null) {
+//                log.info("changedInventoryItemDetail {} is not null ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
+//                if (changedInventoryItemDetail.getId() == null) {
+//                    log.info("changedInventoryItemDetail {} id is null ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
+//                    changedInventoryItemDetail = upperObjectMapper.readValue(dataChangeInfo.getBeforeData(), InventoryItemDetail.class);
+//
+//
+//                }
+//            } else {
+//                log.info("changedInventoryItemDetail {} is null ", dataChangeInfo.getId());
+//            }
+//        }
+
+        if (changedInventoryItemDetail.getId() == null) {
+            log.info("changedInventoryItemDetail {} id is null ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
+            changedInventoryItemDetail = upperObjectMapper.readValue(dataChangeInfo.getBeforeData(), InventoryItemDetail.class);
+        }
+
+
         //更新时间
         if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -1030,7 +1082,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         if (changedInventoryItemDetail.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
-
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
                 log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
                 return;
@@ -1058,7 +1109,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+    public void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException {
 
         InventoryItem changedInventoryItem = null;
 
@@ -1106,7 +1157,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+    public void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException {
 
         Inventory changedInventory = null;
 
@@ -1152,7 +1203,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+    public void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException {
         Location changedLocation = null;
 
         changedLocation = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Location.class);
@@ -1248,7 +1299,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventoryItemDetailDb(Long id) {
+    public void updateByInventoryItemDetailDb(Long id) throws InterruptedException {
         InventoryItemDetail inventoryItemDetail = this.inventoryItemDetailService.getById(id);
         DataChangeInfo dataChangeInfo = new DataChangeInfo();
         dataChangeInfo.setTableName("InventoryItemDetail");
@@ -1256,7 +1307,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventoryItemDb(Long id) {
+    public void updateByInventoryItemDb(Long id) throws InterruptedException {
         InventoryItem inventoryItem = this.inventoryItemService.getById(id);
         DataChangeInfo dataChangeInfo = new DataChangeInfo();
         dataChangeInfo.setTableName("InventoryItem");
@@ -1264,7 +1315,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventoryDb(Long id) {
+    public void updateByInventoryDb(Long id) throws InterruptedException {
         Inventory inventory = this.inventoryService.getById(id);
         DataChangeInfo dataChangeInfo = new DataChangeInfo();
         dataChangeInfo.setTableName("Inventory");
@@ -1272,7 +1323,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
 
-    private void updateInventoryInfoOfDetail(InventoryItemDetail inventoryItemDetail, DataChangeInfo dataChangeInfo) {
+    private void updateInventoryInfoOfDetail(InventoryItemDetail inventoryItemDetail, DataChangeInfo dataChangeInfo) throws InterruptedException {
 
         InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
 
@@ -1291,7 +1342,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
-    private void updateInventoryInfoOfItem(InventoryItem inventoryItem, DataChangeInfo dataChangeInfo) {
+    private void updateInventoryInfoOfItem(InventoryItem inventoryItem, DataChangeInfo dataChangeInfo) throws InterruptedException {
 
         //        CriteriaQuery 适合简单的查询场景，对于复杂的聚合查询，建议使用 NativeSearchQuery
         Criteria criteria = new Criteria("inventoryItemId").is(inventoryItem.getId());
@@ -1315,7 +1366,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
 
-    private void updateInventoryInfoOfInventory(Inventory inventory, DataChangeInfo dataChangeInfo) {
+    private void updateInventoryInfoOfInventory(Inventory inventory, DataChangeInfo dataChangeInfo) throws InterruptedException {
 
         Criteria criteria = new Criteria("inventoryId").is(inventory.getId());
 
@@ -1327,6 +1378,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             return;
         }
         for (InventoryInfo inventoryInfo : inventoryInfoList) {
+            if (inventoryInfo == null) {
+                log.info("inventoryInfo is null");
+                continue;
+            }
             if (inventory.getLastModificationTime() != null) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventory.getLastModificationTime()), ZoneOffset.of("+8"));
                 if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
@@ -1338,7 +1393,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
-    private void updateInventoryInfoOfLocation(Location location, DataChangeInfo dataChangeInfo) {
+    private void updateInventoryInfoOfLocation(Location location, DataChangeInfo dataChangeInfo) throws InterruptedException {
 
         Criteria criteria = new Criteria("locationId").is(location.getId());
         CriteriaQuery query = new CriteriaQuery(criteria);
@@ -1451,7 +1506,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
 
-    private void deletedByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) {
+    private void deletedByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) throws InterruptedException {
         Map<String, Object> updatedMap = new HashMap<>();
         updatedMap.put("deleted", 1);
         updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, "InventoryItemDetail");
@@ -1470,21 +1525,58 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //endregion
 
     // 更新方法2：使用字段映射
-    private void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) {
+    private void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) throws InterruptedException {
+
+        String lockKey = "redisson:updateInventoryInfo:" + id;
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
         try {
+            boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+//                log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                log.info("updateInventoryInfo - {} fail ,get lock fail", id);
+                //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                return;
+            }
+            log.info("InventoryInfo - {} acquire lock - {} success ", id, lockKey);
+
+            //            Elasticsearch 7+ 使用 seq_no 和 primary_term 替代了旧版的 _version 来跟踪文档变更
+//         withAbortOnVersionConflict(false) 无效：
+//            该参数仅影响传统的 _version 冲突处理，对 seq_no 和 primary_term 冲突可能无效。
+//            .withIfSeqNo(null)  // 忽略 seq_no
+//                    .withIfPrimaryTerm(null) // 忽略 primary_term
+
             Document document = Document.create();
             document.putAll(fieldsMap);
-
+// .retryOnConflict(3) // 冲突时重试3次
+//                    .setIfSeqNo(seqNo)  // 使用正确的序列号
+//                    .setIfPrimaryTerm(primaryTerm);
             UpdateQuery updateQuery = UpdateQuery.builder(id)
                     .withDocument(document)
+//                    .withRetryOnConflict(3) // 冲突时重试3次
+                    .withIfSeqNo(null)  // 忽略 seq_no
+                    .withIfPrimaryTerm(null) // 忽略 primary_term
+                    .withDocAsUpsert(true)// 如果文档不存在则创建
                     .build();
             //InventoryInfo
             UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
             log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
+
+
         } catch (Exception ex) {
             log.error("", ex);
             throw ex;
+        } finally {
+            //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+            //unlock 删除key
+            //如果锁因超时（leaseTime）会抛异常
+            lock.unlock();
+            log.info("InventoryInfo - {} release lock - {} success ", id, lockKey);
+
         }
+
 
     }
 

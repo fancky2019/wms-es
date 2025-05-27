@@ -159,18 +159,114 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     }
 
     @Override
-    public void loadFromDbLocation(Long locationId) {
+    public Location loadFromDbLocation(Long locationId) throws InterruptedException {
+        HashOperations<String, String, Location> hashOps = redisTemplate.opsForHash();
+        String key = locationPrefix;
+        Location location = (Location) hashOps.get(key, locationId.toString());
+        if (location == null) {
 
+            String lockKey = locationPrefix + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            try {
+
+                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                location = this.locationService.getById(locationId);
+                //穿透：设置个空值,待优化
+                if (location != null) {
+                    hashOps.put(key, locationId.toString(), location);
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+                lock.unlock();
+            }
+        }
+        return location;
     }
 
     @Override
-    public void loadFromDbLaneway(Long lanewayId) {
+    public Laneway loadFromDbLaneway(Long lanewayId) throws InterruptedException {
+        HashOperations<String, String, Laneway> hashOps = redisTemplate.opsForHash();
+        String key = lanewayPrefix;
+        Laneway laneway = (Laneway) hashOps.get(key, lanewayId.toString());
+        if (laneway == null) {
 
+            String lockKey = locationPrefix + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            try {
+
+                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                laneway = this.lanewayService.getById(lanewayId);
+                //穿透：设置个空值,待优化
+                if (laneway != null) {
+                    hashOps.put(key, lanewayId.toString(), laneway);
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+                lock.unlock();
+            }
+        }
+        return laneway;
     }
 
     @Override
-    public void loadFromDbZone(Long zoneId) {
+    public Zone loadFromDbZone(Long zoneId) throws InterruptedException {
+        HashOperations<String, String, Zone> hashOps = redisTemplate.opsForHash();
+        String key = zonePrefix;
+        Zone zone = (Zone) hashOps.get(key, zoneId.toString());
+        if (zone == null) {
 
+            String lockKey = locationPrefix + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            try {
+
+                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                zone = this.zoneService.getById(zoneId);
+                //穿透：设置个空值,待优化
+                if (zone != null) {
+                    hashOps.put(key, zoneId.toString(), zone);
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+                lock.unlock();
+            }
+        }
+        return zone;
     }
 
 
@@ -217,62 +313,114 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     }
 
     @Override
-    public void loadFromDbWarehouse(Long wareHouseId) {
+    public Warehouse loadFromDbWarehouse(Long wareHouseId) throws InterruptedException {
+        HashOperations<String, String, Warehouse> hashOps = redisTemplate.opsForHash();
+        String key = warehousePrefix;
+        Warehouse warehouse = (Warehouse) hashOps.get(key, wareHouseId.toString());
+        if (warehouse == null) {
 
-//        HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
-//        String key = materialPrefix;
-//        Material material = (Material) hashOps.get(key, materialId.toString());
-//        if (material == null) {
-//
-//            String lockKey = materialPrefix + "redisson";
-//            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
-//            RLock lock = redissonClient.getLock(lockKey);
-//            try {
-//
-//                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
-//                if (!lockSuccessfully) {
-//                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
-//
-//                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
-////                    throw new Exception("服务器繁忙，稍后重试");
-//                    return null;
-//                }
-//                material = this.materialService.getById(materialId);
-//                //穿透：设置个空值
-//                if (material == null) {
-//                    hashOps.put(key, materialId.toString(),null);
-//                    redisTemplate.expire(key, materialId.toString(),60, TimeUnit.SECONDS);
-//                } else {
-//                    String json = objectMapper.writeValueAsString(productTest);
-//                    //要设置个过期时间
-//                    valueOperations.set(key, json);
-//                    //[100,2000)
-//                    long expireTime = ThreadLocalRandom.current().nextInt(3600, 24 * 3600);
-//                    redisTemplate.expire(key, expireTime, TimeUnit.SECONDS);
-//                }
-//            } catch (Exception e) {
-//                throw e;
-//            } finally {
-//                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
-//                //unlock 删除key
-//                //如果锁因超时（leaseTime）会抛异常
-//                lock.unlock();
-//            }
-//
-//
-//        } else {
-//
-//        }
+            String lockKey = locationPrefix + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            try {
+
+                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                warehouse = this.warehouseService.getById(wareHouseId);
+                //穿透：设置个空值,待优化
+                if (warehouse != null) {
+                    hashOps.put(key, wareHouseId.toString(), warehouse);
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+                lock.unlock();
+            }
+        }
+        return warehouse;
     }
 
     @Override
-    public void loadFromDbOrgnization(Long orgnizationd) {
+    public Orgnization loadFromDbOrgnization(Long orgnizationd) throws InterruptedException {
+        HashOperations<String, String, Orgnization> hashOps = redisTemplate.opsForHash();
+        String key = warehousePrefix;
+        Orgnization orgnization = (Orgnization) hashOps.get(key, orgnizationd.toString());
+        if (orgnization == null) {
 
+            String lockKey = locationPrefix + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            try {
+
+                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                orgnization = this.orgnizationService.getById(orgnizationd);
+                //穿透：设置个空值,待优化
+                if (orgnization != null) {
+                    hashOps.put(key, orgnizationd.toString(), orgnization);
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+                lock.unlock();
+            }
+        }
+        return orgnization;
     }
 
     @Override
-    public void loadFromDbPackageUnit(Long packageUnitId) {
+    public PackageUnit loadFromDbPackageUnit(Long packageUnitId) throws InterruptedException {
+        HashOperations<String, String, PackageUnit> hashOps = redisTemplate.opsForHash();
+        String key = warehousePrefix;
+        PackageUnit packageUnit = (PackageUnit) hashOps.get(key, packageUnitId.toString());
+        if (packageUnit == null) {
 
+            String lockKey = locationPrefix + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            try {
+
+                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                packageUnit = this.packageUnitService.getById(packageUnitId);
+                //穿透：设置个空值,待优化
+                if (packageUnit != null) {
+                    hashOps.put(key, packageUnitId.toString(), packageUnit);
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+                lock.unlock();
+            }
+        }
+        return packageUnit;
     }
 
 

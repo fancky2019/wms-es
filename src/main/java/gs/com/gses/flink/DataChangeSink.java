@@ -87,15 +87,17 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
                 default:
                     break;
             }
+            log.info("Sink {} completed", dataChangeInfo.getId());
         } catch (Exception ex) {
-            log.error("Sink {} exception - {}", dataChangeInfo.getId(), dataChangeInfo.getAfterData());
+            log.error("Sink {} exception ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
             //待优化处理
             log.error("", ex);
-            throw ex;
+//            throw ex;
         } finally {
             MDC.remove("traceId");
+
         }
-        log.info("Sink {} completed", dataChangeInfo.getId());
+
 
     }
 

@@ -1,6 +1,6 @@
 package gs.com.gses.service;
 
-import gs.com.gses.model.entity.Material;
+import gs.com.gses.model.entity.*;
 
 public interface BasicInfoCacheService {
     void initLocation();
@@ -19,19 +19,19 @@ public interface BasicInfoCacheService {
 
     void initPackageUnit();
 
-    void loadFromDbLocation(Long locationId);
+    Location loadFromDbLocation(Long locationId) throws InterruptedException;
 
-    void loadFromDbLaneway(Long lanewayId);
+    Laneway loadFromDbLaneway(Long lanewayId) throws InterruptedException;
 
-    void loadFromDbZone(Long zoneId);
+    Zone loadFromDbZone(Long zoneId) throws InterruptedException;
 
     Material loadFromDbMaterial(Long materialId) throws InterruptedException;
 
-    void loadFromDbWarehouse(Long wareHouseId);
+    Warehouse loadFromDbWarehouse(Long wareHouseId) throws InterruptedException;
 
-    void loadFromDbOrgnization(Long orgnizationd);
+    Orgnization loadFromDbOrgnization(Long orgnizationd) throws InterruptedException;
 
-    void loadFromDbPackageUnit(Long packageUnitId);
+    PackageUnit loadFromDbPackageUnit(Long packageUnitId) throws InterruptedException;
 
     void batch();
 }

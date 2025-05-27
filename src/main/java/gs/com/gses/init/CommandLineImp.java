@@ -177,13 +177,13 @@ public class CommandLineImp implements CommandLineRunner {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // enable checkpoint
         env.enableCheckpointing(300);
-        env.setParallelism(4);// 根据表数量和大小调整
+        env.setParallelism(Runtime.getRuntime().availableProcessors());// 根据表数量和大小调整
         // set the source parallelism to 2
         env.fromSource(
                         sqlServerSource,
                         WatermarkStrategy.noWatermarks(),
                         "sqlserver43")
-                .setParallelism(Runtime.getRuntime().availableProcessors())
+                .setParallelism(1)// Sink单线程 Sink单线程确保写入顺序 同一个id 的数据sink 多线程可能乱序
                 .keyBy(record -> {
                     return record.getId(); // 按主键分组  .setParallelism(1) >1 解决增删改乱序
                 })

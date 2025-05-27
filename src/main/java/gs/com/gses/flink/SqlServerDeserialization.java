@@ -124,14 +124,28 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
             DataChangeInfo dataChangeInfo = new DataChangeInfo();
             ObjectMapper objectMapper = new ObjectMapper();
             HashMap<String, Object> beforeMap = getJsonObject(struct, BEFORE);
-            String beforeJson = objectMapper.writeValueAsString(beforeMap);
-            HashMap<String, Object> afterMap = getJsonObject(struct, AFTER);
-            String afterJson = objectMapper.writeValueAsString(afterMap);
-
-            Object id = afterMap.get("Id");
+            log.info("beforeMap complete");
+            Object id = beforeMap.get("Id");
             if (id != null) {
                 dataChangeInfo.setId(id.toString());
+                log.info("Id - {}} ", id);
+            } else {
+                log.info("Id is null ");
             }
+            log.info("beforeMapId complete");
+            String beforeJson = objectMapper.writeValueAsString(beforeMap);
+            HashMap<String, Object> afterMap = getJsonObject(struct, AFTER);
+            log.info("afterMap complete");
+
+            if (id == null) {
+                id = afterMap.get("Id");
+                if (id != null) {
+                    dataChangeInfo.setId(id.toString());
+                    log.info("Id - {}} ", id);
+                }
+            }
+            log.info("afterMapId complete");
+            String afterJson = objectMapper.writeValueAsString(afterMap);
 
             dataChangeInfo.setTraceId(traceId);
 //        dataChangeInfo.setBeforeData(getJsonObject(struct, BEFORE).toJSONString());
@@ -145,7 +159,7 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
 //        String type = operation.toString().toUpperCase();
 //        int eventType = type.equals(CREATE) ? 1 : UPDATE.equals(type) ? 2 : 3;
             dataChangeInfo.setEventType(operation.name());
-
+            log.info("operation complete");
 
 //        dataChangeInfo.setFileName(Optional.ofNullable(source.get(BIN_FILE)).map(Object::toString).orElse(""));
 //        dataChangeInfo.setFilePos(Optional.ofNullable(source.get(POS)).map(x -> Integer.parseInt(x.toString())).orElse(0));

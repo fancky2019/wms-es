@@ -54,19 +54,19 @@ public class InventoryController {
 
 
     @GetMapping("/updateByInventoryItemDetailDb/{id}")
-    public MessageResult<Void> updateByInventoryItemDetailDb(@PathVariable Long id) {
+    public MessageResult<Void> updateByInventoryItemDetailDb(@PathVariable Long id) throws InterruptedException {
         inventoryInfoService.updateByInventoryItemDetailDb(id);
         return MessageResult.success();
     }
 
     @GetMapping("/updateByInventoryItemDb/{id}")
-    public MessageResult<Void> updateByInventoryItemDb(@PathVariable Long id) {
+    public MessageResult<Void> updateByInventoryItemDb(@PathVariable Long id) throws InterruptedException {
         inventoryInfoService.updateByInventoryItemDb(id);
         return MessageResult.success();
     }
 
     @GetMapping("/updateByInventoryDb/{id}")
-    public MessageResult<Void> updateByInventoryDb(@PathVariable Long id) {
+    public MessageResult<Void> updateByInventoryDb(@PathVariable Long id) throws InterruptedException {
         inventoryInfoService.updateByInventoryDb(id);
         return MessageResult.success();
     }

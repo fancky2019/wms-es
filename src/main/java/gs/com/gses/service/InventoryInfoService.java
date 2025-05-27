@@ -29,20 +29,20 @@ public interface InventoryInfoService {
 
     void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
 
-    void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
+    void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
 
-    void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
+    void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
 
-    void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
+    void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
 
     void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
 
     void test();
 
 
-    void updateByInventoryItemDetailDb(Long id);
-    void updateByInventoryItemDb(Long id);
-    void updateByInventoryDb(Long id);
+    void updateByInventoryItemDetailDb(Long id) throws InterruptedException;
+    void updateByInventoryItemDb(Long id) throws InterruptedException;
+    void updateByInventoryDb(Long id) throws InterruptedException;
 
 
 

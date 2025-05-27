@@ -1,6 +1,9 @@
 package gs.com.gses.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
+import gs.com.gses.model.entity.InventoryItemDetail;
 import gs.com.gses.model.entity.ShipOrder;
 import gs.com.gses.model.request.InventoryInfoRequest;
 import gs.com.gses.model.request.ShipOrderRequest;
@@ -23,9 +26,17 @@ public class ShipOrderController {
     //    org.apache.flink.api.common.ExecutionConfig
     @Autowired
     private ShipOrderService shipOrderService;
+    @Autowired
+    private ObjectMapper upperObjectMapper;
 
-    @GetMapping("/test")
-    public MessageResult<ShipOrder> test(Long id) {
+    @GetMapping("/test/{id}")
+    public MessageResult<ShipOrder> test(Long id) throws JsonProcessingException {
+
+//        InventoryItemDetail changedInventoryItemDetail = null;
+//        String str = null;
+//
+//        changedInventoryItemDetail = upperObjectMapper.readValue(upperObjectMapper.writeValueAsString(str), InventoryItemDetail.class);
+
         return MessageResult.success(shipOrderService.test(id));
     }
 

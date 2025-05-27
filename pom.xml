@@ -8,6 +8,7 @@
     <name>wms-es</name>
     <description>wms-es</description>
     <properties>
+<!--        版本匹配规则：Spring Boot 的 starter 版本号（如 3.5.0）必须与 Spring Boot 本身的版本号严格一致-->
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
