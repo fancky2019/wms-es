@@ -153,9 +153,9 @@ spring:
     # MQTT服务地址，端口号默认11883，如果有多个，用逗号隔开
     url: tcp://10.100.200.43:1883
     # 用户名
-    username: test1
+    username: ""
     # 密码
-    password: Admin123
+    password: ""
     # 客户端id(不能重复)
     client:
       id: provider-id1

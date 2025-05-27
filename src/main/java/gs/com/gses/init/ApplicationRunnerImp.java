@@ -25,15 +25,15 @@ import javax.annotation.Resource;
 public class ApplicationRunnerImp implements ApplicationRunner {
     private static Logger LOGGER = LogManager.getLogger(ApplicationRunnerImp.class);
 
-    @Autowired
-    private MqttConsume mqttConsume;
+
     @Resource
     ApplicationContext applicationContext;
 
     @Autowired
     private BasicInfoCacheService basicInfoCacheService;
 
-
+    @Autowired
+    private MqttConsume mqttConsume;
     @Value("${sbp.initCache}")
     private Boolean initCache;
 
@@ -44,11 +44,10 @@ public class ApplicationRunnerImp implements ApplicationRunner {
         log.info("threadId - {}", Thread.currentThread().getId());
         if (!initCache) {
             log.info("Don't run initCache");
-            return;
+        } else {
+            basicInfoCacheService.initBasicInfoCache();
         }
-        basicInfoCacheService.initBasicInfoCache();
         log.info("ApplicationRunnerImp Complete");
-//        mqttConsume.init();
 
     }
 }

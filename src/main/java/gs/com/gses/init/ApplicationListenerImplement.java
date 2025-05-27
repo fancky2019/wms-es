@@ -1,20 +1,13 @@
 package gs.com.gses.init;
 
-import gs.com.gses.model.entity.Orgnization;
-import gs.com.gses.model.entity.Warehouse;
+import gs.com.gses.rabbitMQ.mqtt.MqttConsume;
 import gs.com.gses.service.BasicInfoCacheService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-
-import java.util.HashMap;
-import java.util.Map;
 
 //容器初始化完成执行：ApplicationRunner-->CommandLineRunner-->ApplicationReadyEvent
 
@@ -29,10 +22,20 @@ public class ApplicationListenerImplement implements ApplicationListener<Applica
     private BasicInfoCacheService basicInfoCacheService;
 
 
+    @Autowired
+    private MqttConsume mqttConsume;
+
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
-
-        basicInfoCacheService.batch();
+        log.info("ApplicationRunnerImp Complete");
+        try {
+            mqttConsume.init();
+            log.info("mqttConsume init complete");
+        } catch (Exception e) {
+            log.error("mqttConsume init exception", e);
+            throw new RuntimeException(e);
+        }
+//        basicInfoCacheService.batch();
         return;
 //        basicInfoCacheService.initBasicInfoCache();
 //        log.info("初始化缓存完成");

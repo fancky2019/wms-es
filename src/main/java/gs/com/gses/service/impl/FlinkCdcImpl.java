@@ -1,11 +1,9 @@
-package gs.com.gses.init;
-
+package gs.com.gses.service.impl;
 
 import gs.com.gses.config.FlinkConfig;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.flink.DataChangeSink;
 import gs.com.gses.flink.SqlServerDeserialization;
-import gs.com.gses.service.impl.FlinkCdcService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -15,39 +13,17 @@ import org.apache.flink.cdc.connectors.sqlserver.source.SqlServerSourceBuilder;
 import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.List;
 import java.util.Properties;
-//import java.util.Properties;
 
-
-//容器初始化完成执行：ApplicationRunner-->CommandLineRunner-->ApplicationReadyEvent
-
-/**
- * Flink DataStream API 方式
- *
- *
- * @author lirui
- */
-//@Order控制配置类的加载顺序，通过@Order指定执行顺序，值越小，越先执行
-@Component
-@Order(1)
+@Service
 @Slf4j
-public class CommandLineImp implements CommandLineRunner {
-
-//    private static Logger LOGGER = LogManager.getLogger(CommandLineImp.class);
+public class FlinkCdcImpl implements FlinkCdcService {
 
     @Autowired
     private FlinkConfig flinkConfig;
@@ -58,16 +34,9 @@ public class CommandLineImp implements CommandLineRunner {
     @Autowired
     private DataChangeSink dataChangeSink;
 
-    @Autowired
-    private FlinkCdcService flinkCdcService;
-
+    @Async("threadPoolExecutor")
     @Override
-    public void run(String... args) throws Exception {
-        flinkCdcService.run();
-    }
-
-    public void run1(String... args) throws Exception {
-
+    public void run() throws Exception {
         if (!flinkConfig.getEnable()) {
             log.info("flink is not enable");
             return;
@@ -226,8 +195,7 @@ public class CommandLineImp implements CommandLineRunner {
                         3, // 最大重试次数，总共尝试3次
                         Time.seconds(2) // 重试间隔
                 ));
+        log.info("flink cdc start running");
         env.execute("WmsToEs");
-
-
     }
 }

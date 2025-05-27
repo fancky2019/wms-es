@@ -429,7 +429,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         //        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
         Map<String, Warehouse> warehouseMap = new HashMap<>();
         Map<String, Orgnization> orgnizationMap = new HashMap<>();
-        Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+       // Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
 
     }
 
