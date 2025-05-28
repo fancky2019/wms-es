@@ -2,6 +2,7 @@ package gs.com.gses.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
+import org.redisson.codec.JsonJacksonCodec;
 import org.redisson.config.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,6 +55,9 @@ public class RedissonConfig {
 
 //        Config  config = Config.fromYAML(new File("redisson-config.yml"));
         Config  config = Config.fromYAML(RedissonConfig.class.getClassLoader().getResource("redisson-config.yml"));
+//        // 使用 Jackson 序列化
+//        config.setCodec(new JsonJacksonCodec());
+
         return Redisson.create(config);
     }
 }

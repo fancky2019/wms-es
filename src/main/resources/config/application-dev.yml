@@ -158,7 +158,7 @@ spring:
     password: ""
     # 客户端id(不能重复)
     client:
-      id: provider-id1
+      id: provider-id2
     # MQTT默认的消息推送主题，实际可在调用接口是指定
     default:
       topic: topic
@@ -169,6 +169,8 @@ sbp:
 #  true  false
 #  ordermigratedbtoolurl: http://localhost:8101
 #  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
+  wmsurl: http://10.100.200.43:9000/api/app
+  authority: http://10.100.200.43:9001/api/app
   hostAndPort: 10.100.200.43:9200
   initCache: false
   flink:

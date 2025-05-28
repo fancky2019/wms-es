@@ -235,15 +235,17 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             warehouseMap.put(warehouse.getId().toString(), warehouse);
 
 
-            List<Long> organiztionSupplierIdList = inventoryItemList.stream().map(p -> p.getOrganiztionSupplierId()).distinct().collect(Collectors.toList());
-            List<Long> organiztionIdList = inventoryItemList.stream().map(p -> p.getOrganiztionId()).distinct().collect(Collectors.toList());
+            List<Long> organiztionSupplierIdList = inventoryItemList.stream().filter(p -> p.getOrganiztionSupplierId() != null).map(p -> p.getOrganiztionSupplierId()).distinct().collect(Collectors.toList());
+            List<Long> organiztionIdList = inventoryItemList.stream().filter(p -> p.getOrganiztionSupplierId() != null).map(p -> p.getOrganiztionId()).distinct().collect(Collectors.toList());
 
             List<Long> allOrganiztionIdList = new ArrayList<>();
             allOrganiztionIdList.addAll(organiztionSupplierIdList);
             allOrganiztionIdList.addAll(organiztionIdList);
-
-            List<Orgnization> orgnizationList = redisTemplate.opsForHash().multiGet(BasicInfoCacheServiceImpl.orgnizationPrefix, allOrganiztionIdList);
-            orgnizationMap = orgnizationList.stream().collect(Collectors.toMap(p -> p.getId().toString(), item -> item));
+            if (!allOrganiztionIdList.isEmpty()) {
+                List<String> allOrganiztionIdStrList = allOrganiztionIdList.stream().map(p -> p.toString()).collect(Collectors.toList());
+                List<Orgnization> orgnizationList = redisTemplate.opsForHash().multiGet(BasicInfoCacheServiceImpl.orgnizationPrefix, allOrganiztionIdStrList);
+                orgnizationMap = orgnizationList.stream().collect(Collectors.toMap(p -> p.getId().toString(), item -> item));
+            }
             List<String> materialIdList = inventoryItemDetailList.stream().map(p -> p.getMaterialId().toString()).distinct().collect(Collectors.toList());
             materialMap = redisUtil.getHashEntries(BasicInfoCacheServiceImpl.materialPrefix, materialIdList);
 
@@ -1330,7 +1332,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (inventoryItemDetail.getLastModificationTime() != null) {
             LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
             if (inventoryInfo != null) {
-                if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
+                if (inventoryInfo.getLastModificationTime() != null && localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
                     Map<String, Object> updatedMap = prepareInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
                     updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, dataChangeInfo.getTableName());
                 }
@@ -1357,7 +1359,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         for (InventoryInfo inventoryInfo : inventoryInfoList) {
             if (inventoryItem.getLastModificationTime() != null) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
-                if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
+                if (inventoryInfo.getLastModificationTime() != null && localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
                     Map<String, Object> updatedMap = prepareInventoryItemUpdatedInfo(inventoryInfo, inventoryItem);
                     updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
                 }
@@ -1384,7 +1386,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             }
             if (inventory.getLastModificationTime() != null) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventory.getLastModificationTime()), ZoneOffset.of("+8"));
-                if (localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
+                if (inventoryInfo.getLastModificationTime() != null && localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
                     Map<String, Object> updatedMap = prepareInventoryUpdatedInfo(inventoryInfo, inventory);
                     updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
                 }
@@ -1572,7 +1574,29 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
             //unlock 删除key
             //如果锁因超时（leaseTime）会抛异常
-            lock.unlock();
+
+//            lock.unlock(); // 执行Redisson操作
+
+            boolean wasInterrupted = Thread.interrupted(); // 清除中断状态
+            try {
+                lock.unlock(); // 执行Redisson操作
+            } finally {
+                if (wasInterrupted) {
+                    Thread.currentThread().interrupt(); // 恢复中断状态
+                }
+            }
+
+//            if (lock.isHeldByCurrentThread()) {
+//                try {
+//                    lock.unlock();
+//                } catch (Exception e) {
+//                    // 记录日志，但不要吞没异常
+//                    log.error("解锁失败", e);
+//                }
+//            }
+
+
+
             log.info("InventoryInfo - {} release lock - {} success ", id, lockKey);
 
         }

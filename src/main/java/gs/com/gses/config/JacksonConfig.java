@@ -59,6 +59,11 @@ public class JacksonConfig {
         javaTimeModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")));
 
 
+
+        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSSSSSSSS]")));
+        javaTimeModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSSSSSSSS]")));
+
+
         // 注册自定义的序列化和反序列化器
         javaTimeModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer());
         javaTimeModule.addDeserializer(ZonedDateTime.class, new ZonedDateTimeDeserializer());
