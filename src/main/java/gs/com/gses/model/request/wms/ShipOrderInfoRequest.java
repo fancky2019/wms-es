@@ -1,5 +1,6 @@
-package gs.com.gses.model.request;
+package gs.com.gses.model.request.wms;
 
+import gs.com.gses.model.request.EsRequestPage;
 import lombok.Data;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -9,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-public class ShipOrderInfoRequest  extends EsRequestPage{
+public class ShipOrderInfoRequest  extends EsRequestPage {
     private Long applyShipOrderId;
     private String applyShipOrderCode;
     private Long applyShipOrderItemId;

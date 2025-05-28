@@ -1,5 +1,6 @@
-package gs.com.gses.model.request;
+package gs.com.gses.model.request.wms;
 
+import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
 import java.util.List;

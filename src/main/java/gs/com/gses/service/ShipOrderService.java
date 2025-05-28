@@ -1,10 +1,8 @@
 package gs.com.gses.service;
 
-import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.ShipOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
-import gs.com.gses.model.request.InventoryInfoRequest;
-import gs.com.gses.model.request.ShipOrderRequest;
+import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 

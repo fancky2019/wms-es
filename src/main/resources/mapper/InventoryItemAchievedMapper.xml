@@ -2,7 +2,7 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="generator.mapper.InventoryItemAchievedMapper">
+<mapper namespace="gs.com.gses.mapper.InventoryItemAchievedMapper">
 
     <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.InventoryItemAchieved">
             <id property="id" column="Id" jdbcType="BIGINT"/>
@@ -32,6 +32,7 @@
             <result property="creationTime" column="CreationTime" jdbcType="BIGINT"/>
             <result property="lastModificationTime" column="LastModificationTime" jdbcType="BIGINT"/>
             <result property="organiztionId" column="OrganiztionId" jdbcType="BIGINT"/>
+            <result property="organiztionSupplierId" column="OrganiztionSupplierId" jdbcType="BIGINT"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -43,6 +44,7 @@
         Str1,Str2,Str3,
         Str4,Str5,CreatorId,
         CreatorName,LastModifierId,LastModifierName,
-        CreationTime,LastModificationTime,OrganiztionId
+        CreationTime,LastModificationTime,OrganiztionId,
+        OrganiztionSupplierId
     </sql>
 </mapper>

@@ -2,7 +2,7 @@ package gs.com.gses.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.entity.InventoryItemDetail;
-import gs.com.gses.model.request.InventoryItemDetailRequest;
+import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 
 import java.util.List;
 

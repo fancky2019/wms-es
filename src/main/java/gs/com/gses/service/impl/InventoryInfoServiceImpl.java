@@ -1,6 +1,5 @@
 package gs.com.gses.service.impl;
 
-import co.elastic.clients.elasticsearch.core.get.GetResult;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,7 +8,7 @@ import gs.com.gses.elasticsearch.ShipOrderInfoRepository;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
-import gs.com.gses.model.request.InventoryInfoRequest;
+import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.service.*;
@@ -17,7 +16,6 @@ import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.math3.stat.descriptive.summary.Product;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;

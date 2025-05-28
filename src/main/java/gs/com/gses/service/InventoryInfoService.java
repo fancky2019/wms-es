@@ -3,13 +3,8 @@ package gs.com.gses.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
-import gs.com.gses.model.entity.Inventory;
-import gs.com.gses.model.entity.InventoryItemDetail;
-import gs.com.gses.model.request.InventoryInfoRequest;
-import gs.com.gses.model.response.MessageResult;
+import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.response.PageData;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.HashMap;
 import java.util.List;

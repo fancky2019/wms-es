@@ -2,9 +2,8 @@ package gs.com.gses.controller;
 
 
 import gs.com.gses.model.entity.InventoryItemDetail;
-import gs.com.gses.model.request.InventoryItemDetailRequest;
+import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.response.MessageResult;
-import gs.com.gses.service.InventoryInfoService;
 import gs.com.gses.service.InventoryItemDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;

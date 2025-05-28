@@ -2,7 +2,7 @@ package gs.com.gses.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import gs.com.gses.model.elasticsearch.ShipOrderInfo;
-import gs.com.gses.model.request.ShipOrderInfoRequest;
+import gs.com.gses.model.request.wms.ShipOrderInfoRequest;
 import gs.com.gses.model.response.PageData;
 import org.springframework.stereotype.Service;
 

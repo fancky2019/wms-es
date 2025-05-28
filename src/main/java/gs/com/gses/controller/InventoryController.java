@@ -1,16 +1,10 @@
 package gs.com.gses.controller;
 
-import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
-import gs.com.gses.model.elasticsearch.ShipOrderInfo;
-import gs.com.gses.model.entity.Inventory;
-import gs.com.gses.model.entity.InventoryItemDetail;
-import gs.com.gses.model.request.InventoryInfoRequest;
-import gs.com.gses.model.request.ShipOrderInfoRequest;
+import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.service.InventoryInfoService;
-import gs.com.gses.service.OutBoundOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,23 +1,16 @@
 package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.InventoryItemDetail;
 import gs.com.gses.mapper.InventoryItemDetailMapper;
-import gs.com.gses.model.entity.ShipOrder;
-import gs.com.gses.model.request.InventoryItemDetailRequest;
-import gs.com.gses.model.request.ShipOrderRequest;
-import gs.com.gses.model.response.ShipOrderResponse;
+import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.service.InventoryItemDetailService;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
 * @author lirui

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="generator.mapper.InventoryItemDetailAchievedMapper">
+<mapper namespace="gs.com.gses.mapper.InventoryItemDetailAchievedMapper">
 
     <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.InventoryItemDetailAchieved">
             <id property="id" column="Id" jdbcType="BIGINT"/>
@@ -77,6 +77,8 @@
             <result property="positionCode" column="PositionCode" jdbcType="VARCHAR"/>
             <result property="positionLevel" column="PositionLevel" jdbcType="INTEGER"/>
             <result property="packageMethod" column="PackageMethod" jdbcType="VARCHAR"/>
+            <result property="materialRackId" column="MaterialRackId" jdbcType="BIGINT"/>
+            <result property="imageFile" column="ImageFile" jdbcType="VARCHAR"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -103,6 +105,7 @@
         M_Str40,CreatorId,CreatorName,
         LastModifierId,LastModifierName,CreationTime,
         LastModificationTime,InboundTime,ProductTime,
-        PositionCode,PositionLevel,PackageMethod
+        PositionCode,PositionLevel,PackageMethod,
+        MaterialRackId,ImageFile
     </sql>
 </mapper>

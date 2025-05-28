@@ -3,9 +3,7 @@ package gs.com.gses.service.elasticsearch;
 
 import gs.com.gses.elasticsearch.ShipOrderInfoRepository;
 import gs.com.gses.model.elasticsearch.DemoProduct;
-import gs.com.gses.model.elasticsearch.ShipOrderInfo;
 import gs.com.gses.model.request.DemoProductRequest;
-import gs.com.gses.model.request.ShipOrderInfoRequest;
 import gs.com.gses.model.response.PageData;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -21,7 +19,6 @@ import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 

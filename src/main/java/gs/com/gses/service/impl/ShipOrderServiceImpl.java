@@ -9,8 +9,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
-import gs.com.gses.model.request.InventoryInfoRequest;
-import gs.com.gses.model.request.ShipOrderRequest;
+import gs.com.gses.model.request.wms.InventoryInfoRequest;
+import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
@@ -27,7 +27,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.ArrayList;

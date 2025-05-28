@@ -22,7 +22,7 @@ import gs.com.gses.model.elasticsearch.ShipOrderInfo;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.WmsTask;
 import gs.com.gses.model.request.DemoProductRequest;
-import gs.com.gses.model.request.ShipOrderInfoRequest;
+import gs.com.gses.model.request.wms.ShipOrderInfoRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
