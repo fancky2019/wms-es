@@ -204,7 +204,10 @@ xxl:
       logretentiondays: 30
       port: 9999
 
-
+##mybatis log 日志显示配置
+#mybatis-plus:
+#  configuration:
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 mybatis-plus:
   ##  mybatis全局配置文件
   #  config-location: classpath:mybatis-config.xml
@@ -215,7 +218,7 @@ mybatis-plus:
   #  M_Str1  默认命中mStr1
   configuration:
     map-underscore-to-camel-case: false  #默认true
-
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 logging:
   config: classpath:log4j2.xml
   #mybatis-plus 日志级别配置，不用配置

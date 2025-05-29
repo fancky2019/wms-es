@@ -6,6 +6,7 @@
 
     <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.TruckOrder">
             <id property="id" column="Id" jdbcType="BIGINT"/>
+            <result property="truckOrderCode" column="TruckOrderCode" jdbcType="VARCHAR"/>
             <result property="senderAddress" column="SenderAddress" jdbcType="VARCHAR"/>
             <result property="receiverAddress" column="ReceiverAddress" jdbcType="VARCHAR"/>
             <result property="senderPhone" column="SenderPhone" jdbcType="VARCHAR"/>
@@ -25,11 +26,11 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        Id,SenderAddress,ReceiverAddress,
-        SenderPhone,ReceiverPhone,SendTime,
-        TrunkType,DriverPhone,TrunkNo,
-        Deleted,Version,CreatorId,
-        CreatorName,LastModifierId,LastModifierName,
-        CreationTime,LastModificationTime
+        Id,TruckOrderCode,SenderAddress,
+        ReceiverAddress,SenderPhone,ReceiverPhone,
+        SendTime,TrunkType,DriverPhone,
+        TrunkNo,Deleted,Version,
+        CreatorId,CreatorName,LastModifierId,
+        LastModifierName,CreationTime,LastModificationTime
     </sql>
 </mapper>

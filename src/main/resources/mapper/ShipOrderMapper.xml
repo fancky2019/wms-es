@@ -55,6 +55,9 @@
             <result property="zoneID" column="ZoneID" jdbcType="BIGINT"/>
             <result property="groupFlag" column="GroupFlag" jdbcType="VARCHAR"/>
             <result property="printingTimes" column="PrintingTimes" jdbcType="BIGINT"/>
+            <result property="completeTime" column="CompleteTime" jdbcType="TIMESTAMP"/>
+            <result property="effectTime" column="EffectTime" jdbcType="TIMESTAMP"/>
+            <result property="sufficientInventory" column="SufficientInventory" jdbcType="BIT"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -74,6 +77,7 @@
         ToLocId,Proirity,OneClickTime,
         OrganiztionCustomId,OrganiztionDepartmentId,OrganiztionSupplierId,
         DestinationDock,ZoneCode,ZoneID,
-        GroupFlag,PrintingTimes
+        GroupFlag,PrintingTimes,CompleteTime,
+        EffectTime,SufficientInventory
     </sql>
 </mapper>

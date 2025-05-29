@@ -1,10 +1,12 @@
 package gs.com.gses.model.request.wms;
 
 import gs.com.gses.model.request.EsRequestPage;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.Date;
 
+@Data
 public class TruckOrderItemRequest extends EsRequestPage {
     /**
      *

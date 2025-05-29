@@ -3,6 +3,7 @@ package gs.com.gses.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -124,7 +125,9 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
     }
 
     public <T> LambdaQueryWrapper<T> orderByField(LambdaQueryWrapper<T> wrapper, String fieldName, boolean isAsc) {
-
+        // 获取实体类所有字段的SFunction缓存
+//        Map<String, SFunction<T, R>> fieldMap = LambdaUtils.getFieldMap(entityClass);
+//         fieldMap.get(fieldName);
         try {
 //            Method method = LambdaQueryWrapper.class.getMethod(
 //                    isAsc ? "orderByAsc" : "orderByDesc",

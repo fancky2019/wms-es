@@ -101,6 +101,10 @@
             <result property="toLocCode" column="ToLocCode" jdbcType="VARCHAR"/>
             <result property="toLocId" column="ToLocId" jdbcType="BIGINT"/>
             <result property="packageMethod" column="PackageMethod" jdbcType="VARCHAR"/>
+            <result property="isSealed" column="IsSealed" jdbcType="BIT"/>
+            <result property="sufficientInventory" column="SufficientInventory" jdbcType="BIT"/>
+            <result property="lackQuantity" column="LackQuantity" jdbcType="DECIMAL"/>
+            <result property="palletCode" column="PalletCode" jdbcType="VARCHAR"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -135,6 +139,8 @@
         ProductTime,QCStatus,Carton,
         SerialNo,Proirity,FromLocationCode,
         FromLocationId,OrganiztionId,ShipAccordingToOrderCode,
-        ToLocCode,ToLocId,PackageMethod
+        ToLocCode,ToLocId,PackageMethod,
+        IsSealed,SufficientInventory,LackQuantity,
+        PalletCode
     </sql>
 </mapper>

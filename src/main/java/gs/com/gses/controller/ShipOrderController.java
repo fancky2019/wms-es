@@ -1,5 +1,6 @@
 package gs.com.gses.controller;
 
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.ShipOrder;
@@ -9,6 +10,7 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
 import gs.com.gses.service.ShipOrderService;
+import gs.com.gses.utility.LambdaFunctionHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +34,7 @@ public class ShipOrderController {
     @GetMapping("/test/{id}")
     public MessageResult<ShipOrder> test(Long id) throws JsonProcessingException {
 
+//        SFunction function=LambdaFunctionHelper.getSFunctionByFieldName(ShipOrder.class,"id");
 //        InventoryItemDetail changedInventoryItemDetail = null;
 //        String str = null;
 //

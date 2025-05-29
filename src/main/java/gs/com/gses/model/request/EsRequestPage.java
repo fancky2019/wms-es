@@ -17,4 +17,6 @@ public class EsRequestPage extends Page {
     private List<String> aggregationFieldList;
 
     private List<Sort> sortFieldList;
+
+
 }
