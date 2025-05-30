@@ -36,7 +36,7 @@ public class MqttConsumerCallBack implements MqttCallback {
     public void connectionLost(Throwable throwable) {
 
         try {
-            log.info("与服务器断开连接，可重连");
+            log.info("mqttConsumeDisconnected 与服务器断开连接，可重连");
             MqttConsume mqttConsume1 = (MqttConsume) applicationContext.getBean("mqttConsume");
             mqttConsume1.connect();
         } catch (Exception e) {

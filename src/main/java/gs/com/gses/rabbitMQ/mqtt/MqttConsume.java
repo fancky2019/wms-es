@@ -23,7 +23,7 @@ public class MqttConsume {
     @Value("${spring.mqtt.url}")
     private String hostUrl;
 
-    //    @Value("${spring.mqtt.client.id}")
+    @Value("${spring.mqtt.consumerid}")
     private String clientId = "consumer-id";
 
     @Value("${spring.mqtt.default.topic}")
@@ -62,10 +62,14 @@ public class MqttConsume {
         //是否清空session，设置为false表示服务器会保留客户端的连接记录，客户端重连之后能获取到服务器在客户端断开连接期间推送的消息
         //设置为true表示每次连接到服务端都是以新的身份
         options.setCleanSession(false);
+
+
         //设置连接用户名
         options.setUserName(username);
-        //设置连接密码
+//        设置连接密码
         options.setPassword(password.toCharArray());
+
+
         //设置超时时间，单位为秒
         options.setConnectionTimeout(100);
         //设置心跳时间 单位为秒，表示服务器每隔1.5*20秒的时间向客户端发送心跳判断客户端是否在线

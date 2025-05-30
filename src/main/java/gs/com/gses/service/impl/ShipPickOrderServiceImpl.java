@@ -38,6 +38,9 @@ public class ShipPickOrderServiceImpl extends ServiceImpl<ShipPickOrderMapper, S
         if (request.getShipOrderId()!=null&&request.getShipOrderId()>0) {
             queryWrapper.eq(ShipPickOrder::getShipOrderId, request.getShipOrderId());
         }
+        if (request.getStartCreationTime()!=null&&request.getStartCreationTime()>0) {
+            queryWrapper.ge(ShipPickOrder::getCreationTime, request.getStartCreationTime());
+        }
 
         // 创建分页对象 (当前页, 每页大小)
         Page<ShipPickOrder> page = new Page<>(request.getPageIndex(), request.getPageSize());

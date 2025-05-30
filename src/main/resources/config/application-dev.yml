@@ -158,9 +158,10 @@ spring:
     username: ""
     # 密码
     password: ""
+    consumerid: id_dev_consumerid
     # 客户端id(不能重复)
     client:
-      id: provider-id2
+      id: id_dev
     # MQTT默认的消息推送主题，实际可在调用接口是指定
     default:
       topic: topic

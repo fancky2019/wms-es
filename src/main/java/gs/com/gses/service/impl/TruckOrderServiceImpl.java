@@ -32,7 +32,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.MessageFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -100,6 +102,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
             shipOrderPalletRequestList.add(shipOrderPalletRequest);
         }
+//        long createTime = LocalDateTime.now().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
+        long createTime = Instant.now().toEpochMilli();
         //未登录会得到全局异常
         WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
         if (wmsResponse.getResult()) {
@@ -108,6 +112,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             Long shipOrderId = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
             ShipPickOrderRequest shipPickOrderRequest = new ShipPickOrderRequest();
             shipPickOrderRequest.setShipOrderId(shipOrderId);
+            shipPickOrderRequest.setStartCreationTime(createTime);
             Sort sort = new Sort();
             sort.setSortType("desc");
             sort.setSortField("Id");

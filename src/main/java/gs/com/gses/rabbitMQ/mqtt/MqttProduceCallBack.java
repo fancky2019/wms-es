@@ -18,7 +18,7 @@ public class MqttProduceCallBack implements MqttCallback {
      */
     @Override
     public void connectionLost(Throwable cause) {
-        System.out.println(clientId + "与服务器断开连接");
+        log.info("mqttProduceDisconnected clientId {} 与服务器断开连接" , clientId);
     }
 
     /**
@@ -26,7 +26,7 @@ public class MqttProduceCallBack implements MqttCallback {
      */
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        log.info( " messageArrived！");
+        log.info(" messageArrived {}", topic);
     }
 
     /**
@@ -35,6 +35,6 @@ public class MqttProduceCallBack implements MqttCallback {
     @Override
     public void deliveryComplete(IMqttDeliveryToken token) {
         IMqttAsyncClient client = token.getClient();
-        log.info(client.getClientId() + " 发布消息成功！");
+        log.info(client.getClientId() + " publish success！");
     }
 }

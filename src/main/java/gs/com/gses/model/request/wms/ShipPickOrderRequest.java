@@ -73,6 +73,8 @@ public class ShipPickOrderRequest extends RequestPage {
      */
     private Long creationTime;
 
+    private Long startCreationTime;
+
     /**
      * 修改时间戳13位
      */
