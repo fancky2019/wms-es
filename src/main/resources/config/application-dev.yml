@@ -10,6 +10,8 @@ spring:
   #      matching-strategy: ant_path_matcher
   #  main:
   #    allow-bean-definition-overriding: true #当遇到相同名字的时候，是否允许覆盖注册 bean
+  main:
+    allow-circular-references: true
   application:
     name: springBootProject
 
@@ -162,7 +164,30 @@ spring:
     # MQTT默认的消息推送主题，实际可在调用接口是指定
     default:
       topic: topic
+feign:
 
+  #  #携带token,未验证
+  #  oauth2:
+  #    # 开启Oauth支持，这样就会在请求头中携带Token了
+  #    enabled: true
+  #    # 同时开启负载均衡支持
+  #    load-balanced: true
+  #  默认超时值
+  #  connectTimeout：10 秒（10,000 毫秒）
+  #  readTimeout：60 秒（60,000 毫秒）
+  # 设置 feign 超时时间:超时异常
+  client:
+    config:
+      # default、service-provider-two，指定服务名称可以设置单个服务的超时时间
+      default:
+        connectTimeout: 60000  #单位ms
+        readTimeout: 60000
+  httpclient:
+    connection-timeout: 60000  #单位ms,默认2000
+    max-connections: 200 #线程池最大连接数
+    enabled: false
+    okhttp: #用okhttp 代替默认的Client，JDK 原生的 URLConnection 发送HTTP请求，没有连接池
+      enabled: true
 
 
 sbp:

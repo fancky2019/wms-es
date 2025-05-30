@@ -21,6 +21,7 @@ import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.MaterialService;
 import gs.com.gses.service.ShipOrderItemService;
 import gs.com.gses.mapper.ShipOrderItemMapper;
+import gs.com.gses.service.ShipOrderService;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -29,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Method;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,7 +48,8 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 
     @Autowired
     private MaterialService materialService;
-
+    @Autowired
+    private ShipOrderService shipOrderService;
 
     @Override
     public List<ShipOrderItem> getByShipOrderIds(List<Long> shipOrderIdList) {
@@ -72,16 +75,16 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             throw new Exception("materialCode is null");
         }
         request.setSearchCount(false);
-        List<Sort> sortList = new ArrayList<>();
-        Sort sort1 = new Sort();
-        sort1.setSortField("id");
-        sort1.setSortType("asc");
-        sortList.add(sort1);
-        sort1 = new Sort();
-        sort1.setSortField("creationTime");
-        sort1.setSortType("asc");
-        sortList.add(sort1);
-        request.setSortFieldList(sortList);
+//        List<Sort> sortList = new ArrayList<>();
+//        Sort sort1 = new Sort();
+//        sort1.setSortField("id");
+//        sort1.setSortType("asc");
+//        sortList.add(sort1);
+//        sort1 = new Sort();
+//        sort1.setSortField("creationTime");
+//        sort1.setSortType("asc");
+//        sortList.add(sort1);
+//        request.setSortFieldList(sortList);
 
         PageData<ShipOrderItemResponse> page = getShipOrderItemPage(request);
 
@@ -92,6 +95,15 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         if (size > 1) {
             throw new Exception("Get more than one  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
         }
+        ShipOrderItemResponse shipOrderItemResponse = page.getData().get(0);
+        ShipOrder shipOrder = shipOrderService.getById(shipOrderItemResponse.getShipOrderId());
+        if (shipOrder == null) {
+            String str = MessageFormat.format("ShipOrder - {0} lost", shipOrderItemResponse.getShipOrderId().toString());
+            throw new Exception(str);
+        }
+        request.setId(shipOrderItemResponse.getId());
+        request.setShipOrderId(shipOrderItemResponse.getShipOrderId());
+        request.setShipOrderCode(shipOrder.getXCode());
         return true;
     }
 
@@ -115,7 +127,6 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             Material material = materialService.getByCode(request.getMaterialCode());
             if (material != null) {
                 queryWrapper.eq(ShipOrderItem::getMaterialId, material.getId());
-
             }
         }
 
@@ -166,7 +177,6 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             // ROW_NUMBER() OVER (ORDER BY id ASC, creationTime ASC) as __row_number__
             page.setOrders(orderItems);
         }
-
 
 
         if (request.getSearchCount() != null) {

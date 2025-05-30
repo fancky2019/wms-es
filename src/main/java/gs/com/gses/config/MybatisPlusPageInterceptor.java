@@ -10,6 +10,8 @@ public class MybatisPlusPageInterceptor {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor(){
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        //        PaginationInnerInterceptor paginationInterceptor=new PaginationInnerInterceptor(DbType.SQL_SERVER);
+
         PaginationInnerInterceptor paginationInterceptor=new PaginationInnerInterceptor();
         interceptor.addInnerInterceptor(paginationInterceptor);
         return interceptor;

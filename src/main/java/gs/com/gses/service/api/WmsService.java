@@ -1,11 +1,14 @@
 package gs.com.gses.service.api;
 
 import gs.com.gses.model.entity.ShipOrder;
+import gs.com.gses.model.request.wms.ShipOrderPalletRequest;
+import gs.com.gses.model.response.wms.WmsResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigInteger;
+import java.util.List;
 
 
 /**
@@ -32,7 +35,10 @@ import java.math.BigInteger;
 //</dependency>
 //2、启动类@EnableFeignClients//启用feign。微服务之间调用,服务发现
 //不能识别服务中有没有请求的路径方法。
-@FeignClient(name = "WmsService", url = "${sbp.wmsurl}", fallbackFactory = WmsServiceFallbackFactory.class)
+
+
+@FeignClient(name = "WmsService", url = "${sbp.wmsurl}")
+//@FeignClient(name = "WmsService", url = "${sbp.wmsurl}", fallbackFactory = WmsServiceFallbackFactory.class)
 //@FeignClient(value = "single-provider")//注册中心的服务名称
 public interface WmsService {
 
@@ -45,7 +51,7 @@ public interface WmsService {
     String completeShipOrder(@PathVariable("shipOrderId") BigInteger shipOrderId, @RequestHeader("Authorization") String token);
 
     @GetMapping("ShipOrder/Test")
-    String shipOrderTest(@RequestParam String test);
+    String shipOrderTest(@RequestParam("test") String test);
 
 //    参数设计：
 //    保持GET参数对象简单（不超过10个字段）
@@ -53,17 +59,18 @@ public interface WmsService {
 // 敏感数据不要放在URL参数中
 
     @GetMapping("/ShipOrder/CheckRelation")
-    boolean checkRelation(@SpringQueryMap ShipOrder query , @RequestHeader("Authorization") String token);
+    boolean checkRelation(@SpringQueryMap ShipOrder query, @RequestHeader("Authorization") String token);
 
     //    String getUser(@RequestParam("name") String name);
+
     /**
      * 参数前要加 @RequestParam 或post @RequestBody
      *
      * @param
      * @return
      */
-    @PostMapping("/test/addUser")
-    String addUser(@RequestBody ShipOrder userInfo);
+    @PostMapping("/ShipOrder/SubAssignPalletsByShipOrderBatch")
+    WmsResponse subAssignPalletsByShipOrderBatch(@RequestBody List<ShipOrderPalletRequest> dtoList, @RequestHeader("Authorization") String token) throws Throwable;
 
 
 }

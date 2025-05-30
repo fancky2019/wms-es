@@ -31,6 +31,9 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
         if (list.size() > 1) {
             throw new Exception("find more than one material info  by " + materialCode);
         }
+        if (list.isEmpty()) {
+            throw new Exception("can't get material info  by " + materialCode);
+        }
         return list.get(0);
     }
 }

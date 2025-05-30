@@ -1,25 +1,21 @@
 package gs.com.gses.model.request.wms;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import gs.com.gses.model.request.EsRequestPage;
 import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
-public class TruckOrderItemRequest extends RequestPage {
+public class TruckOrderRequest extends RequestPage {
     /**
      *
      */
     private Long id;
-
-    /**
-     *
-     */
-    private Long truckOrderId;
 
     /**
      *
@@ -29,57 +25,33 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    private String projectNo;
+    private String senderAddress;
 
     /**
      *
      */
-    private String projectName;
+    private String receiverAddress;
 
     /**
      *
      */
-    private String applyShipOrderCode;
+    private String senderPhone;
 
     /**
      *
      */
-    private Long shipOrderId;
+    private String receiverPhone;
 
     /**
      *
      */
-    private String shipOrderCode;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sendTime;
 
     /**
      *
      */
-    private String pallet;
-
-    /**
-     *
-     */
-    private Long shipOrderItemId;
-
-    /**
-     *
-     */
-    private Long materialId;
-
-    /**
-     *
-     */
-    private String materialCode;
-
-    /**
-     *
-     */
-    private String deviceName;
-
-    /**
-     *
-     */
-    private String deviceNo;
+    private Integer trunkType;
 
     /**
      *
@@ -89,17 +61,7 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    private BigDecimal quantity;
-
-    /**
-     *
-     */
-    private String sendBatchNo;
-
-    /**
-     *
-     */
-    private String remark;
+    private String trunkNo;
 
     /**
      *

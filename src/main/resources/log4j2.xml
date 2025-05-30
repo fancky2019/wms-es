@@ -42,7 +42,7 @@
             <PatternLayout pattern="${log_pattern}"/>
             <Policies>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
-                <SizeBasedTriggeringPolicy size="5000 MB"/>
+<!--                <SizeBasedTriggeringPolicy size="5000 MB"/>-->
             </Policies>
             <DefaultRolloverStrategy max="20"/>
         </RollingFile>

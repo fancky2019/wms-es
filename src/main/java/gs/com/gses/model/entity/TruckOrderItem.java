@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import lombok.Data;
 
@@ -146,13 +147,13 @@ public class TruckOrderItem implements Serializable {
      * 
      */
     @TableField(value = "CreationTime")
-    private Date creationTime;
+    private LocalDateTime creationTime;
 
     /**
      * 
      */
     @TableField(value = "LastModificationTime")
-    private Date lastModificationTime;
+    private LocalDateTime lastModificationTime;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

@@ -1,4 +1,4 @@
-package gs.com.gses.config.ZonedDateTimeConfig;
+package gs.com.gses.config.zonedDateTimeConfig;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;

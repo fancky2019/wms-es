@@ -1,16 +1,18 @@
-package gs.com.gses.model.request.wms;
+package gs.com.gses.model.response.wms;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import gs.com.gses.model.request.EsRequestPage;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
-public class TruckOrderItemRequest extends RequestPage {
+public class TruckOrderItemResponse implements Serializable {
     /**
      *
      */
@@ -20,11 +22,6 @@ public class TruckOrderItemRequest extends RequestPage {
      *
      */
     private Long truckOrderId;
-
-    /**
-     *
-     */
-    private String truckOrderCode;
 
     /**
      *
@@ -45,16 +42,6 @@ public class TruckOrderItemRequest extends RequestPage {
      *
      */
     private Long shipOrderId;
-
-    /**
-     *
-     */
-    private String shipOrderCode;
-
-    /**
-     *
-     */
-    private String pallet;
 
     /**
      *
@@ -134,13 +121,11 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime creationTime;
 
     /**
      *
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastModificationTime;
 
     private static final long serialVersionUID = 1L;

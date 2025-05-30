@@ -1,12 +1,15 @@
 package gs.com.gses.service.api;
 
 import gs.com.gses.model.entity.ShipOrder;
+import gs.com.gses.model.request.wms.ShipOrderPalletRequest;
+import gs.com.gses.model.response.wms.WmsResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigInteger;
+import java.util.List;
 
 /*
  框架2.1.1升级到2.5.4
@@ -33,7 +36,7 @@ public class WmsServiceFallbackFactory implements FallbackFactory<WmsService> {
         return new WmsService() {
 
             @Override
-            public String completeShipOrder( BigInteger shipOrderId, String token) {
+            public String completeShipOrder(BigInteger shipOrderId, String token) {
                 //
                 System.out.println(throwable.getMessage());
                 log.error(throwable.getMessage());
@@ -53,8 +56,11 @@ public class WmsServiceFallbackFactory implements FallbackFactory<WmsService> {
             }
 
             @Override
-            public String addUser(ShipOrder userInfo) {
-                return "";
+            public WmsResponse subAssignPalletsByShipOrderBatch(List<ShipOrderPalletRequest> dtoList, String token) throws Throwable {
+
+                //// 对非关键方法直接抛出异常
+//                throw throwable;
+                return null;
             }
 
         };

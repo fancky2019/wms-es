@@ -324,6 +324,11 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         for (ShipOrderResponse shipOrderResponse : list) {
 
             List<ShipOrderItem> currentShipOrderItemList = shipOrderItemMap.get(shipOrderResponse.getId());
+            if (CollectionUtils.isEmpty(currentShipOrderItemList)) {
+                shipOrderPreparePercentMap.put(shipOrderResponse.getId().toString(), "0.00");
+                continue;
+            }
+
             List<Long> materialIdList = currentShipOrderItemList.stream().map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
             InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
             inventoryInfoRequest.setMaterialIdList(materialIdList);

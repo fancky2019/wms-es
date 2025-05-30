@@ -1,35 +1,249 @@
 package gs.com.gses.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.metadata.OrderItem;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import gs.com.gses.model.entity.Material;
+import gs.com.gses.model.entity.ShipOrder;
+import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.entity.TruckOrderItem;
+import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
-import gs.com.gses.service.ShipOrderItemService;
-import gs.com.gses.service.TruckOrderItemService;
+import gs.com.gses.model.request.wms.TruckOrderRequest;
+import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.wms.TruckOrderItemResponse;
+import gs.com.gses.model.response.wms.TruckOrderResponse;
+import gs.com.gses.service.*;
 import gs.com.gses.mapper.TruckOrderItemMapper;
+import gs.com.gses.utility.LambdaFunctionHelper;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.session.ExecutorType;
+import org.apache.ibatis.session.SqlSession;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
-* @author lirui
-* @description 针对表【TruckOrderItem】的数据库操作Service实现
-* @createDate 2025-05-28 13:18:54
-*/
+ * @author lirui
+ * @description 针对表【TruckOrderItem】的数据库操作Service实现
+ * @createDate 2025-05-28 13:18:54
+ */
 @Service
 public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper, TruckOrderItem>
-    implements TruckOrderItemService{
+        implements TruckOrderItemService {
 
-  @Autowired
-  private ShipOrderItemService shipOrderItemService;
+    @Autowired
+    private ShipOrderItemService shipOrderItemService;
 
-  @Override
-  public Boolean checkAvailable(TruckOrderItemRequest request) throws Exception {
-    ShipOrderItemRequest shipOrderItemRequest=new ShipOrderItemRequest();
-    shipOrderItemRequest.setM_Str7(request.getProjectNo());
-    shipOrderItemRequest.setM_Str12(request.getDeviceNo());
-    shipOrderItemRequest.setMaterialCode(request.getMaterialCode());
-    return shipOrderItemService.checkItemExist(shipOrderItemRequest);
-  }
+    @Autowired
+    private InventoryItemDetailService inventoryItemDetailService;
+
+    @Autowired
+    private TruckOrderService truckOrderService;
+
+    @Autowired
+    private ShipOrderService shipOrderService;
+
+    @Autowired
+    private MaterialService materialService;
+
+    @Autowired
+    private SqlSessionTemplate sqlSessionTemplate;
+
+
+    @Override
+    public Boolean checkAvailable(TruckOrderItemRequest request) throws Exception {
+        ShipOrderItemRequest shipOrderItemRequest = new ShipOrderItemRequest();
+        shipOrderItemRequest.setM_Str7(request.getProjectNo());
+        shipOrderItemRequest.setM_Str12(request.getDeviceNo());
+        shipOrderItemRequest.setMaterialCode(request.getMaterialCode());
+        Boolean shipOrderItemExist = shipOrderItemService.checkItemExist(shipOrderItemRequest);
+
+        InventoryItemDetailRequest inventoryItemDetailRequest = new InventoryItemDetailRequest();
+        inventoryItemDetailRequest.setM_Str7(request.getProjectNo());
+        inventoryItemDetailRequest.setM_Str12(request.getDeviceNo());
+        inventoryItemDetailRequest.setMaterialCode(request.getMaterialCode());
+        Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest);
+
+        request.setShipOrderId(shipOrderItemRequest.getShipOrderId());
+        request.setShipOrderCode(shipOrderItemRequest.getShipOrderCode());
+        request.setShipOrderItemId(shipOrderItemRequest.getId());
+        request.setPallet(inventoryItemDetailRequest.getPallet());
+        request.setMaterialId(inventoryItemDetailRequest.getMaterialId());
+        return shipOrderItemExist && detailExist;
+    }
+
+    @Override
+    public Boolean add(TruckOrderItemRequest request) {
+        TruckOrderItem truckOrderItem = new TruckOrderItem();
+        BeanUtils.copyProperties(request, truckOrderItem);
+        this.save(truckOrderItem);
+        return true;
+    }
+
+    @Override
+    public Boolean addBatch(List<TruckOrderItemRequest> requestList) {
+        List<TruckOrderItem> truckOrderItemList = new ArrayList<>();
+        for (TruckOrderItemRequest request : requestList) {
+            TruckOrderItem item = new TruckOrderItem();
+            BeanUtils.copyProperties(request, item);
+            this.save(item);
+            truckOrderItemList.add(item);
+        }
+        //SQL Server的JDBC驱动限制：SQL Server的JDBC驱动在批量插入时无法完美支持返回所有插入记录的主键值，只能返回最后一个插入记录的主键值
+//        this.saveBatch(truckOrderItemList);
+
+//        this.customSaveBatch(truckOrderItemList);
+
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void safeBatchInsert(List<TruckOrderItem> list) {
+        if (CollectionUtils.isEmpty(list)) return;
+
+        // 使用BATCH执行器
+        SqlSession sqlSession = sqlSessionTemplate.getSqlSessionFactory()
+                .openSession(ExecutorType.BATCH);
+        try {
+            TruckOrderItemMapper mapper = sqlSession.getMapper(TruckOrderItemMapper.class);
+            for (TruckOrderItem item : list) {
+                mapper.insert(item);
+            }
+            sqlSession.commit();  // 手动提交
+        } finally {
+            sqlSession.close();
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean customSaveBatch(Collection<TruckOrderItem> entityList) {
+        if (CollectionUtils.isEmpty(entityList)) {
+            return false;
+        }
+        try (SqlSession batchSqlSession = sqlSessionTemplate.getSqlSessionFactory().openSession(ExecutorType.BATCH)) {
+            TruckOrderItemMapper batchMapper = batchSqlSession.getMapper(TruckOrderItemMapper.class);
+            int i = 0;
+            for (TruckOrderItem entity : entityList) {
+                batchMapper.insert(entity);
+                i++;
+                if (i % 1000 == 0) {
+                    batchSqlSession.flushStatements();
+                }
+            }
+            batchSqlSession.flushStatements();
+            return true;
+        }
+    }
+
+    @Override
+    public PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request) {
+        LambdaQueryWrapper<TruckOrderItem> truckOrderItemQueryWrapper = new LambdaQueryWrapper<>();
+        truckOrderItemQueryWrapper.eq(TruckOrderItem::getDeleted, 0);
+        if (StringUtils.isNotEmpty(request.getTruckOrderCode())) {
+            LambdaQueryWrapper<TruckOrder> truckOrderQueryWrapper = new LambdaQueryWrapper<>();
+            truckOrderQueryWrapper.eq(TruckOrder::getTruckOrderCode, request.getTruckOrderCode());
+            List<TruckOrder> truckOrderList = this.truckOrderService.list(truckOrderQueryWrapper);
+            if (CollectionUtils.isNotEmpty(truckOrderList)) {
+                List<Long> truckOrderIdList = truckOrderList.stream().map(TruckOrder::getId).distinct().collect(Collectors.toList());
+                truckOrderItemQueryWrapper.in(TruckOrderItem::getTruckOrderId, truckOrderIdList);
+            }
+        }
+
+        if (request.getTruckOrderId() != null && request.getTruckOrderId() > 0) {
+            truckOrderItemQueryWrapper.eq(TruckOrderItem::getTruckOrderId, request.getTruckOrderId());
+        }
+
+        if (StringUtils.isNotEmpty(request.getProjectNo())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getProjectNo, request.getProjectNo());
+        }
+        if (StringUtils.isNotEmpty(request.getProjectName())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getProjectName, request.getProjectName());
+
+        }
+        if (StringUtils.isNotEmpty(request.getApplyShipOrderCode())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getApplyShipOrderCode, request.getApplyShipOrderCode());
+
+        }
+        if (StringUtils.isNotEmpty(request.getShipOrderCode())) {
+            LambdaQueryWrapper<ShipOrder> shipOrderWrapper = new LambdaQueryWrapper<>();
+            shipOrderWrapper.eq(ShipOrder::getXCode, request.getShipOrderCode());
+            List<ShipOrder> shipOrderList = this.shipOrderService.list(shipOrderWrapper);
+            if (CollectionUtils.isNotEmpty(shipOrderList)) {
+                List<Long> shipOrderIdList = shipOrderList.stream().map(ShipOrder::getId).distinct().collect(Collectors.toList());
+                truckOrderItemQueryWrapper.in(TruckOrderItem::getShipOrderId, shipOrderIdList);
+            }
+        }
+        if (StringUtils.isNotEmpty(request.getMaterialCode())) {
+            LambdaQueryWrapper<Material> materialLambdaQueryWrapper = new LambdaQueryWrapper<>();
+            materialLambdaQueryWrapper.eq(Material::getXCode, request.getMaterialCode());
+            List<Material> materialList = this.materialService.list(materialLambdaQueryWrapper);
+            if (CollectionUtils.isNotEmpty(materialList)) {
+                List<Long> materialIdList = materialList.stream().map(Material::getId).distinct().collect(Collectors.toList());
+                truckOrderItemQueryWrapper.in(TruckOrderItem::getMaterialId, materialIdList);
+            }
+        }
+
+        if (StringUtils.isNotEmpty(request.getDeviceName())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getDeviceName, request.getDeviceName());
+
+        }
+        if (StringUtils.isNotEmpty(request.getDeviceNo())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getDeviceNo, request.getDeviceNo());
+
+        }
+        if (StringUtils.isNotEmpty(request.getDriverPhone())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getDriverPhone, request.getDriverPhone());
+
+        }
+
+        if (StringUtils.isNotEmpty(request.getSendBatchNo())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getSendBatchNo, request.getSendBatchNo());
+
+        }
+
+        // 创建分页对象 (当前页, 每页大小)
+        Page<TruckOrderItem> page = new Page<>(request.getPageIndex(), request.getPageSize());
+
+        if (CollectionUtils.isNotEmpty(request.getSortFieldList())) {
+            List<OrderItem> orderItems = LambdaFunctionHelper.getWithDynamicSort(request.getSortFieldList());
+            page.setOrders(orderItems);
+        }
+
+        if (request.getSearchCount() != null) {
+            // 关键设置：不执行 COUNT 查询
+            page.setSearchCount(request.getSearchCount());
+        }
+
+        // 执行分页查询, sqlserver 使用通用表达式 WITH selectTemp AS
+        IPage<TruckOrderItem> truckOrderPage = this.baseMapper.selectPage(page, truckOrderItemQueryWrapper);
+
+        // 获取当前页数据
+        List<TruckOrderItem> records = truckOrderPage.getRecords();
+        long total = truckOrderPage.getTotal();
+
+        List<TruckOrderItemResponse> truckOrderItemResponseResponseList = records.stream().map(p -> {
+            TruckOrderItemResponse response = new TruckOrderItemResponse();
+            BeanUtils.copyProperties(p, response);
+            return response;
+        }).collect(Collectors.toList());
+
+        PageData<TruckOrderItemResponse> pageData = new PageData<>();
+        pageData.setData(truckOrderItemResponseResponseList);
+        pageData.setCount(total);
+        return pageData;
+    }
 }
 
 

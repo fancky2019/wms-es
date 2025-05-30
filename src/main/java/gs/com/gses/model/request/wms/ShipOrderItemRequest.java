@@ -20,6 +20,8 @@ public class ShipOrderItemRequest extends RequestPage {
      */
     private Long shipOrderId;
 
+    private String shipOrderCode;
+
     /**
      * 行号
      */

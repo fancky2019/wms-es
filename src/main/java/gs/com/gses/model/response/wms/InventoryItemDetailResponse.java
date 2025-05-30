@@ -1,41 +1,33 @@
 package gs.com.gses.model.response.wms;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Date;
 
 @Data
-public class ShipOrderItemResponse implements Serializable {
+public class InventoryItemDetailResponse implements Serializable {
     /**
      *
      */
     private Long id;
 
     /**
-     * 关联的出库单主表id
+     * 库存明细表id
      */
-    private Long shipOrderId;
+    private Long inventoryItemId;
 
     /**
-     * 行号
+     * 箱号
      */
-    private Integer rowNo;
+    private String carton;
 
     /**
-     * 第三方系统单号（兼容字符型）
+     * 序列号
      */
-    private String erpCode;
-
-    /**
-     * 第三方系统行号（兼容字符型）
-     */
-    private String thirdPartyRowNo;
-
-    /**
-     * 状态（1open新建，2生效，3执行中，4已完成，-1作废）
-     */
-    private Integer XStatus;
+    private String serialNo;
 
     /**
      * 物料id
@@ -63,130 +55,68 @@ public class ShipOrderItemResponse implements Serializable {
     private Long packageUnitId;
 
     /**
-     * 需求数量
+     * 最小单位数量
      */
-    private BigDecimal requiredPkgQuantity;
+    private BigDecimal smallUnitQuantity;
 
     /**
-     * 需求数量单位
+     * 包装单位数量
      */
-    private String requiredUnit;
+    private BigDecimal packageQuantity;
 
     /**
-     * 分配数量
+     * 已分配最小单位数量
      */
-    private BigDecimal alloactedPkgQuantity;
+    private BigDecimal allocatedSmallUnitQuantity;
 
     /**
-     * 已拣货数量
+     * 已分配包装单位数量
      */
-    private BigDecimal pickedPkgQuantity;
+    private BigDecimal allocatedPackageQuantity;
+
+    /**
+     * 质检状态（0待检，1已取样，2合格，-1不合格）
+     */
+    @JsonProperty("QCStatus")
+    private Integer QCStatus;
+
+    /**
+     * 状态 （0正常，-1禁用）
+     */
+    @JsonProperty("XStatus")
+    private Integer XStatus;
+
+    /**
+     * 是否任务锁定
+     */
+    private Boolean isLocked;
+
+    /**
+     * 是否封存
+     */
+    private Boolean isSealed;
+
+    /**
+     * 是否零托，散货
+     */
+    private Boolean isScattered;
+
+    /**
+     * 是否过期
+     */
+    private Boolean isExpired;
+
+    /**
+     * 过期时间时间戳
+     */
+    private Long expiredTime;
 
     /**
      * 备注
      */
     private String comments;
 
-    /**
-     * 预留字段1
-     */
-    private String str1;
-
-    /**
-     * 预留字段2
-     */
-    private String str2;
-
-    /**
-     * 预留字段3
-     */
-    private String str3;
-
-    /**
-     * 预留字段4
-     */
-    private String str4;
-
-    /**
-     * 预留字段5
-     */
-    private String str5;
-
-    /**
-     * 预留字段6
-     */
-    private String str6;
-
-    /**
-     * 预留字段7
-     */
-    private String str7;
-
-    /**
-     * 预留字段8
-     */
-    private String str8;
-
-    /**
-     * 预留字段9
-     */
-    private String str9;
-
-    /**
-     * 预留字段10
-     */
-    private String str10;
-
-    /**
-     * 预留字段11
-     */
-    private String str11;
-
-    /**
-     * 预留字段12
-     */
-    private String str12;
-
-    /**
-     * 预留字段13
-     */
-    private String str13;
-
-    /**
-     * 预留字段14
-     */
-    private String str14;
-
-    /**
-     * 预留字段15
-     */
-    private String str15;
-
-    /**
-     * 预留字段16
-     */
-    private String str16;
-
-    /**
-     * 预留字段17
-     */
-    private String str17;
-
-    /**
-     * 预留字段18
-     */
-    private String str18;
-
-    /**
-     * 预留字段19
-     */
-    private String str19;
-
-    /**
-     * 预留字段20
-     */
-    private String str20;
-
+    //region m_Str40
     /**
      * 物料扩展属性预留字段1
      */
@@ -386,7 +316,7 @@ public class ShipOrderItemResponse implements Serializable {
      * 物料扩展属性预留字段40
      */
     private String m_Str40;
-
+    //endregion
     /**
      * 创建人ID
      */
@@ -418,11 +348,6 @@ public class ShipOrderItemResponse implements Serializable {
     private Long lastModificationTime;
 
     /**
-     * 过期时间
-     */
-    private Long expiredTime;
-
-    /**
      * 入库时间
      */
     private Long inboundTime;
@@ -433,54 +358,14 @@ public class ShipOrderItemResponse implements Serializable {
     private Long productTime;
 
     /**
-     * 质检状态
+     * 货载在托盘上的码放工位号
      */
-    private Integer QCStatus;
+    private String positionCode;
 
     /**
-     * 箱号
+     * 货载在托盘上的码放层级
      */
-    private String carton;
-
-    /**
-     * 序列号
-     */
-    private String serialNo;
-
-    /**
-     * 单据优先级[0,8]
-     */
-    private Integer proirity;
-
-    /**
-     * 起点位置Code
-     */
-    private String fromLocationCode;
-
-    /**
-     * 起点位置ID
-     */
-    private Long fromLocationId;
-
-    /**
-     * 组织（客户，供应商）
-     */
-    private Long organiztionId;
-
-    /**
-     *
-     */
-    private String shipAccordingToOrderCode;
-
-    /**
-     * 终点位置Code
-     */
-    private String toLocCode;
-
-    /**
-     * 终点位置ID
-     */
-    private Long toLocId;
+    private Integer positionLevel;
 
     /**
      * 包装方式
@@ -488,25 +373,41 @@ public class ShipOrderItemResponse implements Serializable {
     private String packageMethod;
 
     /**
-     * 是否封存
+     * 禁止出库原因
      */
-    private Boolean isSealed;
+    private String forbidOutboundRemark;
 
     /**
-     * 库存是否足够
+     * 是否禁止出库
      */
-    private Boolean sufficientInventory;
+    private Boolean isForbidOutbound;
 
     /**
-     * 缺少数量
+     * 是否保税
      */
-    private BigDecimal lackQuantity;
+    private Boolean isBonded;
 
     /**
-     * 起点位置Code
+     * 入库日期
      */
-    private String palletCode;
+    private Date inboundDate;
+
+    /**
+     * 料架格口ID
+     */
+    private Long materialRackId;
+
+    /**
+     * 入库天数
+     */
+    private Integer days;
+
+    /**
+     * 图片文件地址
+     */
+    private String imageFile;
 
     private static final long serialVersionUID = 1L;
+
 }
 
