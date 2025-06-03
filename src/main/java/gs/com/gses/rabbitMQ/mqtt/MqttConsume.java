@@ -2,6 +2,7 @@ package gs.com.gses.rabbitMQ.mqtt;
 
 
 import com.esotericsoftware.minlog.Log;
+import gs.com.gses.service.impl.UtilityConst;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
@@ -45,15 +46,30 @@ public class MqttConsume {
     /**
      * 在bean初始化后连接到服务器
      */
-//    @PostConstruct
+    @PostConstruct
     public void init() throws Exception {
-        //创建MQTT客户端对象
-        client = new MqttClient(hostUrl, clientId, new MemoryPersistence());
-        //设置回调
+//        //创建MQTT客户端对象
+//        client = new MqttClient(hostUrl, clientId, new MemoryPersistence());
+//        //设置回调
+////        client.setCallback(new MqttConsumerCallBack());
+//        client.setCallback(mqttConsumerCallBack);
+//        connect();
+//        subscribe();
+
+        log.info("start init  MqttConsumer");
+        try {
+            //创建MQTT客户端对象
+            client = new MqttClient(hostUrl, clientId, new MemoryPersistence());
+            //设置回调
 //        client.setCallback(new MqttConsumerCallBack());
-        client.setCallback(mqttConsumerCallBack);
-        connect();
-        subscribe();
+            client.setCallback(mqttConsumerCallBack);
+            connect();
+            subscribe();
+            log.info("mqttConsume init complete");
+        } catch (Exception e) {
+            log.error("mqttConsume init exception", e);
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -93,8 +109,13 @@ public class MqttConsume {
         //订阅主题
         //消息等级，和主题数组一一对应，服务端将按照指定等级给订阅了主题的客户端推送消息
         int[] qos = {1, 1, 1, 1};
-        //主题
         String[] topics = {"topic1", "topic2", "topic3", "OutBoundTaskComplete"};
+
+
+//        int[] qos = {1, 1};
+//        String[] topics = {"topic1", UtilityConst.TRUCK_ORDER_COMPLETE_TOPIC};
+
+
         //订阅主题
         client.subscribe(topics, qos);
     }
@@ -106,7 +127,7 @@ public class MqttConsume {
         try {
             client.disconnect();
         } catch (MqttException e) {
-            log.error("",e);
+            log.error("", e);
         }
     }
 
@@ -117,7 +138,7 @@ public class MqttConsume {
         try {
             client.subscribe(topic, qos);
         } catch (MqttException e) {
-            log.error("",e);
+            log.error("", e);
         }
     }
 }

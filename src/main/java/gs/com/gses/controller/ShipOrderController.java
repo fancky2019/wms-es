@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @RestController
 @RequestMapping("/shipOrder")
@@ -76,8 +78,8 @@ public class ShipOrderController {
         //retained = true 只会保留最后一条消息
         boolean retained = false;
         String topic = "topic1";
-
-        mqttProduce.publish(qos, retained, topic, msg);
+//        ThreadLocalRandom
+        mqttProduce.publish(qos, retained, topic, msg, UUID.randomUUID().toString().replaceAll("-", ""));
     }
 
 }

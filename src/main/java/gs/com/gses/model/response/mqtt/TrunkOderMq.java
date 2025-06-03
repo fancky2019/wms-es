@@ -8,6 +8,7 @@ import java.util.List;
 
 @Data
 public class TrunkOderMq {
+    private String msgId;
     private List<TruckOrderResponse> truckOrderResponseList;
     private List<TruckOrderItemResponse> truckOrderItemResponseList;
 }

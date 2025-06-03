@@ -27,14 +27,18 @@ public class ApplicationListenerImplement implements ApplicationListener<Applica
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
-        log.info("ApplicationRunnerImp Complete");
-        try {
-            mqttConsume.init();
-            log.info("mqttConsume init complete");
-        } catch (Exception e) {
-            log.error("mqttConsume init exception", e);
-            throw new RuntimeException(e);
-        }
+        //使用  @PostConstruct 代替
+//        log.info("ApplicationRunnerImp Complete");
+//        try {
+//            mqttConsume.init();
+//            log.info("mqttConsume init complete");
+//        } catch (Exception e) {
+//            log.error("mqttConsume init exception", e);
+//            throw new RuntimeException(e);
+//        }
+
+
+
 //        basicInfoCacheService.batch();
         return;
 //        basicInfoCacheService.initBasicInfoCache();

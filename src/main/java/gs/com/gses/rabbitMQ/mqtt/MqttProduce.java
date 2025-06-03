@@ -70,20 +70,20 @@ public class MqttProduce {
 
 
         } catch (MqttException e) {
-            log.error("",e);
+            log.error("", e);
         }
     }
 
-//    @Async("threadPoolExecutor")
-    public void publish(String topic, String message) {
+    //    @Async("threadPoolExecutor")
+    public void publish(String topic, String message, String msgId) {
         int qos = 1;
         //retained = true 只会保留最后一条消息
         boolean retained = false;
-        publish(qos, retained, topic, message);
+        publish(qos, retained, topic, message, msgId);
     }
 
-//    @Async("threadPoolExecutor")
-    public void publish(int qos, boolean retained, String topic, String message) {
+    //    @Async("threadPoolExecutor")
+    public void publish(int qos, boolean retained, String topic, String message, String msgId) {
        /*
         rabbitmq 的mqtt性能未做测试
         */
@@ -109,8 +109,10 @@ public class MqttProduce {
             //一旦此方法干净地返回，消息就已被客户端接受发布，当连接可用，将在后台完成消息传递。
             token = mqttTopic.publish(mqttMessage);
             token.waitForCompletion();
+            log.info("publish success - {}", msgId);
         } catch (MqttException e) {
-            log.error("",e);
+            log.info("publish fail - {}", msgId);
+            log.error("", e);
         }
     }
 }

@@ -39,6 +39,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -62,9 +63,6 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private MqttProduce mqttProduce;
     @Autowired
     private ObjectMapper upperObjectMapper;
-
-
-    private final static String TRUCK_ORDER_TOPIC = "GS/WMS/TruckOrder/Complete";
 
 
     //    @Transactional(rollbackFor = Exception.class)
@@ -165,12 +163,13 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             if (itemList.size() <= 0) {
                 throw new Exception("save TruckOrderItem exception");
             }
-
+            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+            trunkOderMq.setMsgId(msgId);
             trunkOderMq.setTruckOrderResponseList(truckOrderResponseList);
             trunkOderMq.setTruckOrderItemResponseList(itemList);
 
             String jsonStr = upperObjectMapper.writeValueAsString(trunkOderMq);
-            mqttProduce.publish(TRUCK_ORDER_TOPIC, jsonStr);
+            mqttProduce.publish(UtilityConst.TRUCK_ORDER_COMPLETE_TOPIC, jsonStr, msgId);
             //endregion
         } else {
             throw new Exception("SubAssignPalletsByShipOrderBatch exception");
