@@ -104,6 +104,8 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         request.setId(shipOrderItemResponse.getId());
         request.setShipOrderId(shipOrderItemResponse.getShipOrderId());
         request.setShipOrderCode(shipOrder.getXCode());
+        request.setApplyShipOrderCode(shipOrder.getApplyShipOrderCode());
+
         return true;
     }
 

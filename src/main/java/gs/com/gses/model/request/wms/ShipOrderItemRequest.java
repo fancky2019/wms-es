@@ -22,6 +22,7 @@ public class ShipOrderItemRequest extends RequestPage {
 
     private String shipOrderCode;
 
+    private String applyShipOrderCode;
     /**
      * 行号
      */

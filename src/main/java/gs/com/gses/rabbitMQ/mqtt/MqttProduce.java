@@ -70,7 +70,7 @@ public class MqttProduce {
 
 
         } catch (MqttException e) {
-            e.printStackTrace();
+            log.error("",e);
         }
     }
 
@@ -110,7 +110,7 @@ public class MqttProduce {
             token = mqttTopic.publish(mqttMessage);
             token.waitForCompletion();
         } catch (MqttException e) {
-            e.printStackTrace();
+            log.error("",e);
         }
     }
 }

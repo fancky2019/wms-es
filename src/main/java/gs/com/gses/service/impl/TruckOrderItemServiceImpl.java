@@ -77,6 +77,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest);
 
         request.setShipOrderId(shipOrderItemRequest.getShipOrderId());
+        request.setApplyShipOrderCode(shipOrderItemRequest.getApplyShipOrderCode());
         request.setShipOrderCode(shipOrderItemRequest.getShipOrderCode());
         request.setShipOrderItemId(shipOrderItemRequest.getId());
         request.setPallet(inventoryItemDetailRequest.getPallet());

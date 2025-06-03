@@ -165,7 +165,9 @@ spring:
     # MQTT默认的消息推送主题，实际可在调用接口是指定
     default:
       topic: topic
+
 feign:
+  # 明确关闭 Hystrix
 
   #  #携带token,未验证
   #  oauth2:
@@ -187,8 +189,8 @@ feign:
     connection-timeout: 60000  #单位ms,默认2000
     max-connections: 200 #线程池最大连接数
     enabled: false
-    okhttp: #用okhttp 代替默认的Client，JDK 原生的 URLConnection 发送HTTP请求，没有连接池
-      enabled: true
+  okhttp: #用okhttp 代替默认的Client，JDK 原生的 URLConnection 发送HTTP请求，没有连接池
+    enabled: true
 
 
 sbp:

@@ -1,6 +1,8 @@
 package gs.com.gses.rabbitMQ.mqtt;
 
 
+import com.esotericsoftware.minlog.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -12,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import javax.annotation.PostConstruct;
 import java.util.List;
 
+@Slf4j
 @Configuration
 public class MqttConsume {
     @Value("${spring.mqtt.username}")
@@ -103,7 +106,7 @@ public class MqttConsume {
         try {
             client.disconnect();
         } catch (MqttException e) {
-            e.printStackTrace();
+            log.error("",e);
         }
     }
 
@@ -114,7 +117,7 @@ public class MqttConsume {
         try {
             client.subscribe(topic, qos);
         } catch (MqttException e) {
-            e.printStackTrace();
+            log.error("",e);
         }
     }
 }
