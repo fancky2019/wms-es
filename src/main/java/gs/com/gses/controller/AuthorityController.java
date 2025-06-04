@@ -1,20 +1,11 @@
 package gs.com.gses.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import gs.com.gses.model.request.authority.CheckPermissionRequest;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.response.MessageResult;
-import gs.com.gses.model.response.wms.WmsResponse;
-import gs.com.gses.service.api.AuthorityService;
-import gs.com.gses.service.api.WmsService;
-import gs.com.gses.service.impl.WmsAuthorityService;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
+import gs.com.gses.service.WmsAuthorityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/authority")

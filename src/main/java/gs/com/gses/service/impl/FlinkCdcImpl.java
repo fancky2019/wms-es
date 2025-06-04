@@ -4,6 +4,7 @@ import gs.com.gses.config.FlinkConfig;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.flink.DataChangeSink;
 import gs.com.gses.flink.SqlServerDeserialization;
+import gs.com.gses.service.FlinkCdcService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;

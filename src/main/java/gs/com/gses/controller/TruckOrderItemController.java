@@ -6,10 +6,7 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
 import gs.com.gses.service.TruckOrderItemService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/truckOrderItem")
@@ -25,7 +22,7 @@ public class TruckOrderItemController {
     }
 
     @PostMapping("/getTruckOrderItemPage")
-    public MessageResult<PageData<TruckOrderItemResponse>> getTruckOrderItemPage(TruckOrderItemRequest request) throws Exception {
+    public MessageResult<PageData<TruckOrderItemResponse>> getTruckOrderItemPage(@RequestBody TruckOrderItemRequest request) throws Exception {
         PageData<TruckOrderItemResponse> page = truckOrderItemService.getTruckOrderItemPage(request);
         return MessageResult.success(page);
     }

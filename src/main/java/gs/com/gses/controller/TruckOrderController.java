@@ -50,7 +50,7 @@ public class TruckOrderController {
     }
 
     @PostMapping("/getTruckOrderPage")
-    public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(TruckOrderRequest request) throws Exception {
+    public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request) throws Exception {
         PageData<TruckOrderResponse> page = truckOrderService.getTruckOrderPage(request);
         return MessageResult.success(page);
     }

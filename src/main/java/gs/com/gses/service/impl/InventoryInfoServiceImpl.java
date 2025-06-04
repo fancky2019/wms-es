@@ -32,6 +32,7 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
@@ -96,6 +97,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Qualifier("upperObjectMapper")  // 明确指定名称
     @Autowired
     private ObjectMapper upperObjectMapper;
 

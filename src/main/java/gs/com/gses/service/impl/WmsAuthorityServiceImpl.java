@@ -2,8 +2,8 @@ package gs.com.gses.service.impl;
 
 import gs.com.gses.model.request.authority.CheckPermissionRequest;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
-import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.wms.WmsResponse;
+import gs.com.gses.service.WmsAuthorityService;
 import gs.com.gses.service.api.AuthorityService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanWrapper;

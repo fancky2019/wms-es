@@ -1,4 +1,4 @@
-package gs.com.gses.service.impl;
+package gs.com.gses.service;
 
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 
