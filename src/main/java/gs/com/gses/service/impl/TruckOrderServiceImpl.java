@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.listener.event.EwmsEvent;
+import gs.com.gses.listener.event.EwmsEventTopic;
 import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.*;
@@ -27,14 +29,14 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.web.config.SortHandlerMethodArgumentResolverCustomizer;
+import org.springframework.cloud.bus.BusProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -63,9 +65,16 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private MqttProduce mqttProduce;
     @Autowired
     private ObjectMapper upperObjectMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
-    //    @Transactional(rollbackFor = Exception.class)
+    @Autowired
+    private BusProperties busProperties;
+
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
         List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
@@ -103,7 +112,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //        long createTime = LocalDateTime.now().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
         long createTime = Instant.now().toEpochMilli();
         //未登录会得到全局异常
+        String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequestList);
+        log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
         WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
+        String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
+        log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
         if (wmsResponse.getResult()) {
 //            add(request.getTruckOrderRequest());
 //            truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
@@ -143,38 +156,50 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 truckOrderItemRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
             }
             truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
-
-            //region mqtt
-            TrunkOderMq trunkOderMq = new TrunkOderMq();
-            TruckOrderResponse truckOrderResponse = new TruckOrderResponse();
-            BeanUtils.copyProperties(truckOrder, truckOrderResponse);
-            List<TruckOrderResponse> truckOrderResponseList = new ArrayList<>();
-            truckOrderResponseList.add(truckOrderResponse);
-
-            List<TruckOrderItemResponse> truckOrderItemResponseList = new ArrayList<>();
-            TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
-            truckOrderItemRequest.setPageIndex(1);
-            truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
-            truckOrderItemRequest.setSearchCount(false);
-            truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
-            PageData<TruckOrderItemResponse> truckOrderItemResponsePageData = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
-            List<TruckOrderItemResponse> itemList = truckOrderItemResponsePageData.getData();
-
-            if (itemList.size() <= 0) {
-                throw new Exception("save TruckOrderItem exception");
-            }
-            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
-            trunkOderMq.setMsgId(msgId);
-            trunkOderMq.setTruckOrderResponseList(truckOrderResponseList);
-            trunkOderMq.setTruckOrderItemResponseList(itemList);
-
-            String jsonStr = upperObjectMapper.writeValueAsString(trunkOderMq);
-            mqttProduce.publish(UtilityConst.TRUCK_ORDER_COMPLETE_TOPIC, jsonStr, msgId);
-            //endregion
+//            try {
+//                //不影响其他
+//                trunkOrderMqtt(truckOrder);
+//            } catch (Exception ex) {
+//                log.error("trunkOrderMqtt exception", ex);
+//            }
+            log.info("ThreadId - {}",Thread.currentThread().getId());
+            EwmsEvent event = new EwmsEvent(this, busProperties.getId());
+            event.setData(truckOrder.getId().toString());
+            event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
+            eventPublisher.publishEvent(event);
         } else {
             throw new Exception("SubAssignPalletsByShipOrderBatch exception");
         }
 
+    }
+
+    private void trunkOrderMqtt(TruckOrder truckOrder) throws Exception {
+        TrunkOderMq trunkOderMq = new TrunkOderMq();
+        TruckOrderResponse truckOrderResponse = new TruckOrderResponse();
+        BeanUtils.copyProperties(truckOrder, truckOrderResponse);
+        List<TruckOrderResponse> truckOrderResponseList = new ArrayList<>();
+        truckOrderResponseList.add(truckOrderResponse);
+
+        List<TruckOrderItemResponse> truckOrderItemResponseList = new ArrayList<>();
+        TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
+        truckOrderItemRequest.setPageIndex(1);
+        truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
+        truckOrderItemRequest.setSearchCount(false);
+        truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
+        PageData<TruckOrderItemResponse> truckOrderItemResponsePageData = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
+        List<TruckOrderItemResponse> itemList = truckOrderItemResponsePageData.getData();
+
+        if (itemList.size() <= 0) {
+            throw new Exception("save TruckOrderItem exception");
+        }
+        String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+        trunkOderMq.setMsgId(msgId);
+        trunkOderMq.setTruckOrderResponseList(truckOrderResponseList);
+        trunkOderMq.setTruckOrderItemResponseList(itemList);
+
+        String jsonStr = upperObjectMapper.writeValueAsString(trunkOderMq);
+        log.info("start publish msgId:{}", msgId);
+        mqttProduce.publish(UtilityConst.TRUCK_ORDER_COMPLETE_TOPIC, jsonStr, msgId);
     }
 
     @Override
@@ -251,6 +276,16 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         pageData.setData(truckOrderResponseResponseList);
         pageData.setCount(total);
         return pageData;
+    }
+
+    @Override
+    public void trunkOrderMq(Integer id) throws Exception {
+        TruckOrder truckOrder = this.getById(id);
+        if (truckOrder == null) {
+            String msg = MessageFormat.format("Can't get TruckOrder by id - {0}", id);
+            throw new Exception(msg);
+        }
+        trunkOrderMqtt(truckOrder);
     }
 
 }

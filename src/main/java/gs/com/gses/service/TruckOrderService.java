@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.AddTruckOrderRequest;
 import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.wms.TruckOrderResponse;
 
 /**
@@ -19,4 +20,5 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
     PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request);
 
+    void trunkOrderMq(Integer id) throws Exception;
 }

@@ -7,6 +7,7 @@ import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class ShipOrderItemRequest extends RequestPage {
@@ -43,6 +44,7 @@ public class ShipOrderItemRequest extends RequestPage {
      */
     private Integer XStatus;
 
+    private List<Integer> XStatusList;
     /**
      * 物料id
      */

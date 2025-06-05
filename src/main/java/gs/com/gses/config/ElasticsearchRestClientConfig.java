@@ -107,7 +107,8 @@ public class ElasticsearchRestClientConfig extends AbstractElasticsearchConfigur
 //                .usingSsl(this.getSSLContext(certificateBase64))
 //                .withBasicAuth("elastic", "==Qok*0raTpVzjnvv_dr")
                 //默认5s,批量插入超时异常： 5,000 milliseconds timeout on connection http-outgoing-0 [ACTIVE];
-                .withSocketTimeout(30000)
+                .withSocketTimeout(60000)//默认30s
+                .withConnectTimeout(10000)//默认1s
                 .build();
 
         return RestClients.create(clientConfiguration).rest();

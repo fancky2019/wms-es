@@ -74,6 +74,14 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         if (StringUtils.isEmpty(request.getMaterialCode())) {
             throw new Exception("materialCode is null");
         }
+
+        List<Integer> xStatusList = new ArrayList<>();
+        xStatusList.add(1);
+        xStatusList.add(2);
+        xStatusList.add(3);
+        request.setXStatusList(xStatusList);
+
+
         request.setSearchCount(false);
 //        List<Sort> sortList = new ArrayList<>();
 //        Sort sort1 = new Sort();
@@ -93,7 +101,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             throw new Exception("Can't get ShipOrderItem  by  m_Str7 ,m_Str12,materialCode");
         }
         if (size > 1) {
-            throw new Exception("Get more than one  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
+            throw new Exception("Get multiple  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
         }
         ShipOrderItemResponse shipOrderItemResponse = page.getData().get(0);
         ShipOrder shipOrder = shipOrderService.getById(shipOrderItemResponse.getShipOrderId());
@@ -131,6 +139,13 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
                 queryWrapper.eq(ShipOrderItem::getMaterialId, material.getId());
             }
         }
+
+        if(CollectionUtils.isNotEmpty(request.getXStatusList()))
+        {
+            queryWrapper.in(ShipOrderItem::getXStatus,request.getXStatusList());
+        }
+
+
 
 
 //        QueryWrapper<ShipOrderItem> queryWrapper = new QueryWrapper<>();

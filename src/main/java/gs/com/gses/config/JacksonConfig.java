@@ -12,6 +12,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import gs.com.gses.config.zonedDateTimeConfig.ZonedDateTimeDeserializer;
 import gs.com.gses.config.zonedDateTimeConfig.ZonedDateTimeSerializer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -28,11 +29,18 @@ import java.util.TimeZone;
 public class JacksonConfig {
 
     /**
+//    @Autowired
+//    private ObjectMapper upperObjectMapper;  // 注入名为"upperObjectMapper"的bean
+//
+//    @Autowired
+//    private ObjectMapper objectMapper;      // 注入带有@Primary的主bean
+*/
+    /**
      * 时区在配置文件中配置
      * @return
      */
     @Bean
-//    @Primary
+    @Primary
     public ObjectMapper objectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
 //        ZonedDateTime
@@ -141,7 +149,7 @@ public class JacksonConfig {
     }
 
 
-    @Bean
+    @Bean("upperObjectMapper")  // 指定特定名称
     public ObjectMapper upperObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
 //        ZonedDateTime
