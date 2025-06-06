@@ -111,6 +111,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         }
 //        long createTime = LocalDateTime.now().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
         long createTime = Instant.now().toEpochMilli();
+        String addTruckOrderRequestJson = objectMapper.writeValueAsString(request);
+        log.info("addTruckOrderRequestJson -:{}", addTruckOrderRequestJson);
         //未登录会得到全局异常
         String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequestList);
         log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);

@@ -1,8 +1,15 @@
 package gs.com.gses.config;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +28,7 @@ import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -65,54 +73,91 @@ public class ElasticsearchRestClientConfig extends AbstractElasticsearchConfigur
 //            "N7LYCILrsXsHbk2gic0C8K38jv6jfOndwgBQs4GP";
 
 
-//    @Value("${sbp.ESCertPath}")
+    //    @Value("${sbp.ESCertPath}")
 //    private String eSCertPath;
 //
     @Value("${sbp.hostAndPort}")
     private String hostAndPort;
 
 
+//    @Override
+//    @Bean
+//    public RestHighLevelClient elasticsearchClient() {
+//
+//
+////        File file = new File(eSCertPath);
+////        List<String> lines = new ArrayList<>();
+////        String certificateBase64 = "";
+////        try {
+////            lines = FileUtils.readLines(file, "UTF-8");
+////            StringBuilder stringBuilder = new StringBuilder();
+////           for(int i=0;i<lines.size();i++)
+////           {
+////               if(i==0||i==lines.size()-1)
+////               {
+////                   continue;
+////               }
+////               stringBuilder.append(lines.get(i));
+////           }
+////            certificateBase64 = stringBuilder.toString();
+////        } catch (IOException e) {
+////            e.printStackTrace();
+////        }
+//
+//
+//
+//
+//
+//        final ClientConfiguration clientConfiguration = ClientConfiguration.builder()
+//               //127 连不上就换IP 127.0.0.1   192.168.8.85
+//                .connectedTo(hostAndPort)
+//                //ES8需要下面的SSL配置
+////                .usingSsl(this.getSSLContext(certificateBase64))
+////                .withBasicAuth("elastic", "==Qok*0raTpVzjnvv_dr")
+//                //默认5s,批量插入超时异常： 5,000 milliseconds timeout on connection http-outgoing-0 [ACTIVE];
+//                .withSocketTimeout(60000)//默认30s
+//                .withConnectTimeout(10000)//默认1s
+////                .withConnectTimeout(Duration.ofSeconds(5))
+////                .withSocketTimeout(Duration.ofSeconds(60))
+//
+//                .build();
+//
+//        return RestClients.create(clientConfiguration).rest();
+//
+//
+//
+//    }
+
     @Override
     @Bean
     public RestHighLevelClient elasticsearchClient() {
-
-
-//        File file = new File(eSCertPath);
-//        List<String> lines = new ArrayList<>();
-//        String certificateBase64 = "";
-//        try {
-//            lines = FileUtils.readLines(file, "UTF-8");
-//            StringBuilder stringBuilder = new StringBuilder();
-//           for(int i=0;i<lines.size();i++)
-//           {
-//               if(i==0||i==lines.size()-1)
-//               {
-//                   continue;
-//               }
-//               stringBuilder.append(lines.get(i));
-//           }
-//            certificateBase64 = stringBuilder.toString();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-
-
-
-
-
-        final ClientConfiguration clientConfiguration = ClientConfiguration.builder()
-               //127 连不上就换IP 127.0.0.1   192.168.8.85
+        ClientConfiguration clientConfiguration = ClientConfiguration.builder()
                 .connectedTo(hostAndPort)
-                //ES8需要下面的SSL配置
-//                .usingSsl(this.getSSLContext(certificateBase64))
-//                .withBasicAuth("elastic", "==Qok*0raTpVzjnvv_dr")
-                //默认5s,批量插入超时异常： 5,000 milliseconds timeout on connection http-outgoing-0 [ACTIVE];
-                .withSocketTimeout(60000)//默认30s
-                .withConnectTimeout(10000)//默认1s
+                .withConnectTimeout(Duration.ofSeconds(10))
+                .withSocketTimeout(Duration.ofSeconds(60))
+                .withClientConfigurer((ClientConfiguration.ClientConfigurationCallback<RestClientBuilder>) restClientBuilder -> {
+                    // 设置连接池参数
+                    restClientBuilder.setHttpClientConfigCallback(httpClientBuilder ->
+                            httpClientBuilder
+                                    .setMaxConnTotal(100)
+                                    .setMaxConnPerRoute(20)
+
+                    );
+                    // 设置请求超时参数
+                    restClientBuilder.setRequestConfigCallback(requestConfigBuilder ->
+                            requestConfigBuilder
+                                    .setConnectionRequestTimeout(3000)
+                                    .setConnectTimeout(10000)
+                                    .setSocketTimeout(60000)
+                    );
+                    return restClientBuilder;
+                })
+
                 .build();
 
         return RestClients.create(clientConfiguration).rest();
     }
+
 
 //    @Bean
 //    @Override

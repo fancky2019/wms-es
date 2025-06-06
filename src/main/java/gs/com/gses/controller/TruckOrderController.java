@@ -55,7 +55,7 @@ public class TruckOrderController {
         return MessageResult.success(page);
     }
 
-    @GetMapping("/addTruckOrder/{id}")
+    @GetMapping("/trunkOrderMq/{id}")
     public MessageResult<Void> trunkOrderMq(@PathVariable("id") Integer id) throws Exception {
         truckOrderService.trunkOrderMq(id);
         return MessageResult.success();

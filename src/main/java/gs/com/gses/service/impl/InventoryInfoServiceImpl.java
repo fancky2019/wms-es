@@ -1236,7 +1236,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             case "CREATE":
                 break;
             case "UPDATE":
-                updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
+                //  updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
+                updateInventoryInfoOfLocationBatch(changedLocation, dataChangeInfo);
                 break;
             case "DELETE":
 
@@ -1421,6 +1422,88 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
+    private void updateInventoryInfoOfLocationBatch(Location location, DataChangeInfo dataChangeInfo) throws InterruptedException {
+
+        StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLocationBatch");
+        stopWatch.start("updateInventoryInfoOfLocationBatch");
+
+        List<String> sourceFieldList = new ArrayList<>();
+        sourceFieldList.add("inventoryItemDetailId");
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.must(QueryBuilders.termQuery("locationId", location.getId()));
+
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                .withQuery(boolQueryBuilder)
+                .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
+                .withSourceFilter(new SourceFilter() {
+                    //返回的字段
+                    @Override
+                    public String[] getIncludes() {
+                        if (CollectionUtils.isNotEmpty(sourceFieldList)) {
+                            return sourceFieldList.toArray(new String[0]);
+                        } else {
+                            return new String[0];
+                        }
+
+                    }
+
+                    //不需要返回的字段
+                    @Override
+                    public String[] getExcludes() {
+                        return new String[0];
+                    }
+                })
+                .withTrackTotalHits(true)//返回命中的总行数
+                .build();
+        //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
+        SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
+        long totalHits = search.getTotalHits();
+        List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+
+
+        long count = inventoryInfoList.size();
+        int step = 1000;
+        long times = count / step;
+        long left = count % step;
+        if (left > 0) {
+            times++;
+        }
+
+        long pageIndex = 0L;
+        long totalIndexSize = 0L;
+        while (times > 0) {
+
+            long skip = (++pageIndex - 1) * step;
+            times--;
+
+            List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
+
+            List<UpdateQuery> updateQueries = new ArrayList<>();
+            for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
+                Map<String, Object> updatedMap = prepareLocationUpdatedInfo(inventoryInfo, location);
+//                updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
+                Document document = Document.create();
+                document.putAll(updatedMap);
+                UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
+                        .withDocument(document)
+                        .build();
+                updateQueries.add(updateQuery);
+            }
+            if (updateQueries.size() > 0) {
+                // 执行批量更新
+                elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+            }
+
+        }
+
+
+        stopWatch.stop();
+        long mills = stopWatch.getTotalTimeMillis();
+        log.info("updateInventoryInfoOfLocationBatch complete {} ms", mills);
+
+
+    }
+
     private void updateInventoryInfoOfLaneway(Laneway laneway, DataChangeInfo dataChangeInfo) {
         StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLaneway");
         stopWatch.start("updateInventoryInfoOfLaneway");
@@ -1481,7 +1564,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             long skip = (++pageIndex - 1) * step;
             times--;
 
-            List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(skip).collect(Collectors.toList());
+            List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
 
             List<UpdateQuery> updateQueries = new ArrayList<>();
             for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
@@ -1596,13 +1679,17 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            }
 
 
-
             log.info("InventoryInfo - {} release lock - {} success ", id, lockKey);
 
         }
 
 
     }
+
+//    @Retryable(value = {IOException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000))
+//    public void updateDocument() {
+//        elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
+//    }
 
     public void updateInventoryInfoBatch(String id, Map<String, Object> fields, String table) {
         Document document = Document.create();

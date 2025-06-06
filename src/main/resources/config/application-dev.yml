@@ -202,7 +202,7 @@ sbp:
   hostAndPort: 10.100.200.43:9200
   initCache: false
   flink:
-    enable: true
+    enable: false
     databaseList:
       - liku
     tableList:

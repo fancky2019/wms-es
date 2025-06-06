@@ -134,7 +134,9 @@ public class LogAspect {
 //        Object[] args = jp.getArgs();
 //
 //
-        log.info("{} : {} - {} 开始处理,参数列表 - {}", uri, className, methodName, Arrays.toString(args));
+        String json=objectMapper.writeValueAsString(args);
+        log.info("{} : {} - {} 开始处理,参数列表 - {}", uri, className, methodName, json);
+//        log.info("{} : {} - {} 开始处理,参数列表 - {}", uri, className, methodName, Arrays.toString(args));
 //        Object result = jp.proceed();
 //        log.info("{} - {} 处理完成,返回结果 - {}", className, methodName,objectMapper.writeValueAsString(result));
 //

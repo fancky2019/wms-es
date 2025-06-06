@@ -82,6 +82,12 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         request.setShipOrderItemId(shipOrderItemRequest.getId());
         request.setPallet(inventoryItemDetailRequest.getPallet());
         request.setMaterialId(inventoryItemDetailRequest.getMaterialId());
+        request.setProjectName(shipOrderItemRequest.getM_Str8());
+        Material material = materialService.getById(request.getMaterialId());
+        if (material == null) {
+            throw new Exception("can't find material - " + request.getMaterialId());
+        }
+        request.setDeviceName(material.getXName());
         return shipOrderItemExist && detailExist;
     }
 
@@ -112,7 +118,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
     @Transactional(rollbackFor = Exception.class)
     public void safeBatchInsert(List<TruckOrderItem> list) {
-        if (CollectionUtils.isEmpty(list)) return;
+        if (CollectionUtils.isEmpty(list)) {
+            return;
+        }
 
         // 使用BATCH执行器
         SqlSession sqlSession = sqlSessionTemplate.getSqlSessionFactory()
