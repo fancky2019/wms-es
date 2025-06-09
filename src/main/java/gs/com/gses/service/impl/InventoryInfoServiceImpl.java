@@ -1486,6 +1486,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 document.putAll(updatedMap);
                 UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
                         .withDocument(document)
+                        .withIfSeqNo(null)  // 忽略 seq_no
+                        .withIfPrimaryTerm(null) // 忽略 primary_term
+                        .withDocAsUpsert(true)// 如果文档不存在则创建
                         .build();
                 updateQueries.add(updateQuery);
             }
@@ -1574,6 +1577,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 document.putAll(updatedMap);
                 UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
                         .withDocument(document)
+                        .withIfSeqNo(null)  // 忽略 seq_no
+                        .withIfPrimaryTerm(null) // 忽略 primary_term
+                        .withDocAsUpsert(true)// 如果文档不存在则创建
                         .build();
                 updateQueries.add(updateQuery);
             }

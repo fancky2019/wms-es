@@ -12,6 +12,7 @@ import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.mqtt.MqttWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.wms.ShipPickOrderResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
@@ -29,6 +30,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.bus.BusProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -37,11 +39,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -64,6 +64,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Autowired
     private MqttProduce mqttProduce;
     @Autowired
+    @Qualifier("upperObjectMapper")
     private ObjectMapper upperObjectMapper;
     @Autowired
     private ObjectMapper objectMapper;
@@ -120,60 +121,72 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
         log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
         if (wmsResponse.getResult()) {
-//            add(request.getTruckOrderRequest());
-//            truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
-            Long shipOrderId = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
-            ShipPickOrderRequest shipPickOrderRequest = new ShipPickOrderRequest();
-            shipPickOrderRequest.setShipOrderId(shipOrderId);
-            shipPickOrderRequest.setStartCreationTime(createTime);
-            Sort sort = new Sort();
-            sort.setSortType("desc");
-            sort.setSortField("Id");
-            List<Sort> sortList = new ArrayList<>();
-            sortList.add(sort);
-            shipPickOrderRequest.setSortFieldList(sortList);
-            shipPickOrderRequest.setPageSize(1);
-            shipPickOrderRequest.setPageIndex(1);
-            shipPickOrderRequest.setSearchCount(false);
-            PageData<ShipPickOrderResponse> shipPickOrderPage = shipPickOrderService.getShipPickOrderPage(shipPickOrderRequest);
-            List<ShipPickOrderResponse> shipPickOrderResponseList = shipPickOrderPage.getData();
-            if (shipPickOrderResponseList.size() != 1) {
-                String str = MessageFormat.format("Get ShipPickOrder by shipOrderId - {0} fail", shipOrderId);
-                throw new Exception(str);
+            TruckOrder truckOrder = saveTruckOrderAndItem(request, createTime);
+            try {
+                log.info("ThreadId - {}", Thread.currentThread().getId());
+                EwmsEvent event = new EwmsEvent(this, busProperties.getId());
+                event.setData(truckOrder.getId().toString());
+                event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
+                eventPublisher.publishEvent(event);
+            } catch (Exception ex) {
+                log.error("Publish event error", ex);
             }
-            ShipPickOrderResponse shipPickOrderResponse = shipPickOrderResponseList.get(0);
 
-            TruckOrderRequest truckOrderRequest = request.getTruckOrderRequest();
-            truckOrderRequest.setCreationTime(LocalDateTime.now());
-            truckOrderRequest.setLastModificationTime(LocalDateTime.now());
-            truckOrderRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
-            truckOrderRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
-
-            TruckOrder truckOrder = add(request.getTruckOrderRequest());
-            for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
-                truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
-                truckOrderItemRequest.setCreationTime(LocalDateTime.now());
-                truckOrderItemRequest.setLastModificationTime(LocalDateTime.now());
-                truckOrderItemRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
-                truckOrderItemRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
-            }
-            truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
-//            try {
-//                //不影响其他
-//                trunkOrderMqtt(truckOrder);
-//            } catch (Exception ex) {
-//                log.error("trunkOrderMqtt exception", ex);
-//            }
-            log.info("ThreadId - {}",Thread.currentThread().getId());
-            EwmsEvent event = new EwmsEvent(this, busProperties.getId());
-            event.setData(truckOrder.getId().toString());
-            event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
-            eventPublisher.publishEvent(event);
         } else {
             throw new Exception("SubAssignPalletsByShipOrderBatch exception");
         }
 
     }
+
+    private TruckOrder saveTruckOrderAndItem(AddTruckOrderRequest request, long createTime) throws Exception {
+
+        Long shipOrderId = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
+        ShipPickOrderRequest shipPickOrderRequest = new ShipPickOrderRequest();
+        shipPickOrderRequest.setShipOrderId(shipOrderId);
+        if (createTime == 0) {
+            createTime = System.currentTimeMillis();
+        }
+        shipPickOrderRequest.setStartCreationTime(createTime);
+        Sort sort = new Sort();
+        sort.setSortType("desc");
+        sort.setSortField("Id");
+        List<Sort> sortList = new ArrayList<>();
+        sortList.add(sort);
+        shipPickOrderRequest.setSortFieldList(sortList);
+        shipPickOrderRequest.setPageSize(1);
+        shipPickOrderRequest.setPageIndex(1);
+        shipPickOrderRequest.setSearchCount(false);
+        PageData<ShipPickOrderResponse> shipPickOrderPage = shipPickOrderService.getShipPickOrderPage(shipPickOrderRequest);
+        List<ShipPickOrderResponse> shipPickOrderResponseList = shipPickOrderPage.getData();
+        if (shipPickOrderResponseList.size() != 1) {
+            String str = MessageFormat.format("Get ShipPickOrder by shipOrderId - {0} fail", shipOrderId);
+            throw new Exception(str);
+        }
+        ShipPickOrderResponse shipPickOrderResponse = shipPickOrderResponseList.get(0);
+
+        TruckOrderRequest truckOrderRequest = request.getTruckOrderRequest();
+        LocalDateTime  creationTime = LocalDateTime.now();
+        if(request.getTruckOrderRequest().getCreationTime()!=null)
+        {
+            creationTime = request.getTruckOrderRequest().getCreationTime();
+        }
+        truckOrderRequest.setCreationTime(creationTime);
+        truckOrderRequest.setLastModificationTime(creationTime);
+        truckOrderRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
+        truckOrderRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
+
+        TruckOrder truckOrder = add(request.getTruckOrderRequest());
+        for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
+            truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
+            truckOrderItemRequest.setCreationTime(LocalDateTime.now());
+            truckOrderItemRequest.setLastModificationTime(LocalDateTime.now());
+            truckOrderItemRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
+            truckOrderItemRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
+        }
+        truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
+        return truckOrder;
+    }
+
 
     private void trunkOrderMqtt(TruckOrder truckOrder) throws Exception {
         TrunkOderMq trunkOderMq = new TrunkOderMq();
@@ -199,7 +212,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         trunkOderMq.setTruckOrderResponseList(truckOrderResponseList);
         trunkOderMq.setTruckOrderItemResponseList(itemList);
 
-        String jsonStr = upperObjectMapper.writeValueAsString(trunkOderMq);
+
+        MqttWrapper<TrunkOderMq> mqttWrapper = new MqttWrapper();
+        mqttWrapper.setCount(1);
+        mqttWrapper.setData(Arrays.asList(trunkOderMq));
+        String jsonStr = upperObjectMapper.writeValueAsString(mqttWrapper);
         log.info("start publish msgId:{}", msgId);
         mqttProduce.publish(UtilityConst.TRUCK_ORDER_COMPLETE_TOPIC, jsonStr, msgId);
     }
@@ -215,6 +232,15 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         return truckOrder;
     }
 
+    @Override
+    public void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable {
+
+        if (request.getTruckOrderRequest().getCreationTime() == null) {
+            throw new Exception("creationTime is null");
+        }
+        long createTime = request.getTruckOrderRequest().getCreationTime().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
+        saveTruckOrderAndItem(request, createTime);
+    }
 
     @Override
     public PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request) {

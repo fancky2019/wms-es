@@ -12,6 +12,7 @@ import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
 import gs.com.gses.service.ShipOrderService;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -28,6 +29,7 @@ public class ShipOrderController {
     @Autowired
     private ShipOrderService shipOrderService;
     @Autowired
+    @Qualifier("upperObjectMapper")
     private ObjectMapper upperObjectMapper;
 
     @Autowired

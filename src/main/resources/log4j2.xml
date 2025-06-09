@@ -37,7 +37,7 @@
         <!--        <RollingFile name="RollingFile" fileName="var/log/ordermigratedbtool/${date:yyyy-MM}/${date:yyyy-MM-dd}/log.log"-->
         <!--                     filePattern="var/log/ordermigratedbtool/$${date:yyyy-MM}/$${date:yyyy-MM-dd}/info-%d{yyyy-MM-dd}-%i.log">-->
         <RollingFile name="RollingFile" fileName="logs/${date:yyyy-MM}/${date:yyyy-MM-dd}/log.log"
-                     filePattern="logs/$${date:yyyy-MM}/$${date:yyyy-MM-dd}/log-%d{yyyy-MM-dd}-%i.log">
+                     filePattern="logs/${date:yyyy-MM}/${date:yyyy-MM-dd}/log-%d{yyyy-MM-dd}-%i.log">
             <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${log_pattern}"/>
             <Policies>

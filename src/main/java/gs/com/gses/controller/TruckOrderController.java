@@ -49,6 +49,14 @@ public class TruckOrderController {
 
     }
 
+    @PostMapping("/addTruckOrderOnly")
+    public MessageResult<Boolean> addTruckOrderOnly(@RequestBody AddTruckOrderRequest request, @RequestHeader("Authorization") String token) throws Throwable {
+
+        truckOrderService.addTruckOrderAndItemOnly(request, token);
+        return MessageResult.success();
+
+    }
+
     @PostMapping("/getTruckOrderPage")
     public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request) throws Exception {
         PageData<TruckOrderResponse> page = truckOrderService.getTruckOrderPage(request);

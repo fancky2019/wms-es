@@ -16,6 +16,8 @@ import gs.com.gses.model.response.wms.TruckOrderResponse;
 public interface TruckOrderService extends IService<TruckOrder> {
     void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable;
 
+    void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable;
+
     TruckOrder add(TruckOrderRequest truckOrderRequest);
 
     PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request);
