@@ -2,6 +2,8 @@ package gs.com.gses.controller;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.filter.UserInfoHolder;
+import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.AddTruckOrderRequest;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
@@ -59,6 +61,7 @@ public class TruckOrderController {
 
     @PostMapping("/getTruckOrderPage")
     public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request) throws Exception {
+        LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         PageData<TruckOrderResponse> page = truckOrderService.getTruckOrderPage(request);
         return MessageResult.success(page);
     }
