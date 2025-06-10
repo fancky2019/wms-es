@@ -48,15 +48,12 @@ public class TruckOrderController {
 
         truckOrderService.addTruckOrderAndItem(request, token);
         return MessageResult.success();
-
     }
 
     @PostMapping("/addTruckOrderOnly")
     public MessageResult<Boolean> addTruckOrderOnly(@RequestBody AddTruckOrderRequest request, @RequestHeader("Authorization") String token) throws Throwable {
-
         truckOrderService.addTruckOrderAndItemOnly(request, token);
         return MessageResult.success();
-
     }
 
     @PostMapping("/getTruckOrderPage")

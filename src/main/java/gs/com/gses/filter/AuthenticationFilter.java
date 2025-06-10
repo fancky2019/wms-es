@@ -12,12 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -26,7 +21,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
 
-@Configuration
+//@Configuration
 public class AuthenticationFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);

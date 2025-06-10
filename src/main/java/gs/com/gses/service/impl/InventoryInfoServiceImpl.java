@@ -505,8 +505,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
         IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(clas);
+
+        // 1. 构造 settings，包括 max_result_window
+        Document settings = Document.create();
+        Map<String, Object> map=new HashMap<>();
+        map.put("max_result_window", 500000);
+        settings.put("index", map);
         //创建索引
-        boolean result = indexOperations.create();
+        boolean result = indexOperations.create(settings);
         if (result) {
             //生成映射
             Document mapping = indexOperations.createMapping();

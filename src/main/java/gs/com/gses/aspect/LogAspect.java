@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.utility.RedisKeyConfigConst;
 import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
@@ -21,12 +22,17 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /*
 
@@ -60,8 +66,7 @@ execution(public * com.spring.service.BusinessObject.businessService(java.lang.S
 @Aspect
 @Component
 @Order(101)
-//@Slf4j
-@Log4j2
+@Slf4j
 public class LogAspect {
 
 
@@ -134,7 +139,27 @@ public class LogAspect {
 //        Object[] args = jp.getArgs();
 //
 //
-        String json=objectMapper.writeValueAsString(args);
+        //上传文件报错
+//        String json=objectMapper.writeValueAsString(args);
+
+        // 处理参数序列化，特别处理文件上传情况
+        List<Object> loggableArgs = new ArrayList<>();
+        for (Object arg : args) {
+            if (arg instanceof MultipartFile) {
+                loggableArgs.add("File[" + ((MultipartFile) arg).getOriginalFilename() + "]");
+            } else if (arg instanceof MultipartFile[]) {
+                loggableArgs.add("Files[" + Arrays.stream((MultipartFile[]) arg)
+                        .map(MultipartFile::getOriginalFilename)
+                        .collect(Collectors.joining(",")) + "]");
+            } else if (arg instanceof HttpServletRequest || arg instanceof HttpServletResponse) {
+                // 忽略这些参数
+            } else {
+                loggableArgs.add(arg);
+            }
+        }
+
+        String json=objectMapper.writeValueAsString(loggableArgs);
+
         log.info("{} : {} - {} 开始处理,参数列表 - {}", uri, className, methodName, json);
 //        log.info("{} : {} - {} 开始处理,参数列表 - {}", uri, className, methodName, Arrays.toString(args));
 //        Object result = jp.proceed();
