@@ -207,8 +207,9 @@ sbp:
   authority: http://10.100.200.43:9001/api/app
   hostAndPort: 10.100.200.43:9200
   initCache: false
+  logMq: true
   flink:
-    enable: false
+    enable: true
     databaseList:
       - liku
     tableList:

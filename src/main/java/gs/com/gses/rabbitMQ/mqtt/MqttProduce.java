@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.nio.charset.StandardCharsets;
 
 @Component
 @Slf4j
@@ -27,6 +28,10 @@ public class MqttProduce {
 
     @Value("${spring.mqtt.default.topic}")
     private String defaultTopic;
+
+    @Value("${sbp.logMq}")
+    private Boolean logMq;
+
 
     /**
      * 客户端对象
@@ -94,11 +99,13 @@ public class MqttProduce {
         QoS 2（只有一次）：确保消息到达一次。这个级别可用于如下情况，在计费系统中，消息重复或丢失会导致不正确的结果。
          */
         //retained = true 只会保留最后一条消息
-
+        if (logMq) {
+            log.info("msgId - {} message -{}", msgId, message);
+        }
         MqttMessage mqttMessage = new MqttMessage();
         mqttMessage.setQos(qos);
         mqttMessage.setRetained(retained);
-        mqttMessage.setPayload(message.getBytes());
+        mqttMessage.setPayload(message.getBytes(StandardCharsets.UTF_8));
         //主题的目的地，用于发布/订阅信息
         MqttTopic mqttTopic = client.getTopic(topic);
         //提供一种机制来跟踪消息的传递进度

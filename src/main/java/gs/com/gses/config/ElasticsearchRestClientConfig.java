@@ -133,8 +133,8 @@ public class ElasticsearchRestClientConfig extends AbstractElasticsearchConfigur
     public RestHighLevelClient elasticsearchClient() {
         ClientConfiguration clientConfiguration = ClientConfiguration.builder()
                 .connectedTo(hostAndPort)
-                .withConnectTimeout(Duration.ofSeconds(10))
-                .withSocketTimeout(Duration.ofSeconds(60))
+                .withConnectTimeout(Duration.ofSeconds(600))
+                .withSocketTimeout(Duration.ofSeconds(600))
                 .withClientConfigurer((ClientConfiguration.ClientConfigurationCallback<RestClientBuilder>) restClientBuilder -> {
                     // 设置连接池参数
                     restClientBuilder.setHttpClientConfigCallback(httpClientBuilder ->
@@ -146,9 +146,9 @@ public class ElasticsearchRestClientConfig extends AbstractElasticsearchConfigur
                     // 设置请求超时参数
                     restClientBuilder.setRequestConfigCallback(requestConfigBuilder ->
                             requestConfigBuilder
-                                    .setConnectionRequestTimeout(3000)
-                                    .setConnectTimeout(10000)
-                                    .setSocketTimeout(60000)
+                                    .setConnectionRequestTimeout(600000)
+                                    .setConnectTimeout(600000)
+                                    .setSocketTimeout(600000)
                     );
                     return restClientBuilder;
                 })

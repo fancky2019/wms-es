@@ -30,7 +30,7 @@ public interface InventoryInfoService {
 
     void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
 
-    void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException;
+    void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
 
     void test();
 

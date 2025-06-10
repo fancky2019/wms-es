@@ -117,6 +117,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     public static LocalDateTime INIT_INVENTORY_TIME = null;
 
+    public static final String LOCK_KEY = "redisson:updateInventoryInfo";
+
     @Override
     public void initInventoryInfoFromDb() throws InterruptedException {
         INIT_INVENTORY_TIME = LocalDateTime.now();
@@ -508,7 +510,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         // 1. 构造 settings，包括 max_result_window
         Document settings = Document.create();
-        Map<String, Object> map=new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         map.put("max_result_window", 500000);
         settings.put("index", map);
         //创建索引
@@ -1257,7 +1259,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException {
+    public void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException {
 
         Laneway changedILaneway = null;
 
@@ -1402,6 +1404,126 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
+
+    private void updateInventoryInfoOfInventoryBatch(Inventory inventory, DataChangeInfo dataChangeInfo) throws InterruptedException {
+
+
+        String lockKey = LOCK_KEY;
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                log.info("updateInventoryInfo - {} fail ,get lock fail", lockKey);
+                return;
+            }
+            log.info("InventoryInfo - {} acquire lock  success ", lockKey);
+
+
+            StopWatch stopWatch = new StopWatch("updateInventoryInfoOfInventoryBatch");
+            stopWatch.start("updateInventoryInfoOfInventoryBatch");
+
+            List<String> sourceFieldList = new ArrayList<>();
+            sourceFieldList.add("inventoryItemDetailId");
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryId", inventory.getId()));
+
+            NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(boolQueryBuilder)
+                    .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
+                    .withSourceFilter(new SourceFilter() {
+                        //返回的字段
+                        @Override
+                        public String[] getIncludes() {
+                            if (CollectionUtils.isNotEmpty(sourceFieldList)) {
+                                return sourceFieldList.toArray(new String[0]);
+                            } else {
+                                return new String[0];
+                            }
+
+                        }
+
+                        //不需要返回的字段
+                        @Override
+                        public String[] getExcludes() {
+                            return new String[0];
+                        }
+                    })
+                    .withTrackTotalHits(true)//返回命中的总行数
+                    .build();
+            //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
+            SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
+            long totalHits = search.getTotalHits();
+            List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+
+
+            long count = inventoryInfoList.size();
+            int step = 1000;
+            long times = count / step;
+            long left = count % step;
+            if (left > 0) {
+                times++;
+            }
+
+            long pageIndex = 0L;
+            long totalIndexSize = 0L;
+            while (times > 0) {
+
+                long skip = (++pageIndex - 1) * step;
+                times--;
+
+                List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
+
+                List<UpdateQuery> updateQueries = new ArrayList<>();
+                for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
+                    Map<String, Object> updatedMap = prepareInventoryUpdatedInfo(inventoryInfo, inventory);
+//                updateInventoryInfo(inventoryInfo.getInventoryItemDetailIinventoryd().toString(), updatedMap, dataChangeInfo.getTableName());
+                    Document document = Document.create();
+                    document.putAll(updatedMap);
+                    UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
+                            .withDocument(document)
+                            .withIfSeqNo(null)  // 忽略 seq_no
+                            .withIfPrimaryTerm(null) // 忽略 primary_term
+                            .withDocAsUpsert(true)// 如果文档不存在则创建
+                            .build();
+                    updateQueries.add(updateQuery);
+                }
+                if (updateQueries.size() > 0) {
+                    // 执行批量更新
+                    elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+                }
+
+            }
+
+
+            stopWatch.stop();
+            long mills = stopWatch.getTotalTimeMillis();
+            log.info("updateInventoryInfoOfLocationBatch complete {} ms", mills);
+
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+
+            boolean wasInterrupted = Thread.interrupted();
+            try {
+                // 只有当前线程持有锁，才释放
+                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            } finally {
+                if (wasInterrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            log.info("InventoryInfo - {} release lock  success ", lockKey);
+
+        }
+
+    }
+
     private void updateInventoryInfoOfLocation(Location location, DataChangeInfo dataChangeInfo) throws InterruptedException {
 
         Criteria criteria = new Criteria("locationId").is(location.getId());
@@ -1429,177 +1551,242 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     private void updateInventoryInfoOfLocationBatch(Location location, DataChangeInfo dataChangeInfo) throws InterruptedException {
+        String lockKey = LOCK_KEY;
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                log.info("updateInventoryInfo - {} fail ,get lock fail", lockKey);
+                return;
+            }
+            log.info("InventoryInfo - {} acquire lock  success ", lockKey);
 
-        StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLocationBatch");
-        stopWatch.start("updateInventoryInfoOfLocationBatch");
 
-        List<String> sourceFieldList = new ArrayList<>();
-        sourceFieldList.add("inventoryItemDetailId");
-        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        boolQueryBuilder.must(QueryBuilders.termQuery("locationId", location.getId()));
+            StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLocationBatch");
+            stopWatch.start("updateInventoryInfoOfLocationBatch");
 
-        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-                .withQuery(boolQueryBuilder)
-                .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
-                .withSourceFilter(new SourceFilter() {
-                    //返回的字段
-                    @Override
-                    public String[] getIncludes() {
-                        if (CollectionUtils.isNotEmpty(sourceFieldList)) {
-                            return sourceFieldList.toArray(new String[0]);
-                        } else {
-                            return new String[0];
+            List<String> sourceFieldList = new ArrayList<>();
+            sourceFieldList.add("inventoryItemDetailId");
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationId", location.getId()));
+
+            NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(boolQueryBuilder)
+                    .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
+                    .withSourceFilter(new SourceFilter() {
+                        //返回的字段
+                        @Override
+                        public String[] getIncludes() {
+                            if (CollectionUtils.isNotEmpty(sourceFieldList)) {
+                                return sourceFieldList.toArray(new String[0]);
+                            } else {
+                                return new String[0];
+                            }
+
                         }
 
-                    }
-
-                    //不需要返回的字段
-                    @Override
-                    public String[] getExcludes() {
-                        return new String[0];
-                    }
-                })
-                .withTrackTotalHits(true)//返回命中的总行数
-                .build();
-        //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
-        SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
-        long totalHits = search.getTotalHits();
-        List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+                        //不需要返回的字段
+                        @Override
+                        public String[] getExcludes() {
+                            return new String[0];
+                        }
+                    })
+                    .withTrackTotalHits(true)//返回命中的总行数
+                    .build();
+            //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
+            SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
+            long totalHits = search.getTotalHits();
+            List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
 
 
-        long count = inventoryInfoList.size();
-        int step = 1000;
-        long times = count / step;
-        long left = count % step;
-        if (left > 0) {
-            times++;
-        }
+            long count = inventoryInfoList.size();
+            int step = 1000;
+            long times = count / step;
+            long left = count % step;
+            if (left > 0) {
+                times++;
+            }
 
-        long pageIndex = 0L;
-        long totalIndexSize = 0L;
-        while (times > 0) {
+            long pageIndex = 0L;
+            long totalIndexSize = 0L;
+            while (times > 0) {
 
-            long skip = (++pageIndex - 1) * step;
-            times--;
+                long skip = (++pageIndex - 1) * step;
+                times--;
 
-            List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
+                List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
 
-            List<UpdateQuery> updateQueries = new ArrayList<>();
-            for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
-                Map<String, Object> updatedMap = prepareLocationUpdatedInfo(inventoryInfo, location);
+                List<UpdateQuery> updateQueries = new ArrayList<>();
+                for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
+                    Map<String, Object> updatedMap = prepareLocationUpdatedInfo(inventoryInfo, location);
 //                updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
-                Document document = Document.create();
-                document.putAll(updatedMap);
-                UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
-                        .withDocument(document)
-                        .withIfSeqNo(null)  // 忽略 seq_no
-                        .withIfPrimaryTerm(null) // 忽略 primary_term
-                        .withDocAsUpsert(true)// 如果文档不存在则创建
-                        .build();
-                updateQueries.add(updateQuery);
+                    Document document = Document.create();
+                    document.putAll(updatedMap);
+                    UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
+                            .withDocument(document)
+                            .withIfSeqNo(null)  // 忽略 seq_no
+                            .withIfPrimaryTerm(null) // 忽略 primary_term
+                            .withDocAsUpsert(true)// 如果文档不存在则创建
+                            .build();
+                    updateQueries.add(updateQuery);
+                }
+                if (updateQueries.size() > 0) {
+                    // 执行批量更新
+                    elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+                }
+
             }
-            if (updateQueries.size() > 0) {
-                // 执行批量更新
-                elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+
+
+            stopWatch.stop();
+            long mills = stopWatch.getTotalTimeMillis();
+            log.info("updateInventoryInfoOfLocationBatch complete {} ms", mills);
+
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+
+            boolean wasInterrupted = Thread.interrupted();
+            try {
+                // 只有当前线程持有锁，才释放
+                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            } finally {
+                if (wasInterrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
+
+            log.info("InventoryInfo - {} release lock  success ", lockKey);
 
         }
-
-
-        stopWatch.stop();
-        long mills = stopWatch.getTotalTimeMillis();
-        log.info("updateInventoryInfoOfLocationBatch complete {} ms", mills);
-
-
     }
 
-    private void updateInventoryInfoOfLaneway(Laneway laneway, DataChangeInfo dataChangeInfo) {
-        StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLaneway");
-        stopWatch.start("updateInventoryInfoOfLaneway");
+    private void updateInventoryInfoOfLaneway(Laneway laneway, DataChangeInfo dataChangeInfo) throws InterruptedException {
 
-        List<String> sourceFieldList = new ArrayList<>();
-        sourceFieldList.add("inventoryItemDetailId");
-        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", laneway.getId()));
+        String lockKey = LOCK_KEY;
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                log.info("updateInventoryInfo - {} fail ,get lock fail", lockKey);
+                return;
+            }
+            log.info("InventoryInfo - {} acquire lock  success ", lockKey);
 
-        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-                .withQuery(boolQueryBuilder)
-                .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
-                .withSourceFilter(new SourceFilter() {
-                    //返回的字段
-                    @Override
-                    public String[] getIncludes() {
-                        if (CollectionUtils.isNotEmpty(sourceFieldList)) {
-                            return sourceFieldList.toArray(new String[0]);
-                        } else {
-                            return new String[0];
+            StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLaneway");
+            stopWatch.start("updateInventoryInfoOfLaneway");
+
+            List<String> sourceFieldList = new ArrayList<>();
+            sourceFieldList.add("inventoryItemDetailId");
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", laneway.getId()));
+
+            NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(boolQueryBuilder)
+                    .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
+                    .withSourceFilter(new SourceFilter() {
+                        //返回的字段
+                        @Override
+                        public String[] getIncludes() {
+                            if (CollectionUtils.isNotEmpty(sourceFieldList)) {
+                                return sourceFieldList.toArray(new String[0]);
+                            } else {
+                                return new String[0];
+                            }
+
                         }
 
-                    }
-
-                    //不需要返回的字段
-                    @Override
-                    public String[] getExcludes() {
-                        return new String[0];
-                    }
-                })
-                .withTrackTotalHits(true)//返回命中的总行数
-                .build();
-        //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
-        SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
-        long totalHits = search.getTotalHits();
-        List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+                        //不需要返回的字段
+                        @Override
+                        public String[] getExcludes() {
+                            return new String[0];
+                        }
+                    })
+                    .withTrackTotalHits(true)//返回命中的总行数
+                    .build();
+            //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
+            SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
+            long totalHits = search.getTotalHits();
+            List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
 
 
-        //有10000限制
+            //有10000限制
 //        Criteria criteria = new Criteria("lanewayId").is(laneway.getId());
 //        CriteriaQuery query = new CriteriaQuery(criteria);
 //        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
 //        List<InventoryInfo> inventoryInfoList1 = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
 
 
-        long count = inventoryInfoList.size();
-        int step = 1000;
-        long times = count / step;
-        long left = count / step;
-        if (left > 0) {
-            times++;
-        }
+            long count = inventoryInfoList.size();
+            int step = 1000;
+            long times = count / step;
+            long left = count / step;
+            if (left > 0) {
+                times++;
+            }
 
-        long pageIndex = 0L;
-        long totalIndexSize = 0L;
-        while (times > 0) {
+            long pageIndex = 0L;
+            long totalIndexSize = 0L;
+            while (times > 0) {
 
-            long skip = (++pageIndex - 1) * step;
-            times--;
+                long skip = (++pageIndex - 1) * step;
+                times--;
 
-            List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
+                List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
 
-            List<UpdateQuery> updateQueries = new ArrayList<>();
-            for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
-                Map<String, Object> updatedMap = prepareLanewayUpdatedInfo(inventoryInfo, laneway);
+                List<UpdateQuery> updateQueries = new ArrayList<>();
+                for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
+                    Map<String, Object> updatedMap = prepareLanewayUpdatedInfo(inventoryInfo, laneway);
 //                updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
-                Document document = Document.create();
-                document.putAll(updatedMap);
-                UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
-                        .withDocument(document)
-                        .withIfSeqNo(null)  // 忽略 seq_no
-                        .withIfPrimaryTerm(null) // 忽略 primary_term
-                        .withDocAsUpsert(true)// 如果文档不存在则创建
-                        .build();
-                updateQueries.add(updateQuery);
+                    Document document = Document.create();
+                    document.putAll(updatedMap);
+                    UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
+                            .withDocument(document)
+                            .withIfSeqNo(null)  // 忽略 seq_no
+                            .withIfPrimaryTerm(null) // 忽略 primary_term
+                            .withDocAsUpsert(true)// 如果文档不存在则创建
+                            .build();
+                    updateQueries.add(updateQuery);
+                }
+                if (updateQueries.size() > 0) {
+                    // 执行批量更新
+                    elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+                }
+
             }
-            if (updateQueries.size() > 0) {
-                // 执行批量更新
-                elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+
+
+            stopWatch.stop();
+            long mills = stopWatch.getTotalTimeMillis();
+            log.info("updateInventoryInfoOfLaneway complete {} ms", mills);
+
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+
+            boolean wasInterrupted = Thread.interrupted();
+            try {
+                // 只有当前线程持有锁，才释放
+                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            } finally {
+                if (wasInterrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
+
+            log.info("InventoryInfo - {} release lock  success ", lockKey);
 
         }
-
-
-        stopWatch.stop();
-        long mills = stopWatch.getTotalTimeMillis();
-        log.info("updateInventoryInfoOfLaneway complete {} ms", mills);
     }
 
 
@@ -1624,11 +1811,12 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     // 更新方法2：使用字段映射
     private void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) throws InterruptedException {
 
-        String lockKey = "redisson:updateInventoryInfo:" + id;
+        String lockKey = LOCK_KEY;// "redisson:updateInventoryInfo:" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
         RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
         try {
-            boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
             if (!lockSuccessfully) {
 //                log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -1674,7 +1862,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             boolean wasInterrupted = Thread.interrupted(); // 清除中断状态
             try {
-                lock.unlock(); // 执行Redisson操作
+                // 只有当前线程持有锁，才释放
+                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
             } finally {
                 if (wasInterrupted) {
                     Thread.currentThread().interrupt(); // 恢复中断状态
