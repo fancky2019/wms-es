@@ -84,11 +84,6 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    private String driverPhone;
-
-    /**
-     *
-     */
     private BigDecimal quantity;
 
     /**

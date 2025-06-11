@@ -1,15 +1,19 @@
 package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
 import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.request.Sort;
+import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.MqttWrapper;
@@ -134,7 +138,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             }
 
         } else {
-            throw new Exception("SubAssignPalletsByShipOrderBatch exception");
+            throw new Exception(" WmsApiException - "+wmsResponse.getExplain());
         }
 
     }
@@ -166,9 +170,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         ShipPickOrderResponse shipPickOrderResponse = shipPickOrderResponseList.get(0);
 
         TruckOrderRequest truckOrderRequest = request.getTruckOrderRequest();
-        LocalDateTime  creationTime = LocalDateTime.now();
-        if(request.getTruckOrderRequest().getCreationTime()!=null)
-        {
+        LocalDateTime creationTime = LocalDateTime.now();
+        if (request.getTruckOrderRequest().getCreationTime() != null) {
             creationTime = request.getTruckOrderRequest().getCreationTime();
         }
         truckOrderRequest.setCreationTime(creationTime);
@@ -241,6 +244,47 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         }
         long createTime = request.getTruckOrderRequest().getCreationTime().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
         saveTruckOrderAndItem(request, createTime);
+    }
+
+    @Override
+    public void updateTruckOrder(TruckOrderRequest request) throws Exception {
+        if (request.getId() == null) {
+            throw new Exception("id is null");
+        }
+        TruckOrder truckOrder = this.getById(request.getId());
+        if (truckOrder == null) {
+            throw new Exception("Can not get truckOrder by id - " + request.getId());
+        }
+        if (truckOrder.getDeleted() == 1) {
+            String msg = MessageFormat.format("truckOrder id - {0} is deleted", request.getId());
+            throw new Exception(msg);
+        }
+        LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
+        if (userTokenDto != null) {
+            request.setLastModifierId(userTokenDto.getId());
+            request.setLastModifierName(userTokenDto.getUserName());
+        }
+
+        LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.set(TruckOrder::getSenderAddress, request.getSenderAddress());
+        updateWrapper.set(TruckOrder::getReceiverAddress, request.getReceiverAddress());
+        updateWrapper.set(TruckOrder::getSenderPhone, request.getSenderPhone());
+        updateWrapper.set(TruckOrder::getReceiverPhone, request.getReceiverPhone());
+        updateWrapper.set(TruckOrder::getSendTime, request.getSendTime());
+        updateWrapper.set(TruckOrder::getTrunkType, request.getTrunkType());
+        updateWrapper.set(TruckOrder::getDriverPhone, request.getDriverPhone());
+        updateWrapper.set(TruckOrder::getTrunkNo, request.getTrunkNo());
+        updateWrapper.set(TruckOrder::getLastModificationTime, LocalDateTime.now());
+        updateWrapper.set(TruckOrder::getVersion, truckOrder.getVersion() + 1);
+        updateWrapper.eq(TruckOrder::getId, request.getId());
+        updateWrapper.eq(TruckOrder::getDeleted, 0);
+        updateWrapper.eq(TruckOrder::getVersion, truckOrder.getVersion());
+
+        boolean re = this.update(updateWrapper);
+        if (!re) {
+            String msg = MessageFormat.format("Update truckOrder id - {0} fail", request.getId());
+            throw new Exception(msg);
+        }
     }
 
     @Override

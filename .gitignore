@@ -23,6 +23,7 @@ uploadfiles/
 log/
 logs/
 *.log
+*.xlsx
 
 ### NetBeans ###
 /nbproject/private/

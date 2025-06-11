@@ -179,11 +179,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
         if (StringUtils.isNotEmpty(request.getProjectName())) {
             truckOrderItemQueryWrapper.like(TruckOrderItem::getProjectName, request.getProjectName());
-
         }
         if (StringUtils.isNotEmpty(request.getApplyShipOrderCode())) {
             truckOrderItemQueryWrapper.like(TruckOrderItem::getApplyShipOrderCode, request.getApplyShipOrderCode());
-
         }
         if (StringUtils.isNotEmpty(request.getShipOrderCode())) {
             LambdaQueryWrapper<ShipOrder> shipOrderWrapper = new LambdaQueryWrapper<>();
@@ -206,20 +204,13 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         if (StringUtils.isNotEmpty(request.getDeviceName())) {
             truckOrderItemQueryWrapper.like(TruckOrderItem::getDeviceName, request.getDeviceName());
-
         }
         if (StringUtils.isNotEmpty(request.getDeviceNo())) {
             truckOrderItemQueryWrapper.like(TruckOrderItem::getDeviceNo, request.getDeviceNo());
-
-        }
-        if (StringUtils.isNotEmpty(request.getDriverPhone())) {
-            truckOrderItemQueryWrapper.like(TruckOrderItem::getDriverPhone, request.getDriverPhone());
-
         }
 
         if (StringUtils.isNotEmpty(request.getSendBatchNo())) {
             truckOrderItemQueryWrapper.like(TruckOrderItem::getSendBatchNo, request.getSendBatchNo());
-
         }
 
         // 创建分页对象 (当前页, 每页大小)

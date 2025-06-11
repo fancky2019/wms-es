@@ -24,7 +24,7 @@ spring:
   datasource:
     #    # sqlserver
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB_test05;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=liku;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -207,9 +207,9 @@ sbp:
   authority: http://10.100.200.43:9001/api/app
   hostAndPort: 10.100.200.43:9200
   initCache: false
-  logMq: true
+  logMq: false
   flink:
-    enable: true
+    enable: false
     databaseList:
       - liku
     tableList:

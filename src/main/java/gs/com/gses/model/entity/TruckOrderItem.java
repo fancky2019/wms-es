@@ -83,11 +83,6 @@ public class TruckOrderItem implements Serializable {
     @TableField(value = "DeviceNo")
     private String deviceNo;
 
-    /**
-     * 
-     */
-    @TableField(value = "DriverPhone")
-    private String driverPhone;
 
     /**
      * 

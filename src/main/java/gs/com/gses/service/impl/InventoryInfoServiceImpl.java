@@ -119,6 +119,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     public static final String LOCK_KEY = "redisson:updateInventoryInfo";
 
+    private final static int WAIT_TIME = 300000;
+    private final static int LEASE_TIME = 300000;
+
+
     @Override
     public void initInventoryInfoFromDb() throws InterruptedException {
         INIT_INVENTORY_TIME = LocalDateTime.now();
@@ -1506,16 +1510,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             throw ex;
         } finally {
 
-            boolean wasInterrupted = Thread.interrupted();
-            try {
-                // 只有当前线程持有锁，才释放
-                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
-            } finally {
-                if (wasInterrupted) {
-                    Thread.currentThread().interrupt();
-                }
+            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                lock.unlock();
             }
 
             log.info("InventoryInfo - {} release lock  success ", lockKey);
@@ -1649,16 +1645,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             throw ex;
         } finally {
 
-            boolean wasInterrupted = Thread.interrupted();
-            try {
-                // 只有当前线程持有锁，才释放
-                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
-            } finally {
-                if (wasInterrupted) {
-                    Thread.currentThread().interrupt();
-                }
+            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                lock.unlock();
             }
 
             log.info("InventoryInfo - {} release lock  success ", lockKey);
@@ -1772,16 +1760,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             throw ex;
         } finally {
 
-            boolean wasInterrupted = Thread.interrupted();
-            try {
-                // 只有当前线程持有锁，才释放
-                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
-            } finally {
-                if (wasInterrupted) {
-                    Thread.currentThread().interrupt();
-                }
+            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                lock.unlock();
             }
 
             log.info("InventoryInfo - {} release lock  success ", lockKey);
@@ -1816,6 +1796,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         RLock lock = redissonClient.getLock(lockKey);
         boolean lockSuccessfully = false;
         try {
+            //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
             lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
             if (!lockSuccessfully) {
 //                log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
@@ -1860,17 +1841,19 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 //            lock.unlock(); // 执行Redisson操作
 
-            boolean wasInterrupted = Thread.interrupted(); // 清除中断状态
-            try {
-                // 只有当前线程持有锁，才释放
-                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
-            } finally {
-                if (wasInterrupted) {
-                    Thread.currentThread().interrupt(); // 恢复中断状态
-                }
-            }
+            // 清除中断状态
+//            boolean wasInterrupted = Thread.interrupted();
+//            try {
+//                // 只有当前线程持有锁，才释放
+//                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                    lock.unlock();
+//                }
+//            } finally {
+//                if (wasInterrupted) {
+//                    // 恢复中断状态
+//                    Thread.currentThread().interrupt();
+//                }
+//            }
 
 //            if (lock.isHeldByCurrentThread()) {
 //                try {
@@ -1881,7 +1864,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //                }
 //            }
 
-
+            // 只有当前线程持有锁，才释放
+            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
             log.info("InventoryInfo - {} release lock - {} success ", id, lockKey);
 
         }

@@ -12,7 +12,7 @@
             <result property="senderPhone" column="SenderPhone" jdbcType="VARCHAR"/>
             <result property="receiverPhone" column="ReceiverPhone" jdbcType="VARCHAR"/>
             <result property="sendTime" column="SendTime" jdbcType="TIMESTAMP"/>
-            <result property="trunkType" column="TrunkType" jdbcType="SMALLINT"/>
+            <result property="trunkType" column="TrunkType" jdbcType="VARCHAR"/>
             <result property="driverPhone" column="DriverPhone" jdbcType="VARCHAR"/>
             <result property="trunkNo" column="TrunkNo" jdbcType="VARCHAR"/>
             <result property="deleted" column="Deleted" jdbcType="TINYINT"/>

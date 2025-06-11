@@ -51,7 +51,7 @@ public class TruckOrderRequest extends RequestPage {
     /**
      *
      */
-    private Integer trunkType;
+    private String trunkType;
 
     /**
      *

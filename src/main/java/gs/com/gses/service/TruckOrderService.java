@@ -18,6 +18,8 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
     void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable;
 
+    void updateTruckOrder(TruckOrderRequest request) throws Exception;
+
     TruckOrder add(TruckOrderRequest truckOrderRequest);
 
     PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request);

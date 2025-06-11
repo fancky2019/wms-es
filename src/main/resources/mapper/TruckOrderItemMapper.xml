@@ -16,7 +16,6 @@
             <result property="materialCode" column="MaterialCode" jdbcType="VARCHAR"/>
             <result property="deviceName" column="DeviceName" jdbcType="VARCHAR"/>
             <result property="deviceNo" column="DeviceNo" jdbcType="VARCHAR"/>
-            <result property="driverPhone" column="DriverPhone" jdbcType="VARCHAR"/>
             <result property="quantity" column="Quantity" jdbcType="DECIMAL"/>
             <result property="sendBatchNo" column="SendBatchNo" jdbcType="VARCHAR"/>
             <result property="remark" column="Remark" jdbcType="VARCHAR"/>

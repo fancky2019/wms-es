@@ -56,13 +56,13 @@ public class TruckOrder implements Serializable {
      * 
      */
     @TableField(value = "SendTime")
-    private Date sendTime;
+    private LocalDateTime sendTime;
 
     /**
      * 
      */
     @TableField(value = "TrunkType")
-    private Integer trunkType;
+    private String trunkType;
 
     /**
      * 

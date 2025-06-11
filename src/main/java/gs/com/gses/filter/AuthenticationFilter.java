@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 
 import javax.servlet.*;
@@ -21,7 +22,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
 
-//@Configuration
+@Configuration
 public class AuthenticationFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
@@ -47,7 +48,7 @@ public class AuthenticationFilter implements Filter {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             // 转换为HttpServletRequest
             HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-
+            log.info("RequestURI:{}", httpServletRequest.getRequestURI());
 
             CheckPermissionRequest checkPermissionRequest = new CheckPermissionRequest();
             //ShipOrder/OneClickContinuous
@@ -58,10 +59,11 @@ public class AuthenticationFilter implements Filter {
 
             String token = httpServletRequest.getHeader("Authorization");
             try {
+                log.info("Start checkPermission");
                 WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
-
                 LoginUserTokenDto userInfo = null;
                 if (dto.getResult()) {
+                    log.info("Start checkPermission success");
                     Map<String, String> userInfoMap = (Map) dto.getData();
                     userInfo = new LoginUserTokenDto();
                     BeanWrapper wrapper = new BeanWrapperImpl(userInfo);
@@ -73,6 +75,7 @@ public class AuthenticationFilter implements Filter {
                 }
 
             } catch (FeignException ex) {
+                log.info("CheckPermission fail");
                 if (httpServletResponse.getStatus() == HttpStatus.UNAUTHORIZED.value()) {
 
                     // 401处理逻辑
@@ -94,12 +97,7 @@ public class AuthenticationFilter implements Filter {
                 try {
                     returnJson(httpServletResponse, msg);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                try {
-                    returnJson(httpServletResponse, ex.getMessage());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    log.error("returnJson ", e);
                 }
             } catch (Exception ex) {
                 try {
@@ -108,12 +106,12 @@ public class AuthenticationFilter implements Filter {
                     String msg = objectMapper.writeValueAsString(messageResult);
                     returnJson(httpServletResponse, msg);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    log.error("returnJson ", e);
                 }
             }
 
-
             chain.doFilter(request, response);
+            log.info("doFilter completed");
         } catch (Exception ex) {
             log.error("", ex);
         } finally {

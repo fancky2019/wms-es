@@ -56,6 +56,12 @@ public class TruckOrderController {
         return MessageResult.success();
     }
 
+    @PostMapping("/updateTruckOrder")
+    public MessageResult<Void> updateTruckOrder(@RequestBody TruckOrderRequest request) throws Exception {
+        truckOrderService.updateTruckOrder(request);
+        return MessageResult.success();
+    }
+
     @PostMapping("/getTruckOrderPage")
     public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request) throws Exception {
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
