@@ -219,9 +219,14 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
                 }
             }
+        } else {
+            throw new RuntimeException("excel data is empty");
         }
 
-        modifyMStr12(dataList, errorDataSet);
+        if (errorDataSet.isEmpty()) {
+            modifyMStr12(dataList, errorDataSet);
+        }
+
 
         saveExcel("ModifyMStr12_error", errorDataSet, ModifyMStr12Bo.class);
 //        CompletableFuture<Void> allFutures = CompletableFuture.allOf(future1, future2, future3);
@@ -276,53 +281,77 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
         try {
 
-            List<InventoryItemDetailResponse> allDetailList = new ArrayList<>();
+            HashSet<ModifyMStr12Bo> currentErrorDataSet = new HashSet<>();
+            HashSet<InventoryItemDetailResponse> allDetailSet = new HashSet<>();
             for (ModifyMStr12Bo bo : dataList) {
                 Material material = this.materialService.getByCode(bo.getMaterialCode());
                 if (material == null) {
                     bo.setRemark("物料不存在");
-                    errorDataSet.add(bo);
-                    return;
+                    currentErrorDataSet.add(bo);
+                    continue;
                 }
                 bo.setMaterialId(material.getId());
                 InventoryItemDetailRequest request = new InventoryItemDetailRequest();
                 request.setM_Str7(bo.getMStr7());
                 request.setMaterialId(material.getId());
                 request.setSearchCount(false);
+                request.setPageSize(10000);
                 PageData<InventoryItemDetailResponse> pageData = this.getInventoryItemDetailPage(request);
                 List<InventoryItemDetailResponse> detailList = pageData.getData();
-                allDetailList.addAll(detailList);
-            }
-
-            if (allDetailList.size() != dataList.size()) {
-                log.info("Detail's count don't equal bo's count  ");
-                String remark = MessageFormat.format("库存条数 {0} excel 条数 {1}", allDetailList.size(), dataList.size());
-                dataList.forEach(p ->
-                {
-                    p.setRemark(remark);
-                });
-                errorDataSet.addAll(dataList);
-                return;
-            }
-
-            for (ModifyMStr12Bo bo : dataList) {
-                List<InventoryItemDetailResponse> currentetailList = allDetailList.stream().filter(p -> bo.getMStr7().equals(p.getM_Str7()) && bo.getMaterialId().equals(p.getMaterialId())).collect(Collectors.toList());
-                if (currentetailList.size() != 1) {
-                    String msg = MessageFormat.format("MStr7 - {0} MaterialCode - {1} 有多条库存", bo.getMaterialCode(), bo.getMStr7());
-                    bo.setRemark(msg);
-                    errorDataSet.add(bo);
+                allDetailSet.addAll(detailList);
+                if (detailList.size() == 0) {
+                    bo.setRemark("库存不存在");
+                    currentErrorDataSet.add(bo);
                     continue;
                 }
 
-                InventoryItemDetailResponse detail = currentetailList.get(0);
-                if (StringUtils.isEmpty(detail.getM_Str12())) {
-                    LambdaUpdateWrapper<InventoryItemDetail> updateWrapper = new LambdaUpdateWrapper<InventoryItemDetail>().eq(InventoryItemDetail::getId, detail.getId()).set(InventoryItemDetail::getM_Str12, bo.getMStr12());
-                    //数据没有做修改，影响的行数是0，不然返回1
-                    boolean re = this.update(null, updateWrapper);
-                } else {
-                    bo.setRemark("没有M_Str12为空的库存");
-                    errorDataSet.add(bo);
+                if (detailList.size() > 1) {
+                    long count = dataList.stream().filter(p -> bo.getMStr7().equals(p.getMStr7()) && bo.getMaterialCode().equals(p.getMaterialCode())).count();
+                    if (detailList.size() != count) {
+                        bo.setRemark("找到" + detailList.size() + "条库存,excel " + count + "条");
+                        currentErrorDataSet.add(bo);
+                    }
                 }
+            }
+
+            if (!currentErrorDataSet.isEmpty()) {
+                errorDataSet.addAll(currentErrorDataSet);
+                return;
+            }
+
+
+            for (ModifyMStr12Bo bo : dataList) {
+                List<InventoryItemDetailResponse> currentDetailList = allDetailSet.stream().filter(p ->
+                        bo.getMStr7().equals(p.getM_Str7())
+                                && bo.getMaterialId().equals(p.getMaterialId())
+                                && StringUtils.isEmpty(p.getM_Str12())).collect(Collectors.toList());
+
+                //没有空M_Str12()
+                if (currentDetailList.isEmpty()) {
+
+                    List<InventoryItemDetailResponse> mStr12DetailList = allDetailSet.stream().filter(p ->
+                            bo.getMStr7().equals(p.getM_Str7())
+                                    && bo.getMaterialId().equals(p.getMaterialId())
+                                    && bo.getMStr12().equals(p.getM_Str12())).collect(Collectors.toList());
+                    if (mStr12DetailList.size() == 1) {
+                        continue;
+                    } else {
+                        bo.setRemark("值为M_Str12的库存，有多个");
+                        errorDataSet.add(bo);
+                        return;
+                    }
+
+                }
+                InventoryItemDetailResponse detail = currentDetailList.get(0);
+                detail.setM_Str12(bo.getMStr12());
+
+                LambdaUpdateWrapper<InventoryItemDetail> updateWrapper = new LambdaUpdateWrapper<InventoryItemDetail>().
+                        eq(InventoryItemDetail::getId, detail.getId())
+                        .set(InventoryItemDetail::getM_Str12, detail.getM_Str12());
+                log.info("InventoryItemDetailId - {} update MStr12 - {}", detail.getId(), detail.getM_Str12());
+                //数据没有做修改，影响的行数是0，不然返回1
+                boolean re = this.update(null, updateWrapper);
+
             }
         } catch (Exception ex) {
             log.error("", ex);
@@ -331,7 +360,8 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
 
     @Override
-    public <T> void exportExcelModifyMStrTemplate(HttpServletResponse response, Class<T> cla) throws IOException {
+    public <T> void exportExcelModifyMStrTemplate(HttpServletResponse response, Class<T> cla) throws
+            IOException {
         String fileName = cla.getSimpleName();
         prepareResponds(fileName, response);
         // EasyExcel.write(response.getOutputStream(), ProductTest.class).sheet("表名称").doWrite(new ArrayList<ProductTest>());
@@ -414,7 +444,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             return;
         }
 
-        prepareResponds("ModifyMStr12_error",response);
+        prepareResponds("ModifyMStr12_error", response);
 //        // 设置响应头
 //        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 //        response.setHeader("Content-Disposition",
@@ -434,7 +464,8 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
 
     @Override
-    public PageData<InventoryItemDetailResponse> getInventoryItemDetailPage(InventoryItemDetailRequest request) throws Exception {
+    public PageData<InventoryItemDetailResponse> getInventoryItemDetailPage(InventoryItemDetailRequest request) throws
+            Exception {
         LambdaQueryWrapper<InventoryItemDetail> queryWrapper = new LambdaQueryWrapper<>();
 
         if (StringUtils.isNotEmpty(request.getM_Str7())) {
@@ -447,8 +478,11 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             Material material = materialService.getByCode(request.getMaterialCode());
             if (material != null) {
                 queryWrapper.eq(InventoryItemDetail::getMaterialId, material.getId());
-
             }
+        }
+
+        if (request.getMaterialId() != null && request.getMaterialId() > 0) {
+            queryWrapper.eq(InventoryItemDetail::getMaterialId, request.getMaterialId());
         }
 
 

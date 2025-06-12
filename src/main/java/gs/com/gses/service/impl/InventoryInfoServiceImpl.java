@@ -1204,7 +1204,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             case "CREATE":
                 break;
             case "UPDATE":
-                updateInventoryInfoOfInventory(changedInventory, dataChangeInfo);
+                updateInventoryInfoOfInventoryBatch(changedInventory, dataChangeInfo);
                 break;
             case "DELETE":
                 break;
@@ -1502,7 +1502,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             stopWatch.stop();
             long mills = stopWatch.getTotalTimeMillis();
-            log.info("updateInventoryInfoOfLocationBatch complete {} ms", mills);
+            log.info("updateInventoryInfoOfInventoryBatch complete {} ms", mills);
 
 
         } catch (Exception ex) {
@@ -1865,8 +1865,27 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            }
 
             // 只有当前线程持有锁，才释放
-            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-                lock.unlock();
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+
+
+            // 清除中断状态，保存中断信息
+            boolean wasInterrupted = Thread.interrupted();
+            try {
+                if (lockSuccessfully) {
+                    try {
+                        if (lock.isHeldByCurrentThread()) {
+                            lock.unlock();
+                        }
+                    } catch (Exception e) {
+                        log.warn("Redis check lock ownership failed: ", e);
+                    }
+                }
+            } finally {
+                if (wasInterrupted) {
+                    Thread.currentThread().interrupt(); // 恢复中断状态
+                }
             }
             log.info("InventoryInfo - {} release lock - {} success ", id, lockKey);
 

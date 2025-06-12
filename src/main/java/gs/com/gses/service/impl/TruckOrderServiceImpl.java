@@ -270,7 +270,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         updateWrapper.set(TruckOrder::getReceiverAddress, request.getReceiverAddress());
         updateWrapper.set(TruckOrder::getSenderPhone, request.getSenderPhone());
         updateWrapper.set(TruckOrder::getReceiverPhone, request.getReceiverPhone());
-        updateWrapper.set(TruckOrder::getSendTime, request.getSendTime());
+        updateWrapper.set(request.getSendTime()!=null,TruckOrder::getSendTime, request.getSendTime());
         updateWrapper.set(TruckOrder::getTrunkType, request.getTrunkType());
         updateWrapper.set(TruckOrder::getDriverPhone, request.getDriverPhone());
         updateWrapper.set(TruckOrder::getTrunkNo, request.getTrunkNo());

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 
@@ -22,6 +23,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
 
+
+//过配置文件中的开关控制 AuthenticationFilter 是否生效（即是否被注册为 Bean 并参与过滤器链）。
+@ConditionalOnProperty(value = "sbp.checkpermission", havingValue = "true")
 @Configuration
 public class AuthenticationFilter implements Filter {
 

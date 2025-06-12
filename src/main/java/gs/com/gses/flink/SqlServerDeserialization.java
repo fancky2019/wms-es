@@ -14,6 +14,7 @@ import org.apache.flink.cdc.connectors.shaded.org.apache.kafka.connect.data.Fiel
 import org.apache.flink.cdc.connectors.shaded.org.apache.kafka.connect.data.Schema;
 import org.apache.flink.cdc.connectors.shaded.org.apache.kafka.connect.data.Struct;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +26,9 @@ import java.util.List;
  */
 @Slf4j
 public class SqlServerDeserialization implements DebeziumDeserializationSchema<DataChangeInfo> {
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public static final String TS_MS = "ts_ms";
     public static final String BIN_FILE = "file";
@@ -166,11 +170,20 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
             dataChangeInfo.setDatabase(database);
             dataChangeInfo.setTableName(tableName);
 //        dataChangeInfo.setChangeTime(Optional.ofNullable(struct.get(TS_MS)).map(x -> Long.parseLong(x.toString())).orElseGet(System::currentTimeMillis));
-            //7.输出数据
+
+
+            try {
+                String jsonStr = objectMapper.writeValueAsString(dataChangeInfo);
+            } catch (Exception ee) {
+                log.error("jsonStr error", ee);
+            }
+
+            //7.输出数据  把反序列化结果发出去
             collector.collect(dataChangeInfo);
             log.info("receive {} - {} - {} ", dataChangeInfo.getTableName(), dataChangeInfo.getId(), dataChangeInfo.getEventType());
 
         } catch (Exception ex) {
+//            objectMapper.writeValueAsString(sourceRecord);
             log.error("deserialize err {}", sourceRecord.value());
             log.error("", ex);
         } finally {
