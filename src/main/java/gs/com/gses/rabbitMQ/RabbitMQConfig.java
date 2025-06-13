@@ -4,6 +4,7 @@ package gs.com.gses.rabbitMQ;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.MqMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.batch.SimpleBatchingStrategy;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
@@ -46,8 +47,6 @@ public class RabbitMQConfig {
     //region DIRECT
 
 
-
-
     // 路由键支持模糊匹配，符号“#”匹配一个或多个词，符号“*”匹配不多不少一个词
     public static final String DIRECT_ROUTING_KEY = "DirectExchangeRoutingKeyES";
     public static final String DIRECT_QUEUE_NAME = "DirectExchangeQueueSpringBootES";
@@ -64,8 +63,6 @@ public class RabbitMQConfig {
         rabbitAdmin.setIgnoreDeclarationExceptions(true);
         return rabbitAdmin;
     }
-
-
 
 
     //@Bean注解的方法的参数可以任意加，反射会自动添加对应参数
@@ -94,23 +91,36 @@ public class RabbitMQConfig {
 ////        //ReturnedMessage  //不行
         rabbitTemplate.setReturnsCallback(returnedMessage ->
         {
-//            ReturnedMessage
-            String exchange = returnedMessage.getExchange();
-            String routingKey = returnedMessage.getRoutingKey();
-            int replyCod = returnedMessage.getReplyCode();
-            String replyText = returnedMessage.getReplyText();
-            String messageId = "";
-
-            Message message = returnedMessage.getMessage();
-            messageId = message.getMessageProperties().getMessageId();
-            // json 序列化，默认SimpleMessageConverter jdk 序列化
             try {
+
+//            ReturnedMessage
+                String exchange = returnedMessage.getExchange();
+                String routingKey = returnedMessage.getRoutingKey();
+                int replyCod = returnedMessage.getReplyCode();
+                String replyText = returnedMessage.getReplyText();
+                String messageId = "";
+
+                Message message = returnedMessage.getMessage();
+                messageId = message.getMessageProperties().getMessageId();
+                // json 序列化，默认SimpleMessageConverter jdk 序列化
+                MessageProperties messageProperties = returnedMessage.getMessage().getMessageProperties();
+                String businessKey = messageProperties.getHeader("businessKey");
+                String businessId = messageProperties.getHeader("businessId");
+                String msgId = messageProperties.getMessageId();
+                String traceId = messageProperties.getHeader("traceId");
+                Boolean retry = messageProperties.getHeader("retry");
+
+                MDC.put("traceId", traceId);
+                log.info("ReturnsCallback msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+
 
                 String failedMessage = new String(returnedMessage.getMessage().getBody());
 //                rabbitMqMessage = objectMapper.readValue(failedMessage, RabbitMqMessage.class);
 //                messageId = rabbitMqMessage.getMessageId();
             } catch (Exception e) {
                 log.info("", e);
+            } finally {
+                MDC.remove("traceId");
             }
 
 //            // 默认jdk 序列化：SimpleMessageConverter  序列化  rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
@@ -123,7 +133,7 @@ public class RabbitMQConfig {
 
             // messageId = rabbitMqMessage.getMessageId();
 
-            log.info("消息 - {} 路由到队列失败.", messageId);
+
         });
 
 //        CachingConnectionFactory.ConfirmType
@@ -239,7 +249,6 @@ public class RabbitMQConfig {
 
 
     //endregion
-
 
 
     //region Direct

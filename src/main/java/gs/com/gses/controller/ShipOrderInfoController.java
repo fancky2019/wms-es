@@ -138,6 +138,7 @@ public class ShipOrderInfoController {
         mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
         mqMessage.setQueue(RabbitMQConfig.DIRECT_QUEUE_NAME);
         mqMessage.setRouteKey(RabbitMQConfig.DIRECT_ROUTING_KEY);
+        mqMessage.setRetry(false);
         directExchangeProducer.produce(mqMessage);
         return MessageResult.success();
     }

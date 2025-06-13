@@ -54,6 +54,7 @@ public class DirectExchangeProducer {
         messageProperties.setHeader("businessId",mqMessage.getBusinessId());
         messageProperties.setHeader("businessKey",mqMessage.getBusinessKey());
         messageProperties.setHeader("traceId",mqMessage.getTraceId());
+        messageProperties.setHeader("retry",mqMessage.getRetry());
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
 

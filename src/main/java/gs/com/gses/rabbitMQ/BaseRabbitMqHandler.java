@@ -50,6 +50,8 @@ public class BaseRabbitMqHandler {
         String businessId = messageProperties.getHeader("businessId");
         String msgId = messageProperties.getMessageId();
         String traceId = messageProperties.getHeader("traceId");
+        Boolean retry = messageProperties.getHeader("retry");
+
         int retryCount = 0;
         String msgContent = null;
         try {
@@ -84,44 +86,46 @@ public class BaseRabbitMqHandler {
                     channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
                     return;
                 }
-
-
             }
             T t = objectMapper.readValue(msgContent, tClass);
             consumer.accept(t);
-//             int i = Integer.parseInt("m");
-
-
+            log.info("ConsumeSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
             //消费成功设置过期时间删除key.
             if (redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS)) {
-//                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-//                log.info("消费成功：{}", msgId);
+                log.info("SetExpire mqMsgIdKey - {} success", mqMsgIdKey);
+            } else {
+                //会存在expire 失败，ack 失败情况
+                log.info("SetExpire mqMsgIdKey - {} fail", mqMsgIdKey);
             }
 
-         //   channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-            log.info("ConsumeSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+            log.info("AckSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
 
         } catch (Exception e) {
             log.error("ConsumerFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
             log.error("", e);
-            //暂时不设置重试,进入死信队列
-//            try {
-//                /**
-//                 * deliveryTag:该消息的index
-//                 * multiple：是否批量.true:将一次性拒绝所有小于deliveryTag的消息。
-//                 * requeue：被拒绝的是否重新入队列
-//                 */
-//                //channel.basicNack(deliveryTag, false, true);
-//                this.retry(channel, message, retryCount, e.getMessage());
-//            } catch (IOException | InterruptedException ex) {
-//                logger.info("被拒绝的消息重新入队列出错", ex);
-//            }
-        } finally {
-            try {
-                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-            } catch (Exception ex) {
-                log.error("AckFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+            if (!retry) {
+                try {
+                    channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+                    log.error("ConsumerFailAckSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+
+                } catch (Exception ex) {
+                    log.error("AckFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+                }
+            } else {
+                try {
+                    /**
+                     * deliveryTag:该消息的index
+                     * multiple：是否批量.true:将一次性拒绝所有小于deliveryTag的消息。
+                     * requeue：被拒绝的是否重新入队列
+                     */
+                    //channel.basicNack(deliveryTag, false, true);
+                    this.retry(channel, message, retryCount, e.getMessage());
+                } catch (IOException | InterruptedException ex) {
+                    log.info("retryException", ex);
+                }
             }
+        } finally {
             MDC.remove("traceId");
         }
     }

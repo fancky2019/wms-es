@@ -21,7 +21,7 @@ public class RabbitMqMessage {
     private static final long serialVersionUID = 1L;
 
 
-//    @TableId(value = "id", type = IdType.AUTO)
+    //    @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
     private String msgId;
     private String businessKey;
@@ -32,7 +32,7 @@ public class RabbitMqMessage {
     private String routeKey;
 
     private String queue;
-
+    private Boolean retry = true;
     private Integer retryCount;
     private DateTime nextRetryTime;
     /**
@@ -64,9 +64,9 @@ public class RabbitMqMessage {
         this.exchange = exchange;
         this.routeKey = routeKey;
         this.queue = queue;
-        this.status=0;
-        this.version=0;
-        this.remark="";
+        this.status = 0;
+        this.version = 0;
+        this.remark = "";
         this.createTime = LocalDateTime.now();
         this.modifyTime = LocalDateTime.now();
     }
