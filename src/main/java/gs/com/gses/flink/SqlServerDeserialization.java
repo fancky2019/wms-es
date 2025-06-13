@@ -27,8 +27,7 @@ import java.util.List;
 @Slf4j
 public class SqlServerDeserialization implements DebeziumDeserializationSchema<DataChangeInfo> {
 
-    @Autowired
-    private ObjectMapper objectMapper;
+
 
     public static final String TS_MS = "ts_ms";
     public static final String BIN_FILE = "file";

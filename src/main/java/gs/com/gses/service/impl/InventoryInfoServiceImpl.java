@@ -12,10 +12,12 @@ import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.service.*;
+import gs.com.gses.utility.ApplicationContextAwareImpl;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
@@ -31,8 +33,10 @@ import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
@@ -1050,6 +1054,53 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
         return bucketHitsMap;
+    }
+
+
+    @Override
+    public void sink(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException {
+//        MDC.put("traceId", dataChangeInfo.getTraceId());
+//        ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
+//        InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
+//        int m = Integer.parseInt("d");
+
+        try {
+            log.info("start sink - {}", dataChangeInfo.getId());
+            if (StringUtils.isEmpty(dataChangeInfo.getAfterData()) || "READ".equals(dataChangeInfo.getEventType())) {
+                log.info("read - {}", dataChangeInfo.getId());
+                return;
+            }
+            switch (dataChangeInfo.getTableName()) {
+                case "Location":
+                    updateByLocation(dataChangeInfo);
+                    break;
+                case "Laneway":
+                    updateByLaneway(dataChangeInfo);
+                    break;
+                case "Inventory":
+                    updateByInventory(dataChangeInfo);
+                    break;
+                case "InventoryItem":
+                    updateByInventoryItem(dataChangeInfo);
+                    break;
+                case "InventoryItemDetail":
+                    updateByInventoryItemDetail(dataChangeInfo);
+                    break;
+                default:
+                    break;
+            }
+            log.info("Sink {} completed", dataChangeInfo.getId());
+        } catch (Exception ex) {
+            log.error("Sink {} exception ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
+            //待优化处理
+            log.error("", ex);
+            throw ex;
+        } finally {
+//            MDC.remove("traceId");
+
+        }
+
+
     }
 
     @Override

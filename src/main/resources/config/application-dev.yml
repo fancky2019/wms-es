@@ -210,7 +210,7 @@ sbp:
   initCache: false
   logMq: false
   flink:
-    enable: false
+    enable: true
     databaseList:
       - liku
     tableList:

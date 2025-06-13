@@ -26,6 +26,7 @@ import gs.com.gses.model.request.wms.ShipOrderInfoRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
+import gs.com.gses.rabbitMQ.RabbitMqMessage;
 import gs.com.gses.rabbitMQ.producer.DirectExchangeProducer;
 import gs.com.gses.service.OutBoundOrderService;
 import gs.com.gses.service.WmsTaskService;
@@ -131,7 +132,7 @@ public class ShipOrderInfoController {
 
     @PostMapping("/rabbitMqTest")
     public MessageResult<Void> rabbitMqTest() throws Exception {
-        MqMessage mqMessage =new MqMessage();
+        RabbitMqMessage mqMessage =new RabbitMqMessage();
         mqMessage.setMsgId("1111111");
         mqMessage.setMsgContent("124");
         mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);

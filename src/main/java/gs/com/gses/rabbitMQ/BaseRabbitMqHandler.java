@@ -3,9 +3,13 @@ package gs.com.gses.rabbitMQ;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
+import gs.com.gses.flink.DataChangeInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -20,9 +24,10 @@ import java.util.function.Consumer;
 /**
  * @author ruili
  */
+@Slf4j
 public class BaseRabbitMqHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(BaseRabbitMqHandler.class);
+//    private static final Logger logger = LoggerFactory.getLogger(BaseRabbitMqHandler.class);
 
     private static final String RABBIT_MQ_MESSAGE_ID_PREFIX = "rabbitMQ:messageId:";
     //
@@ -32,25 +37,32 @@ public class BaseRabbitMqHandler {
     @Autowired
     private RedisTemplate redisTemplate;
 
-    @Autowired
+//    @Autowired
 //    IMqFailLogService mqFailLogService;
-    ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public <T> void onMessage(Class<T> tClass, Message message, Channel channel, Consumer<T> consumer) {
 
-        String messageId = message.getMessageProperties().getMessageId();
-        String msgContent = new String(message.getBody());
-        String mqMsgIdKey = RABBIT_MQ_MESSAGE_ID_PREFIX + messageId;
-        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
-
-        //添加重复消费redis 校验，不会存在并发同一个message
-        Object retryCountObj = valueOperations.get(mqMsgIdKey);
-//        String time1 = LocalDateTimeUtil.formatNormal(t.getMessageTime());
-//        String time2 = LocalDateTimeUtil.formatNormal(LocalDateTime.now());
-//        logger.info("time1 - {} time2 - {}", time1, time2);
-        logger.info("开始消费msg - {}", messageId);
+        MessageProperties messageProperties = message.getMessageProperties();
+        String businessKey = messageProperties.getHeader("businessKey");
+        String businessId = messageProperties.getHeader("businessId");
+        String msgId = messageProperties.getMessageId();
+        String traceId = messageProperties.getHeader("traceId");
         int retryCount = 0;
+        String msgContent = null;
         try {
+            MDC.put("traceId", traceId);
+            log.info("StartConsumeMessage msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+            msgContent = new String(message.getBody());
+
+            String mqMsgIdKey = RABBIT_MQ_MESSAGE_ID_PREFIX + msgId;
+            ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+
+            //添加重复消费redis 校验，不会存在并发同一个message
+            Object retryCountObj = valueOperations.get(mqMsgIdKey);
+
 
             if (retryCountObj == null) {
                 //value 重试次数
@@ -64,11 +76,11 @@ public class BaseRabbitMqHandler {
                         long deliveryTag = message.getMessageProperties().getDeliveryTag();
                         //补偿 ack--消费了却没有ack 成功。
                         channel.basicAck(deliveryTag, false);
-                        logger.info("msgId - {} 已经被消费,msg - {}", messageId, msgContent);
+                        log.info("msgId - {} has been consumed,msg - {}", msgId, msgContent);
                         return;
                     }
                 } else {
-                    logger.info("msgId - {} 已经被消费,msg - {}", messageId, msgContent);
+                    log.info("msgId - {} has been consumed,msg - {}", msgId, msgContent);
                     channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
                     return;
                 }
@@ -82,25 +94,35 @@ public class BaseRabbitMqHandler {
 
             //消费成功设置过期时间删除key.
             if (redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS)) {
-                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-                logger.info("消费成功：{}", messageId);
+//                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+//                log.info("消费成功：{}", msgId);
             }
 
+         //   channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+            log.info("ConsumeSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
 
         } catch (Exception e) {
-            logger.info("消息消费失败：", e);
-            logger.info("消息消费失败 - {}", msgContent);
+            log.error("ConsumerFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+            log.error("", e);
+            //暂时不设置重试,进入死信队列
+//            try {
+//                /**
+//                 * deliveryTag:该消息的index
+//                 * multiple：是否批量.true:将一次性拒绝所有小于deliveryTag的消息。
+//                 * requeue：被拒绝的是否重新入队列
+//                 */
+//                //channel.basicNack(deliveryTag, false, true);
+//                this.retry(channel, message, retryCount, e.getMessage());
+//            } catch (IOException | InterruptedException ex) {
+//                logger.info("被拒绝的消息重新入队列出错", ex);
+//            }
+        } finally {
             try {
-                /**
-                 * deliveryTag:该消息的index
-                 * multiple：是否批量.true:将一次性拒绝所有小于deliveryTag的消息。
-                 * requeue：被拒绝的是否重新入队列
-                 */
-                //channel.basicNack(deliveryTag, false, true);
-                this.retry(channel, message, retryCount, e.getMessage());
-            } catch (IOException | InterruptedException ex) {
-                logger.info("被拒绝的消息重新入队列出错", ex);
+                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+            } catch (Exception ex) {
+                log.error("AckFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
             }
+            MDC.remove("traceId");
         }
     }
 
@@ -115,7 +137,7 @@ public class BaseRabbitMqHandler {
         if (requeue) {
             channel.basicNack(deliveryTag, false, false);
             valueOperations.set(mqMsgIdKey, retryCount);
-            logger.info(" {} 开始第{}次回归到队列：", deliveryTag, retryCount);
+            log.info(" {} 开始第{}次回归到队列：", deliveryTag, retryCount);
         } else {
             //ack 掉消息，把该消息插入数据库，批处理
             if (redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS)) {

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
+import gs.com.gses.rabbitMQ.RabbitMqMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageDeliveryMode;
@@ -15,6 +16,8 @@ import org.springframework.amqp.rabbit.core.BatchingRabbitTemplate;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 
 /**
@@ -39,15 +42,18 @@ public class DirectExchangeProducer {
 
 
 
-    public void produce(MqMessage mqMessage) {
+    public void produce(RabbitMqMessage mqMessage) {
         String exchange = mqMessage.getExchange();
         String routingKey = mqMessage.getRouteKey();
-
+//        String msgId = UUID.randomUUID().toString().replaceAll("-", "");
         MessageProperties messageProperties = new MessageProperties();
         String msgId = mqMessage.getMsgId();
         //设置优先级
         messageProperties.setPriority(9);
         messageProperties.setMessageId(msgId);
+        messageProperties.setHeader("businessId",mqMessage.getBusinessId());
+        messageProperties.setHeader("businessKey",mqMessage.getBusinessKey());
+        messageProperties.setHeader("traceId",mqMessage.getTraceId());
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
 
@@ -55,7 +61,10 @@ public class DirectExchangeProducer {
         //设置消息内容
         ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
         correlationData.setReturned(returnedMessage);
+        log.info("BeforeRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}",mqMessage.getMsgId(),mqMessage.getBusinessKey(),mqMessage.getBusinessId());
         rabbitTemplate.send(exchange, routingKey, message, correlationData);
+        log.info("AfterRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}",mqMessage.getMsgId(),mqMessage.getBusinessKey(),mqMessage.getBusinessId());
+
     }
 
 }

@@ -1,8 +1,14 @@
 package gs.com.gses.flink;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.model.entity.MqMessage;
+import gs.com.gses.rabbitMQ.RabbitMQConfig;
+import gs.com.gses.rabbitMQ.RabbitMqMessage;
+import gs.com.gses.rabbitMQ.producer.DirectExchangeProducer;
 import gs.com.gses.service.InventoryInfoService;
 import gs.com.gses.service.impl.InventoryInfoServiceImpl;
+import gs.com.gses.service.impl.MqMessageServiceImpl;
 import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -16,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 @Component
 @Slf4j
@@ -28,12 +35,38 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
 //    @Autowired
 //    private transient ApplicationContext applicationContext;
 //
-//    @Autowired
-//    private transient InventoryInfoService inventoryInfoService;
 
 
     @Override
     public void invoke(DataChangeInfo dataChangeInfo, Context context) throws JsonProcessingException, InterruptedException {
+        MDC.put("traceId", dataChangeInfo.getTraceId());
+        ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
+        DirectExchangeProducer directExchangeProducer = applicationContext.getBean(DirectExchangeProducer.class);
+        ObjectMapper objectMapper = applicationContext.getBean(ObjectMapper.class);
+        try {
+            String jsonStr = objectMapper.writeValueAsString(dataChangeInfo);
+            RabbitMqMessage mqMessage = new RabbitMqMessage();
+            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+            mqMessage.setMsgId(msgId);
+            mqMessage.setBusinessId(dataChangeInfo.getId());
+            mqMessage.setBusinessKey(dataChangeInfo.getTableName());
+            mqMessage.setMsgContent(jsonStr);
+            mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
+            mqMessage.setRouteKey(RabbitMQConfig.DIRECT_ROUTING_KEY);
+            mqMessage.setQueue(RabbitMQConfig.DIRECT_QUEUE_NAME);
+            mqMessage.setTraceId(dataChangeInfo.getTraceId());
+            directExchangeProducer.produce(mqMessage);
+        } catch (Exception ex) {
+            log.error("", ex);
+        } finally {
+            MDC.remove("traceId");
+
+        }
+
+
+    }
+
+    public void invoke1(DataChangeInfo dataChangeInfo, Context context) throws JsonProcessingException, InterruptedException {
         MDC.put("traceId", dataChangeInfo.getTraceId());
         ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
 //        log.info("收到变更原始数据:{}", dataChangeInfo);
