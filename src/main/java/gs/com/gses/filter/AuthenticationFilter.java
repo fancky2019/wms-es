@@ -57,6 +57,7 @@ public class AuthenticationFilter implements Filter {
             CheckPermissionRequest checkPermissionRequest = new CheckPermissionRequest();
             //ShipOrder/OneClickContinuous
             String code = "ShipOrder/ComplexQueryDemo";
+//            String code = "ShipOrder/SubAssignPalletsByShipOrderBatch";
             checkPermissionRequest.setCode(code);
             checkPermissionRequest.setUrl(code);
             //  LoginUserTokenDto dto = authorityService.checkPermission(request, token);

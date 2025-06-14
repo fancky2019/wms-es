@@ -51,7 +51,7 @@ public class TruckOrderResponse implements Serializable {
     /**
      *
      */
-    private Integer trunkType;
+    private String trunkType;
 
     /**
      *

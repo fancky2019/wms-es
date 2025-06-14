@@ -19,6 +19,7 @@ public class TruckOrderItemResponse implements Serializable {
      */
     private Long id;
 
+    private Integer seqNo;
     /**
      *
      */

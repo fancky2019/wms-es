@@ -1,16 +1,22 @@
 package gs.com.gses.service.impl;
 
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.support.ExcelTypeEnum;
+import com.alibaba.excel.write.metadata.WriteSheet;
+import com.alibaba.excel.write.metadata.fill.FillConfig;
+import com.alibaba.excel.write.metadata.fill.FillWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
+import gs.com.gses.model.bo.trunkorderexcel.TruckOrderItemBo;
 import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
@@ -35,12 +41,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.bus.BusProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.math.BigDecimal;
+import java.net.URLEncoder;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -362,6 +372,98 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             throw new Exception(msg);
         }
         trunkOrderMqtt(truckOrder);
+    }
+
+    @Override
+    public void exportTrunkOrderExcel(Long id, HttpServletResponse httpServletResponse) throws Exception {
+
+        TruckOrder trunkOrder = this.getById(id);
+        if (trunkOrder == null) {
+            throw new Exception(MessageFormat.format("TruckOrder - {0} doesn't exist", id));
+        }
+        TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
+        truckOrderItemRequest.setTruckOrderId(id);
+        truckOrderItemRequest.setSearchCount(false);
+        truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
+        PageData<TruckOrderItemResponse> itemPage = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
+        List<TruckOrderItemResponse> itemList = itemPage.getData();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
+        String sendTimeStr = LocalDateTime.now().format(formatter);
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("senderAddress", trunkOrder.getSenderAddress());
+        map.put("receiverAddress", trunkOrder.getReceiverAddress());
+        map.put("senderPhone", trunkOrder.getSenderPhone());
+        map.put("receiverPhone", trunkOrder.getReceiverPhone());
+        map.put("sendTime", sendTimeStr);
+        map.put("trunkType", trunkOrder.getTrunkType());
+        map.put("driverPhone", trunkOrder.getDriverPhone());
+        map.put("trunkNo", trunkOrder.getTrunkNo());
+
+//        List<TruckOrderItemBo> items = new ArrayList<>();
+//        items.add(new TruckOrderItemBo(1, "XM001", "供电工程", "CK20230601", "WL1001", "电缆", "SB1001", BigDecimal.ONE, "第1批", "注意防水"));
+//        items.add(new TruckOrderItemBo(2, "XM002", "管道工程", "CK20230602", "WL1002", "法兰", "SB1002", BigDecimal.TEN, "第1批", ""));
+
+        int seqNo = 0;
+        for (TruckOrderItemResponse item : itemList) {
+            item.setSeqNo(++seqNo);
+        }
+
+
+//        String templatePath = "发车单模板.xlsx";
+//        String outputPath = "发货单导出.xlsx";
+
+        String currentWorkingDir = System.getProperty("user.dir");
+        File folder = new File(currentWorkingDir + File.separator + "tmp");
+        // 写入Excel文件
+        String templatePath = MessageFormat.format("{0}/{1}.xlsx", folder, "发车单模板");
+        String outputPath = MessageFormat.format("{0}/{1}.xlsx", folder, "发货单导出");
+
+
+        // Excel 文件路径（确保存在）
+        File file = new File(templatePath);
+
+        if (!file.exists()) {
+            httpServletResponse.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        // 输出设置
+        prepareResponds("发车单导出", httpServletResponse);
+
+        /* 4) 直接把 EasyExcel 写到浏览器输出流 */
+        try (ServletOutputStream out = httpServletResponse.getOutputStream()) {
+
+            ExcelWriter writer = EasyExcel.write(out)
+                    .autoCloseStream(true)       // 写完顺带关流
+                    .withTemplate(templatePath)
+                    .build();
+            WriteSheet sheet = EasyExcel.writerSheet().build();
+            // ① 填充单值
+            writer.fill(map, sheet);
+            // ② 填充列表
+            writer.fill(new FillWrapper("items", itemList),
+                    FillConfig.builder().forceNewRow(true).build(),
+                    sheet);
+            writer.finish();  // !!! 必须调用，否则文件只写了一半
+        }
+
+    }
+
+    private void prepareResponds(String fileName, HttpServletResponse response) throws IOException {
+        response.setContentType("application/vnd.ms-excel");
+        response.setCharacterEncoding("utf-8");
+        fileName = URLEncoder.encode(fileName, "UTF-8");
+        response.setHeader("Content-disposition", "attachment;filename*=utf-8'zh_cn'" + fileName + ExcelTypeEnum.XLSX.getValue());
+
+//        fileName = URLEncoder.encode(fileName, "UTF-8");
+//        // 这里注意 有同学反应使用swagger 会导致各种问题，请直接用浏览器或者用postman
+//        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+//        response.setCharacterEncoding("utf-8");
+//        // 这里URLEncoder.encode可以防止中文乱码 当然和easyexcel没有关系
+//        response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
+
+
     }
 
 }

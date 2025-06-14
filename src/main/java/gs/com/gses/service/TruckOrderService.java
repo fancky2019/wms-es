@@ -8,6 +8,10 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.wms.TruckOrderResponse;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 /**
  * @author lirui
  * @description 针对表【TruckOrder】的数据库操作Service
@@ -25,4 +29,6 @@ public interface TruckOrderService extends IService<TruckOrder> {
     PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request);
 
     void trunkOrderMq(Integer id) throws Exception;
+
+    void exportTrunkOrderExcel(Long id,HttpServletResponse httpServletResponse) throws Exception;
 }

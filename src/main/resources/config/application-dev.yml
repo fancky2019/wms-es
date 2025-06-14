@@ -24,7 +24,7 @@ spring:
   datasource:
     #    # sqlserver
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB_test05;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=liku;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -189,10 +189,10 @@ feign:
     config:
       # default、service-provider-two，指定服务名称可以设置单个服务的超时时间
       default:
-        connectTimeout: 60000  #单位ms
-        readTimeout: 60000
+        connectTimeout: 600000  #单位ms
+        readTimeout: 600000
   httpclient:
-    connection-timeout: 60000  #单位ms,默认2000
+    connection-timeout: 600000  #单位ms,默认2000
     max-connections: 200 #线程池最大连接数
     enabled: false
   okhttp: #用okhttp 代替默认的Client，JDK 原生的 URLConnection 发送HTTP请求，没有连接池
@@ -213,7 +213,7 @@ sbp:
     - "http://127.0.0.1:[*]"
   authority: http://gen-song.vip:14001/api/app      #;//http://10.100.200.43:9001/api/app
   hostAndPort: 10.100.200.43:9200
-  checkpermission: true
+  checkpermission: false
   initCache: false
   logMq: false
   flink:

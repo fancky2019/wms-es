@@ -3,6 +3,7 @@ package gs.com.gses.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.filter.UserInfoHolder;
+import gs.com.gses.model.bo.ModifyMStr12Bo;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.AddTruckOrderRequest;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
@@ -16,6 +17,8 @@ import gs.com.gses.service.TruckOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,6 +76,11 @@ public class TruckOrderController {
     public MessageResult<Void> trunkOrderMq(@PathVariable("id") Integer id) throws Exception {
         truckOrderService.trunkOrderMq(id);
         return MessageResult.success();
+    }
+
+    @GetMapping(value = "/exportTrunkOrderExcel/{id}")
+    public void exportTrunkOrderExcel(@PathVariable("id") Long id,HttpServletResponse httpServletResponse) throws Exception {
+        this.truckOrderService.exportTrunkOrderExcel(id,httpServletResponse);
     }
 
 }
