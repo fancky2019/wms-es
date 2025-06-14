@@ -63,7 +63,7 @@ public class TruckOrderController {
     }
 
     @PostMapping("/getTruckOrderPage")
-    public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request) throws Exception {
+    public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request, @RequestHeader("Authorization") String token) throws Exception {
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         PageData<TruckOrderResponse> page = truckOrderService.getTruckOrderPage(request);
         return MessageResult.success(page);

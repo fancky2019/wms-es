@@ -138,13 +138,16 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             }
 
         } else {
-            throw new Exception(" WmsApiException - "+wmsResponse.getExplain());
+            throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
         }
 
     }
 
     private TruckOrder saveTruckOrderAndItem(AddTruckOrderRequest request, long createTime) throws Exception {
 
+        if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
+            throw new Exception("TruckOrderItem is empty");
+        }
         Long shipOrderId = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
         ShipPickOrderRequest shipPickOrderRequest = new ShipPickOrderRequest();
         shipPickOrderRequest.setShipOrderId(shipOrderId);
@@ -270,7 +273,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         updateWrapper.set(TruckOrder::getReceiverAddress, request.getReceiverAddress());
         updateWrapper.set(TruckOrder::getSenderPhone, request.getSenderPhone());
         updateWrapper.set(TruckOrder::getReceiverPhone, request.getReceiverPhone());
-        updateWrapper.set(request.getSendTime()!=null,TruckOrder::getSendTime, request.getSendTime());
+        updateWrapper.set(request.getSendTime() != null, TruckOrder::getSendTime, request.getSendTime());
         updateWrapper.set(TruckOrder::getTrunkType, request.getTrunkType());
         updateWrapper.set(TruckOrder::getDriverPhone, request.getDriverPhone());
         updateWrapper.set(TruckOrder::getTrunkNo, request.getTrunkNo());

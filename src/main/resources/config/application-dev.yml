@@ -24,7 +24,7 @@ spring:
   datasource:
     #    # sqlserver
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB_test05;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=liku;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -204,9 +204,11 @@ sbp:
 #  ordermigratedbtoolurl: http://localhost:8101
 #  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
   wmsurl: http://127.0.0.1:9000/api/app
-  authority: http://10.100.200.43:9001/api/app
+  weburl: http://localhost:8030
+  apiurl: http://localhost:8088
+  authority: http://gen-song.vip:14001/api/app      #;//http://10.100.200.43:9001/api/app
   hostAndPort: 10.100.200.43:9200
-  checkpermission: false
+  checkpermission: true
   initCache: false
   logMq: false
   flink:

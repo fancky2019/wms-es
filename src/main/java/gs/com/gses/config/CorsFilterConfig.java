@@ -1,8 +1,11 @@
 package gs.com.gses.config;
 
 import org.elasticsearch.core.List;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -18,6 +21,13 @@ from origin 'http://localhost:63342' has been blocked by CORS policy: The 'Acces
 
 @Configuration
 public class CorsFilterConfig {
+
+
+
+    @Value("${sbp.weburl}")
+    private String weburl;
+    @Value("${sbp.apiurl}")
+    private String apiurl;
 
     //此种设置有弊端：拦截器中存在跨域有问题，还要再设置 response.setHeader("Access-Control-Allow-Origin", "*");
 //    //跨域配置
@@ -46,6 +56,15 @@ public class CorsFilterConfig {
     }
 
 
+    /**
+     * 浏览器判断是否跨域时，会比较下面三个部分：
+     * 协议（http / https）
+     * 域名（localhost ≠ IP）
+     * 端口（8080 ≠ 8088）
+     * 这三者只要有一个不同，就是跨域！
+     * @return
+     */
+
     // 解决原理：一个http请求，先走filter，到达servlet后才进行拦截器的处理，所以我们可以把cors放在filter里，就可以优先于权限拦截器执行。
     @Bean
     public CorsFilter corsFilter() {
@@ -64,16 +83,26 @@ public class CorsFilterConfig {
 
         CorsConfiguration config = new CorsConfiguration();
         // 使用 allowedOriginPatterns 替代 allowedOrigins
-        config.setAllowedOriginPatterns(List.of("*")); // 或者具体的前端地址如 "http://localhost:8080"
+        //setAllowCredentials(true); true 必须指定具体的url,不能设置setAllowedOriginPatterns(*)
+//        config.setAllowedOriginPatterns(List.of("http://localhost:8030","http://localhost:8088"));
+        config.setAllowedOriginPatterns(List.of(weburl,apiurl,"http://localhost:8188","http://localhost:8088","http://localhost:8889"));
+        //启用跨域凭据 Authorization、cookies 信息
         config.setAllowCredentials(true);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("token", "RedirectUrl"));
-
+        config.setExposedHeaders(List.of("token", "RedirectUrl","Access-Control-Allow-Headers", "Content-Type", "Authorization", "X-Requested-With"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
 
+    // 强制CorsFilter最高优先级
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
+        FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>();
+        registration.setFilter(corsFilter());
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE); // 最高优先级
+        return registration;
+    }
 
 }

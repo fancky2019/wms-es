@@ -43,17 +43,17 @@ public class AuthenticationFilter implements Filter {
 
         //路径变量，根据 / 分割，获得数组，去除最有一个数组元素
 
+
+        MessageResult<Void> messageResult = new MessageResult<>();
+        messageResult.setSuccess(false);
+
+
+        HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+        // 转换为HttpServletRequest
+        HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+        log.info("RequestURI:{}", httpServletRequest.getRequestURI());
+        //OPTIONS 请求不会到此过滤器，应该到cors 中
         try {
-
-            MessageResult<Void> messageResult = new MessageResult<>();
-            messageResult.setSuccess(false);
-
-
-            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            // 转换为HttpServletRequest
-            HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-            log.info("RequestURI:{}", httpServletRequest.getRequestURI());
-
             CheckPermissionRequest checkPermissionRequest = new CheckPermissionRequest();
             //ShipOrder/OneClickContinuous
             String code = "ShipOrder/ComplexQueryDemo";
@@ -131,7 +131,15 @@ public class AuthenticationFilter implements Filter {
 //        response.setHeader("Cache-Control","no-cache");
         PrintWriter writer = null;
         response.setCharacterEncoding("UTF-8");
-        response.setContentType("text/html; charset=utf-8");
+//        response.setContentType("text/html; charset=utf-8");
+        response.setContentType("application/json; charset=utf-8");
+
+        // 设置跨域响应头
+//        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+        response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
+        response.setHeader("Access-Control-Allow-Origin", "http://localhost:8030");
         try {
 
 
