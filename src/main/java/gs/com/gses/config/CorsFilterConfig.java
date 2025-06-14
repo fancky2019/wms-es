@@ -1,7 +1,9 @@
 package gs.com.gses.config;
 
 import org.elasticsearch.core.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,12 +24,15 @@ from origin 'http://localhost:63342' has been blocked by CORS policy: The 'Acces
 @Configuration
 public class CorsFilterConfig {
 
+    //只能注入一个字符串（String），不能直接注入数组或集合类型，
+//    @Value("${sbp.allowedoriginpatterns}")
+//    private String[] allowedOriginPatterns;
 
 
-    @Value("${sbp.weburl}")
-    private String weburl;
-    @Value("${sbp.apiurl}")
-    private String apiurl;
+    @Autowired
+    private  CorsProperties corsProperties;
+
+
 
     //此种设置有弊端：拦截器中存在跨域有问题，还要再设置 response.setHeader("Access-Control-Allow-Origin", "*");
 //    //跨域配置
@@ -85,12 +90,12 @@ public class CorsFilterConfig {
         // 使用 allowedOriginPatterns 替代 allowedOrigins
         //setAllowCredentials(true); true 必须指定具体的url,不能设置setAllowedOriginPatterns(*)
 //        config.setAllowedOriginPatterns(List.of("http://localhost:8030","http://localhost:8088"));
-        config.setAllowedOriginPatterns(List.of(weburl,apiurl,"http://localhost:8188","http://localhost:8088","http://localhost:8889"));
+        config.setAllowedOriginPatterns(corsProperties.getAllowedoriginpatterns());
         //启用跨域凭据 Authorization、cookies 信息
         config.setAllowCredentials(true);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("token", "RedirectUrl","Access-Control-Allow-Headers", "Content-Type", "Authorization", "X-Requested-With"));
+        config.setExposedHeaders(List.of("token", "RedirectUrl", "Access-Control-Allow-Headers", "Content-Type", "Authorization", "X-Requested-With"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);

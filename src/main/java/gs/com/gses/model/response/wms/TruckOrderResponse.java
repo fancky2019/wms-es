@@ -3,6 +3,7 @@ package gs.com.gses.model.response.wms;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -44,7 +45,8 @@ public class TruckOrderResponse implements Serializable {
     /**
      *
      */
-    private Date sendTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime sendTime;
 
     /**
      *
@@ -94,11 +96,15 @@ public class TruckOrderResponse implements Serializable {
     /**
      *
      */
+//    @DateTimeFormat	用于 接收请求参数（如表单、URL 参数）时格式化	Spring MVC 的数据绑定，例如表单提交中的时间字段
+//    @JsonFormat	用于 JSON 序列化/反序列化时的时间格式控制	与 Jackson 配合，将时间转为特定格式的字符串输出到前端
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime creationTime;
 
     /**
      *
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastModificationTime;
 
     @TableField(exist = false)

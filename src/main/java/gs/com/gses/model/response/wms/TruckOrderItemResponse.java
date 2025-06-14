@@ -3,6 +3,7 @@ package gs.com.gses.model.response.wms;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
@@ -121,11 +122,13 @@ public class TruckOrderItemResponse implements Serializable {
     /**
      *
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime creationTime;
 
     /**
      *
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastModificationTime;
 
     private static final long serialVersionUID = 1L;
