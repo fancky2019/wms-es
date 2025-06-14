@@ -101,7 +101,8 @@ public class CorsFilterConfig {
     public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
         FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(corsFilter());
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE); // 最高优先级
+        // 最高优先级
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registration;
     }
 
