@@ -98,10 +98,13 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 
         int size = page.getData().size();
         if (size == 0) {
-            throw new Exception("Can't get ShipOrderItem  by  m_Str7 ,m_Str12,materialCode");
+
+//            throw new Exception("Can't get ShipOrderItem  by  m_Str7 ,m_Str12,materialCode");
+            throw new Exception("发货单不存在");
         }
         if (size > 1) {
-            throw new Exception("Get multiple  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
+//            throw new Exception("Get multiple  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
+            throw new Exception("找到多个发货单");
         }
         ShipOrderItemResponse shipOrderItemResponse = page.getData().get(0);
         ShipOrder shipOrder = shipOrderService.getById(shipOrderItemResponse.getShipOrderId());

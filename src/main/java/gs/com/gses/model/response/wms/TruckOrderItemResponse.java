@@ -75,10 +75,6 @@ public class TruckOrderItemResponse implements Serializable {
      */
     private String driverPhone;
 
-    /**
-     *
-     */
-    private BigDecimal quantity;
 
     /**
      *

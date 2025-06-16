@@ -15,6 +15,7 @@
         <spring-boot.version>2.7.18</spring-boot.version>
         <spring-cloud.version>2021.0.8</spring-cloud.version>
         <spring-boot-admin.version>2.5.4</spring-boot-admin.version>
+        <springdoc.version>1.7.0</springdoc.version>
         <mysql.version>8.0.33</mysql.version>
         <mybatis-plus.version>3.5.4.1</mybatis-plus.version>
         <pagehelper.version>2.1.0</pagehelper.version>
@@ -42,6 +43,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>

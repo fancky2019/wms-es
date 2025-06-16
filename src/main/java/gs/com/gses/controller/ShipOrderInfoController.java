@@ -16,10 +16,9 @@
 
 package gs.com.gses.controller;
 
-import gs.com.gses.aspect.RepeatPermission;
+import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.model.elasticsearch.DemoProduct;
 import gs.com.gses.model.elasticsearch.ShipOrderInfo;
-import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.WmsTask;
 import gs.com.gses.model.request.DemoProductRequest;
 import gs.com.gses.model.request.wms.ShipOrderInfoRequest;
@@ -68,7 +67,7 @@ public class ShipOrderInfoController {
         return MessageResult.success();
     }
 
-    @RepeatPermission
+    @DuplicateSubmission
     @GetMapping("/esTest")
     public MessageResult<PageData<DemoProduct>> esTest(DemoProductRequest request) {
 

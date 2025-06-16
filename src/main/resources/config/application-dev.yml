@@ -208,6 +208,7 @@ sbp:
     - "http://10.100.200.43:8088"
     - "http://10.100.200.43:8188"
     - "http://10.100.200.32:8889"
+    - "http://10.100.200.32:8882"
     - "http://10.100.200.32:8088"
     - "http://localhost:[*]"
     - "http://127.0.0.1:[*]"
@@ -215,6 +216,7 @@ sbp:
   hostAndPort: 10.100.200.43:9200
   checkpermission: false
   initCache: false
+  enableDuplicateSubmission: false
   logMq: false
   flink:
     enable: true

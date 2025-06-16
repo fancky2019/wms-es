@@ -5,15 +5,20 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * @author lirui
+ */
 @Target({ElementType.TYPE, ElementType.METHOD})//注解目标，只加在类上
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RepeatPermission {
-//   String  apiName() default "";
+public @interface DuplicateSubmission {
 
-   /**
-    * 方法名称
-    * @return
-    */
-   String value()default "";
+    /**
+     *是否校验重复提交
+     */
+    boolean value() default true;
+
+
+    DuplicateSubmissionCheckType checkType() default DuplicateSubmissionCheckType.FINGERPRINT;
+
 
 }

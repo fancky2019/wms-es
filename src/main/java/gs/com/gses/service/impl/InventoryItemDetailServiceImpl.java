@@ -120,10 +120,12 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         PageData<InventoryItemDetailResponse> page = getInventoryItemDetailPage(request);
         int size = page.getData().size();
         if (size == 0) {
-            throw new Exception("Can't get inventoryItemDetail info by m_Str7 ,m_Str12,materialCode");
+//            throw new Exception("Can't get inventoryItemDetail info by m_Str7 ,m_Str12,materialCode");
+            throw new Exception("库存不存在");
         }
         if (size > 1) {
-            throw new Exception("Get more than one inventoryItemDetail info by  m_Str7 ,m_Str12,materialCode");
+//            throw new Exception("Get more than one inventoryItemDetail info by  m_Str7 ,m_Str12,materialCode");
+            throw new Exception("匹配多个库存");
         }
         InventoryItemDetailResponse inventoryItemDetailResponse = page.getData().get(0);
         InventoryItem inventoryItem = this.inventoryItemService.getById(inventoryItemDetailResponse.getInventoryItemId());
