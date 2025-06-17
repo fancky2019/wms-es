@@ -20,5 +20,5 @@ public @interface DuplicateSubmission {
 
     DuplicateSubmissionCheckType checkType() default DuplicateSubmissionCheckType.FINGERPRINT;
 
-
+    int timeOut() default 60;
 }

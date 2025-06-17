@@ -216,7 +216,6 @@ sbp:
   hostAndPort: 10.100.200.43:9200
   checkpermission: false
   initCache: false
-  enableDuplicateSubmission: false
   logMq: false
   flink:
     enable: true

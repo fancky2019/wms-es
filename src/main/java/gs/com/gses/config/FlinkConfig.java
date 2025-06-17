@@ -8,6 +8,9 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+/**
+ * @    @Value("${spring.datasource.username}") 配置文件不配置会报错，采用此种不配置就是用默认值不会报错
+ */
 @Configuration
 @ConfigurationProperties(prefix = "sbp.flink")
 @Data

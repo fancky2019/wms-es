@@ -87,8 +87,6 @@ public class LogAspect {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Value("${sbp.enableDuplicateSubmission}")
-    private Boolean enableDuplicateSubmission = false;
 
     @Pointcut("execution(* gs.com.gses.controller.*.*(..))")
     public void pointCut() {
@@ -167,7 +165,7 @@ public class LogAspect {
         DuplicateSubmission duplicateSubmission = method.getDeclaredAnnotation(DuplicateSubmission.class);
         Object result = null;
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
-        if (duplicateSubmission != null && enableDuplicateSubmission) {
+        if (duplicateSubmission != null) {
             String submissionToken = "";
             BigInteger userId = new BigInteger("1");
             String key = "repeat:" + userId + ":";
@@ -225,12 +223,24 @@ public class LogAspect {
                 lockSuccessfully = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
                 if (lockSuccessfully) {
                     Object obj = monitor(jp, servletPath);
-                    Boolean re = redisTemplate.expire(key, 1, TimeUnit.DAYS);
-                    if (re) {
-                        log.info("DuplicateSubmissionSetKey {} expire success", key);
+                    int timeOut = duplicateSubmission.timeOut();
+                    if (timeOut > 0) {
+
+                        Boolean re = redisTemplate.expire(key, timeOut, TimeUnit.SECONDS);
+                        if (re) {
+                            log.info("DuplicateSubmissionSetKey {} expire success", key);
+                        } else {
+                            log.info("DuplicateSubmissionSetKey {} expire fail", key);
+                        }
                     } else {
-                        log.info("DuplicateSubmissionSetKey {} expire fail", key);
+                        Boolean re = redisTemplate.delete(key);
+                        if (re) {
+                            log.info("DuplicateSubmissionSetKey {} delete success", key);
+                        } else {
+                            log.info("DuplicateSubmissionSetKey {} delete fail", key);
+                        }
                     }
+
 
                     return obj;
                 } else {

@@ -18,6 +18,7 @@ import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
 import gs.com.gses.model.bo.trunkorderexcel.TruckOrderItemBo;
 import gs.com.gses.model.entity.TruckOrder;
+import gs.com.gses.model.entity.TruckOrderItem;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
@@ -330,8 +331,12 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         if (StringUtils.isNotEmpty(request.getTrunkNo())) {
             queryWrapper.like(TruckOrder::getTrunkNo, request.getTrunkNo());
         }
-
-
+        if (StringUtils.isNotEmpty(request.getTrunkType())) {
+            queryWrapper.like(TruckOrder::getTrunkType, request.getTrunkType());
+        }
+        if (StringUtils.isNotEmpty(request.getCreatorName())) {
+            queryWrapper.like(TruckOrder::getCreatorName, request.getCreatorName());
+        }
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrder> page = new Page<>(request.getPageIndex(), request.getPageSize());
 

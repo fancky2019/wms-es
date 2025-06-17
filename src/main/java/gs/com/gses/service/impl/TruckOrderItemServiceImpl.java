@@ -213,6 +213,13 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             truckOrderItemQueryWrapper.like(TruckOrderItem::getSendBatchNo, request.getSendBatchNo());
         }
 
+        if (StringUtils.isNotEmpty(request.getRemark())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getRemark, request.getRemark());
+        }
+        if (StringUtils.isNotEmpty(request.getCreatorName())) {
+            truckOrderItemQueryWrapper.like(TruckOrderItem::getCreatorName, request.getCreatorName());
+        }
+
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrderItem> page = new Page<>(request.getPageIndex(), request.getPageSize());
 
