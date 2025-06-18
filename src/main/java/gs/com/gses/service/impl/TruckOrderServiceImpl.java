@@ -110,7 +110,6 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         for (String shipOrderCode : shipOrderCodeSet) {
             ShipOrderPalletRequest shipOrderPalletRequest = new ShipOrderPalletRequest();
-
             List<TruckOrderItemRequest> shipOrderTruckOrderItemmList = request.getTruckOrderItemRequestList().stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).collect(Collectors.toList());
             List<InventoryItemDetailRequest> inventoryItemDetailRequestList = shipOrderTruckOrderItemmList.stream().map(p ->
             {
@@ -119,6 +118,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 detailRequest.setPallet(p.getPallet());
                 detailRequest.setM_Str7(p.getProjectNo());
                 detailRequest.setM_Str12(p.getDeviceNo());
+                detailRequest.setMovedPkgQuantity(p.getQuantity());
+                detailRequest.setId(p.getInventoryItemDetailId());
                 detailRequest.setMaterialCode(p.getMaterialCode());
                 return detailRequest;
             }).collect(Collectors.toList());

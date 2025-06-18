@@ -45,8 +45,10 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -109,9 +111,9 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         if (StringUtils.isEmpty(request.getM_Str7())) {
             throw new Exception("m_Str7 is null");
         }
-        if (StringUtils.isEmpty(request.getM_Str12())) {
-            throw new Exception("m_Str12 is null");
-        }
+//        if (StringUtils.isEmpty(request.getM_Str12())) {
+//            throw new Exception("m_Str12 is null");
+//        }
         if (StringUtils.isEmpty(request.getMaterialCode())) {
             throw new Exception("materialCode is null");
         }
@@ -128,6 +130,15 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             throw new Exception("匹配多个库存");
         }
         InventoryItemDetailResponse inventoryItemDetailResponse = page.getData().get(0);
+        if (inventoryItemDetailResponse.getPackageQuantity().compareTo(request.getPackageQuantity()) < 0) {
+            // 设置小数点后两位，并指定舍入模式（如四舍五入）
+//            BigDecimal rounded = number.setScale(2, RoundingMode.HALF_UP);
+            // 固定两位小数
+            DecimalFormat df = new DecimalFormat("#0.00");
+            String formatted = df.format(inventoryItemDetailResponse.getPackageQuantity());
+            throw new Exception("库存不足 ,库存数量 - " + formatted);
+        }
+
         InventoryItem inventoryItem = this.inventoryItemService.getById(inventoryItemDetailResponse.getInventoryItemId());
         if (inventoryItem == null) {
             String str = MessageFormat.format("inventoryItem - {0} lost", inventoryItemDetailResponse.getInventoryItemId().toString());

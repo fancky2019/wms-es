@@ -82,6 +82,7 @@ public class InventoryItemDetailRequest extends RequestPage {
      */
     private BigDecimal allocatedPackageQuantity;
 
+    private BigDecimal movedPkgQuantity;
     /**
      * 质检状态（0待检，1已取样，2合格，-1不合格）
      */

@@ -68,9 +68,9 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         if (StringUtils.isEmpty(request.getM_Str7())) {
             throw new Exception("m_Str7 is null");
         }
-        if (StringUtils.isEmpty(request.getM_Str12())) {
-            throw new Exception("m_Str12 is null");
-        }
+//        if (StringUtils.isEmpty(request.getM_Str12())) {
+//            throw new Exception("m_Str12 is null");
+//        }
         if (StringUtils.isEmpty(request.getMaterialCode())) {
             throw new Exception("materialCode is null");
         }
@@ -83,16 +83,16 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 
 
         request.setSearchCount(false);
-//        List<Sort> sortList = new ArrayList<>();
-//        Sort sort1 = new Sort();
-//        sort1.setSortField("id");
-//        sort1.setSortType("asc");
-//        sortList.add(sort1);
+        List<Sort> sortList = new ArrayList<>();
+        Sort sort1 = new Sort();
+        sort1.setSortField("id");
+        sort1.setSortType("asc");
+        sortList.add(sort1);
 //        sort1 = new Sort();
 //        sort1.setSortField("creationTime");
 //        sort1.setSortType("asc");
 //        sortList.add(sort1);
-//        request.setSortFieldList(sortList);
+        request.setSortFieldList(sortList);
 
         PageData<ShipOrderItemResponse> page = getShipOrderItemPage(request);
 
@@ -102,9 +102,13 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 //            throw new Exception("Can't get ShipOrderItem  by  m_Str7 ,m_Str12,materialCode");
             throw new Exception("发货单不存在");
         }
-        if (size > 1) {
+
+        if (StringUtils.isNotEmpty(request.getM_Str12())) {
+            if (size > 1) {
 //            throw new Exception("Get multiple  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
-            throw new Exception("找到多个发货单");
+                throw new Exception("找到多个发货单");
+            }
+
         }
         ShipOrderItemResponse shipOrderItemResponse = page.getData().get(0);
         ShipOrder shipOrder = shipOrderService.getById(shipOrderItemResponse.getShipOrderId());
@@ -144,12 +148,9 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             }
         }
 
-        if(CollectionUtils.isNotEmpty(request.getXStatusList()))
-        {
-            queryWrapper.in(ShipOrderItem::getXStatus,request.getXStatusList());
+        if (CollectionUtils.isNotEmpty(request.getXStatusList())) {
+            queryWrapper.in(ShipOrderItem::getXStatus, request.getXStatusList());
         }
-
-
 
 
 //        QueryWrapper<ShipOrderItem> queryWrapper = new QueryWrapper<>();

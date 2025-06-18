@@ -74,6 +74,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         inventoryItemDetailRequest.setM_Str7(request.getProjectNo());
         inventoryItemDetailRequest.setM_Str12(request.getDeviceNo());
         inventoryItemDetailRequest.setMaterialCode(request.getMaterialCode());
+        inventoryItemDetailRequest.setPackageQuantity(request.getQuantity());
         Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest);
 
         request.setShipOrderId(shipOrderItemRequest.getShipOrderId());
@@ -82,6 +83,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         request.setShipOrderItemId(shipOrderItemRequest.getId());
         request.setPallet(inventoryItemDetailRequest.getPallet());
         request.setMaterialId(inventoryItemDetailRequest.getMaterialId());
+        request.setInventoryItemDetailId(inventoryItemDetailRequest.getId());
         request.setProjectName(shipOrderItemRequest.getM_Str8());
         Material material = materialService.getById(request.getMaterialId());
         if (material == null) {

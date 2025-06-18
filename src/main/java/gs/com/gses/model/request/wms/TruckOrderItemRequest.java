@@ -67,6 +67,7 @@ public class TruckOrderItemRequest extends RequestPage {
      */
     private Long materialId;
 
+    private Long inventoryItemDetailId;
     /**
      *
      */
@@ -85,7 +86,7 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    private BigDecimal quantity;
+    private BigDecimal quantity=BigDecimal.ONE;
 
     /**
      *
