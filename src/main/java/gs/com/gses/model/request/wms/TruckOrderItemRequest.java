@@ -45,7 +45,7 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    private Long shipOrderId;
+    private String shipOrderId;
 
     /**
      *
@@ -60,7 +60,7 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    private Long shipOrderItemId;
+    private String shipOrderItemId;
 
     /**
      *

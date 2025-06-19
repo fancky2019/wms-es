@@ -16,7 +16,12 @@ public class ShipOrderItemResponse implements Serializable {
      * 关联的出库单主表id
      */
     private Long shipOrderId;
+    /**
+     * 第三方系统单号（兼容字符型）
+     */
+    private String shipOrderCode;
 
+    private String applyShipOrderCode;
     /**
      * 行号
      */
@@ -77,6 +82,7 @@ public class ShipOrderItemResponse implements Serializable {
      */
     private BigDecimal alloactedPkgQuantity;
 
+    private BigDecimal currentAllocatedPkgQuantity;
     /**
      * 已拣货数量
      */

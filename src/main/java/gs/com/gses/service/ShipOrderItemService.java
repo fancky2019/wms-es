@@ -16,6 +16,7 @@ import java.util.List;
 public interface ShipOrderItemService extends IService<ShipOrderItem> {
     List<ShipOrderItem> getByShipOrderIds(List<Long> shipOrderIdList);
 
-    Boolean checkItemExist(ShipOrderItemRequest request) throws Exception;
+    Boolean checkItemExist(ShipOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
+
     PageData<ShipOrderItemResponse> getShipOrderItemPage(ShipOrderItemRequest request) throws Exception;
 }

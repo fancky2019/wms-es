@@ -14,6 +14,8 @@ import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.mqtt.TrunkOderMq;
+import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderResponse;
 import gs.com.gses.service.*;
@@ -29,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -63,12 +66,16 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
 
     @Override
-    public Boolean checkAvailable(TruckOrderItemRequest request) throws Exception {
+    public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception {
         ShipOrderItemRequest shipOrderItemRequest = new ShipOrderItemRequest();
         shipOrderItemRequest.setM_Str7(request.getProjectNo());
         shipOrderItemRequest.setM_Str12(request.getDeviceNo());
         shipOrderItemRequest.setMaterialCode(request.getMaterialCode());
-        Boolean shipOrderItemExist = shipOrderItemService.checkItemExist(shipOrderItemRequest);
+        shipOrderItemRequest.setRequiredPkgQuantity(request.getQuantity());
+        if (matchedShipOrderItemResponseList == null) {
+            matchedShipOrderItemResponseList = new ArrayList<>();
+        }
+        Boolean shipOrderItemExist = shipOrderItemService.checkItemExist(shipOrderItemRequest, matchedShipOrderItemResponseList);
 
         InventoryItemDetailRequest inventoryItemDetailRequest = new InventoryItemDetailRequest();
         inventoryItemDetailRequest.setM_Str7(request.getProjectNo());
@@ -77,14 +84,25 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         inventoryItemDetailRequest.setPackageQuantity(request.getQuantity());
         Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest);
 
-        request.setShipOrderId(shipOrderItemRequest.getShipOrderId());
-        request.setApplyShipOrderCode(shipOrderItemRequest.getApplyShipOrderCode());
-        request.setShipOrderCode(shipOrderItemRequest.getShipOrderCode());
-        request.setShipOrderItemId(shipOrderItemRequest.getId());
+        if (CollectionUtils.isNotEmpty(matchedShipOrderItemResponseList)) {
+//            List<Long> shipOrderIdList=matchedShipOrderItemResponseList.stream().map(p->p.getShipOrderId()).collect(Collectors.toList());
+//            List<String> shipOrderCodeList=    matchedShipOrderItemResponseList.stream().map(p->p.getShipOrderCode()).collect(Collectors.toList());
+//            List<String> applyShipOrderCodeList=    matchedShipOrderItemResponseList.stream().map(p->p.getApplyShipOrderCode()).collect(Collectors.toList());
+//
+//
+//
+//            request.setShipOrderId(shipOrderItemRequest.getShipOrderId());
+//            request.setApplyShipOrderCode(shipOrderItemRequest.getApplyShipOrderCode());
+//            request.setShipOrderCode(shipOrderItemRequest.getShipOrderCode());
+//            request.setShipOrderItemId(shipOrderItemRequest.getId());
+//            request.setProjectName(shipOrderItemRequest.getM_Str8());
+        }
+
+
         request.setPallet(inventoryItemDetailRequest.getPallet());
         request.setMaterialId(inventoryItemDetailRequest.getMaterialId());
         request.setInventoryItemDetailId(inventoryItemDetailRequest.getId());
-        request.setProjectName(shipOrderItemRequest.getM_Str8());
+
         Material material = materialService.getById(request.getMaterialId());
         if (material == null) {
             throw new Exception("can't find material - " + request.getMaterialId());
@@ -159,7 +177,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     }
 
     @Override
-    public PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request) {
+    public PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request) throws Exception {
         LambdaQueryWrapper<TruckOrderItem> truckOrderItemQueryWrapper = new LambdaQueryWrapper<>();
         truckOrderItemQueryWrapper.eq(TruckOrderItem::getDeleted, 0);
         if (StringUtils.isNotEmpty(request.getTruckOrderCode())) {
@@ -247,6 +265,17 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             BeanUtils.copyProperties(p, response);
             return response;
         }).collect(Collectors.toList());
+
+
+        List<Long> truckOrderIdList = records.stream().map(p -> p.getTruckOrderId()).distinct().collect(Collectors.toList());
+        List<TruckOrder> truckOrderList = this.truckOrderService.listByIds(truckOrderIdList);
+        for (TruckOrderItemResponse response : truckOrderItemResponseResponseList) {
+            TruckOrder truckOrder = truckOrderList.stream().filter(p -> p.getId().equals(response.getTruckOrderId())).findFirst().orElse(null);
+            if (truckOrder == null) {
+                throw new Exception(MessageFormat.format("TruckOrder - {0} lost", response.getTruckOrderId()));
+            }
+            response.setTruckOrderCode(truckOrder.getTruckOrderCode());
+        }
 
         PageData<TruckOrderItemResponse> pageData = new PageData<>();
         pageData.setData(truckOrderItemResponseResponseList);

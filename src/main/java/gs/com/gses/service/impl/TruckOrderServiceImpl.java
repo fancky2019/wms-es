@@ -25,10 +25,7 @@ import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.MqttWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
-import gs.com.gses.model.response.wms.ShipPickOrderResponse;
-import gs.com.gses.model.response.wms.TruckOrderItemResponse;
-import gs.com.gses.model.response.wms.TruckOrderResponse;
-import gs.com.gses.model.response.wms.WmsResponse;
+import gs.com.gses.model.response.wms.*;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
 import gs.com.gses.service.ShipPickOrderService;
 import gs.com.gses.service.TruckOrderItemService;
@@ -39,6 +36,7 @@ import gs.com.gses.utility.LambdaFunctionHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -96,8 +94,10 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
         List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
         HashSet<String> shipOrderCodeSet = new HashSet<>();
+        List<ShipOrderItemResponse> allMatchedShipOrderItemResponseList = new ArrayList<>();
         for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
-            Boolean result = truckOrderItemService.checkAvailable(itemRequest);
+            List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
+            Boolean result = truckOrderItemService.checkAvailable(itemRequest, matchedShipOrderItemResponseList);
             if (!result) {
                 String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.",
                         itemRequest.getProjectNo()
@@ -105,28 +105,81 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                         , itemRequest.getMaterialCode());
                 throw new Exception(str);
             }
-            shipOrderCodeSet.add(itemRequest.getShipOrderCode());
+            List<String> shipOrderCodeList = matchedShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
+//            shipOrderCodeSet.add(itemRequest.getShipOrderCode());
+            shipOrderCodeSet.addAll(shipOrderCodeList);
+            allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
         }
 
-        for (String shipOrderCode : shipOrderCodeSet) {
-            ShipOrderPalletRequest shipOrderPalletRequest = new ShipOrderPalletRequest();
-            List<TruckOrderItemRequest> shipOrderTruckOrderItemmList = request.getTruckOrderItemRequestList().stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).collect(Collectors.toList());
-            List<InventoryItemDetailRequest> inventoryItemDetailRequestList = shipOrderTruckOrderItemmList.stream().map(p ->
-            {
-                InventoryItemDetailRequest detailRequest = new InventoryItemDetailRequest();
-                detailRequest.setUpdateMStr12(true);
-                detailRequest.setPallet(p.getPallet());
-                detailRequest.setM_Str7(p.getProjectNo());
-                detailRequest.setM_Str12(p.getDeviceNo());
-                detailRequest.setMovedPkgQuantity(p.getQuantity());
-                detailRequest.setId(p.getInventoryItemDetailId());
-                detailRequest.setMaterialCode(p.getMaterialCode());
-                return detailRequest;
-            }).collect(Collectors.toList());
-            shipOrderPalletRequest.setShipOrderCode(shipOrderCode);
-            shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
-            shipOrderPalletRequestList.add(shipOrderPalletRequest);
+//        for (String shipOrderCode : shipOrderCodeSet) {
+//            ShipOrderPalletRequest shipOrderPalletRequest = new ShipOrderPalletRequest();
+//            List<TruckOrderItemRequest> shipOrderTruckOrderItemmList = request.getTruckOrderItemRequestList().stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).collect(Collectors.toList());
+//            List<InventoryItemDetailRequest> inventoryItemDetailRequestList = shipOrderTruckOrderItemmList.stream().map(p ->
+//            {
+//                InventoryItemDetailRequest detailRequest = new InventoryItemDetailRequest();
+//                detailRequest.setUpdateMStr12(true);
+//                detailRequest.setPallet(p.getPallet());
+//                detailRequest.setM_Str7(p.getProjectNo());
+//                detailRequest.setM_Str12(p.getDeviceNo());
+//                detailRequest.setMovedPkgQuantity(p.getQuantity());
+//                detailRequest.setId(p.getInventoryItemDetailId());
+//                detailRequest.setMaterialCode(p.getMaterialCode());
+//                return detailRequest;
+//            }).collect(Collectors.toList());
+//            shipOrderPalletRequest.setShipOrderCode(shipOrderCode);
+//            shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
+//            shipOrderPalletRequestList.add(shipOrderPalletRequest);
+//        }
+
+        for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
+
+            List<ShipOrderItemResponse> currentShipOrderItemResponseList = allMatchedShipOrderItemResponseList.stream().filter(p -> p.getM_Str7().equals(truckOrderItemRequest.getProjectNo()) &&
+                    p.getMaterialId().equals(truckOrderItemRequest.getMaterialId())).collect(Collectors.toList());
+
+            if (StringUtils.isNotEmpty(truckOrderItemRequest.getDeviceNo())) {
+                currentShipOrderItemResponseList = currentShipOrderItemResponseList.stream().filter(p -> p.getM_Str12().equals(truckOrderItemRequest.getDeviceNo())).collect(Collectors.toList());
+            }
+            List<String> currentApplyShipOrderList = currentShipOrderItemResponseList.stream().map(p -> p.getApplyShipOrderCode()).distinct().collect(Collectors.toList());
+            List<String> currentShipOrderIdStrList = currentShipOrderItemResponseList.stream().map(p -> p.getShipOrderId().toString()).distinct().collect(Collectors.toList());
+            List<String> currentShipOrderCodeList = currentShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
+            List<String>  shipOrderItemIdStrList=currentShipOrderItemResponseList.stream().map(p -> p.getId().toString()).distinct().collect(Collectors.toList());
+
+
+            String currentApplyShipOrderStr = String.join(",", currentApplyShipOrderList);
+            String currentShipOrderIdStr = String.join(",", currentShipOrderIdStrList);
+            String currentShipOrderCodeStr = String.join(",", currentShipOrderCodeList);
+            String currentShipOrderItemIdStr = String.join(",", shipOrderItemIdStrList);
+            truckOrderItemRequest.setApplyShipOrderCode(currentApplyShipOrderStr);
+            truckOrderItemRequest.setShipOrderId(currentShipOrderIdStr);
+            truckOrderItemRequest.setShipOrderCode(currentShipOrderCodeStr);
+            truckOrderItemRequest.setShipOrderItemId(currentShipOrderItemIdStr);
+
+            for (String shipOrderCode : currentShipOrderCodeList) {
+                BigDecimal currentOrderQuantity = currentShipOrderItemResponseList.stream()
+                        .filter(p->p.getShipOrderCode().equals(shipOrderCode))
+                        .map(ShipOrderItemResponse::getRequiredPkgQuantity)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                List<ShipOrderPalletRequest> added = shipOrderPalletRequestList.stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).collect(Collectors.toList());
+                if (CollectionUtils.isNotEmpty(added)) {
+                    ShipOrderPalletRequest shipOrderPalletRequest = added.get(0);
+                    List<InventoryItemDetailRequest> inventoryItemDetailRequestList = shipOrderPalletRequest.getInventoryItemDetailDtoList();
+                    InventoryItemDetailRequest detailRequest = getInventoryItemDetailRequest(truckOrderItemRequest, currentOrderQuantity);
+                    inventoryItemDetailRequestList.add(detailRequest);
+                } else {
+                    ShipOrderPalletRequest shipOrderPalletRequest = new ShipOrderPalletRequest();
+                    shipOrderPalletRequest.setShipOrderCode(shipOrderCode);
+                    List<InventoryItemDetailRequest> inventoryItemDetailRequestList = new ArrayList<>();
+                    InventoryItemDetailRequest detailRequest = getInventoryItemDetailRequest(truckOrderItemRequest, currentOrderQuantity);
+                    inventoryItemDetailRequestList.add(detailRequest);
+                    shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
+                    shipOrderPalletRequestList.add(shipOrderPalletRequest);
+                }
+            }
+
+
         }
+
+
 //        long createTime = LocalDateTime.now().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
         long createTime = Instant.now().toEpochMilli();
         String addTruckOrderRequestJson = objectMapper.writeValueAsString(request);
@@ -155,12 +208,25 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
     }
 
+    private InventoryItemDetailRequest getInventoryItemDetailRequest(TruckOrderItemRequest truckOrderItemRequest, BigDecimal movedPkgQuantity) {
+        InventoryItemDetailRequest detailRequest = new InventoryItemDetailRequest();
+        detailRequest.setUpdateMStr12(true);
+        detailRequest.setPallet(truckOrderItemRequest.getPallet());
+        detailRequest.setM_Str7(truckOrderItemRequest.getProjectNo());
+        detailRequest.setM_Str12(truckOrderItemRequest.getDeviceNo());
+        detailRequest.setMovedPkgQuantity(movedPkgQuantity);
+        detailRequest.setId(truckOrderItemRequest.getInventoryItemDetailId());
+        detailRequest.setMaterialCode(truckOrderItemRequest.getMaterialCode());
+        return detailRequest;
+    }
+
     private TruckOrder saveTruckOrderAndItem(AddTruckOrderRequest request, long createTime) throws Exception {
 
         if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
             throw new Exception("TruckOrderItem is empty");
         }
-        Long shipOrderId = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
+        String shipOrderIds = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
+        Long shipOrderId = Long.valueOf(shipOrderIds.split(",")[0]);
         ShipPickOrderRequest shipPickOrderRequest = new ShipPickOrderRequest();
         shipPickOrderRequest.setShipOrderId(shipOrderId);
         if (createTime == 0) {

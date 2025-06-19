@@ -23,6 +23,7 @@ import gs.com.gses.service.ShipOrderItemService;
 import gs.com.gses.mapper.ShipOrderItemMapper;
 import gs.com.gses.service.ShipOrderService;
 import gs.com.gses.utility.LambdaFunctionHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -30,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +44,7 @@ import java.util.stream.Collectors;
  * @description 针对表【ShipOrderItem】的数据库操作Service实现
  * @createDate 2024-08-11 10:23:06
  */
+@Slf4j
 @Service
 public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, ShipOrderItem>
         implements ShipOrderItemService {
@@ -63,8 +66,11 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
     }
 
     @Override
-    public Boolean checkItemExist(ShipOrderItemRequest request) throws Exception {
+    public Boolean checkItemExist(ShipOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception {
 
+        if (matchedShipOrderItemResponseList == null) {
+            matchedShipOrderItemResponseList = new ArrayList<>();
+        }
         if (StringUtils.isEmpty(request.getM_Str7())) {
             throw new Exception("m_Str7 is null");
         }
@@ -108,20 +114,66 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 //            throw new Exception("Get multiple  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
                 throw new Exception("找到多个发货单");
             }
+            log.info("M_Str12 is not empty set RequiredPkgQuantity one");
+            request.setRequiredPkgQuantity(BigDecimal.ONE);
+        }
+        BigDecimal requiredPkgQuantity = request.getRequiredPkgQuantity();
+        List<ShipOrderItemResponse> shipOrderItemResponseList = page.getData();
+        BigDecimal allRequiredPkgQuantity = shipOrderItemResponseList.stream()
+                .map(ShipOrderItemResponse::getRequiredPkgQuantity)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        if (requiredPkgQuantity.compareTo(allRequiredPkgQuantity) > 0) {
+            throw new Exception(MessageFormat.format("发货单待出库数量 - {0} 小于 当前要出库数量 {1}", allRequiredPkgQuantity, requiredPkgQuantity));
         }
-        ShipOrderItemResponse shipOrderItemResponse = page.getData().get(0);
-        ShipOrder shipOrder = shipOrderService.getById(shipOrderItemResponse.getShipOrderId());
-        if (shipOrder == null) {
-            String str = MessageFormat.format("ShipOrder - {0} lost", shipOrderItemResponse.getShipOrderId().toString());
-            throw new Exception(str);
+
+        List<Long> shipOrderIdList = shipOrderItemResponseList.stream().map(ShipOrderItemResponse::getShipOrderId).distinct().collect(Collectors.toList());
+        List<ShipOrder> shipOrderList = this.shipOrderService.listByIds(shipOrderIdList);
+        BigDecimal leftRequiredPkgQuantity = request.getRequiredPkgQuantity();
+        for (ShipOrderItemResponse shipOrderItemResponse : shipOrderItemResponseList) {
+            if (leftRequiredPkgQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            ShipOrder shipOrder = shipOrderList.stream().filter(p -> p.getId().equals(shipOrderItemResponse.getShipOrderId()))
+                    .findFirst()
+                    .orElse(null);
+            ;
+            if (shipOrder == null) {
+                String str = MessageFormat.format("ShipOrder - {0} lost", shipOrderItemResponse.getShipOrderId().toString());
+                throw new Exception(str);
+            }
+
+
+            BigDecimal itemNeedPackageQuantity = shipOrderItemResponse.getRequiredPkgQuantity().subtract(shipOrderItemResponse.getPickedPkgQuantity());
+            if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            if (leftRequiredPkgQuantity.compareTo(itemNeedPackageQuantity) > 0) {
+                shipOrderItemResponse.setCurrentAllocatedPkgQuantity(itemNeedPackageQuantity);
+            } else {
+                shipOrderItemResponse.setCurrentAllocatedPkgQuantity(leftRequiredPkgQuantity);
+            }
+            leftRequiredPkgQuantity = leftRequiredPkgQuantity.subtract(shipOrderItemResponse.getCurrentAllocatedPkgQuantity());
+            shipOrderItemResponse.setApplyShipOrderCode(shipOrder.getApplyShipOrderCode());
+            shipOrderItemResponse.setShipOrderCode(shipOrder.getXCode());
+            matchedShipOrderItemResponseList.add(shipOrderItemResponse);
         }
-        request.setId(shipOrderItemResponse.getId());
-        request.setShipOrderId(shipOrderItemResponse.getShipOrderId());
-        request.setShipOrderCode(shipOrder.getXCode());
-        request.setApplyShipOrderCode(shipOrder.getApplyShipOrderCode());
-        request.setM_Str8(shipOrderItemResponse.getM_Str8());
-        request.setMaterialId(shipOrderItemResponse.getMaterialId());
+
+
+//        ShipOrderItemResponse shipOrderItemResponse = page.getData().get(0);
+//        ShipOrder shipOrder = shipOrderService.getById(shipOrderItemResponse.getShipOrderId());
+//        if (shipOrder == null) {
+//            String str = MessageFormat.format("ShipOrder - {0} lost", shipOrderItemResponse.getShipOrderId().toString());
+//            throw new Exception(str);
+//        }
+
+//        request.setId(shipOrderItemResponse.getId());
+//        request.setShipOrderId(shipOrderItemResponse.getShipOrderId());
+//        request.setShipOrderCode(shipOrder.getXCode());
+//        request.setApplyShipOrderCode(shipOrder.getApplyShipOrderCode());
+//        request.setM_Str8(shipOrderItemResponse.getM_Str8());
+//        request.setMaterialId(shipOrderItemResponse.getMaterialId());
         return true;
     }
 

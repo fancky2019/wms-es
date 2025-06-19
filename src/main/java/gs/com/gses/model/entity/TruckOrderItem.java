@@ -51,13 +51,13 @@ public class TruckOrderItem implements Serializable {
      * 
      */
     @TableField(value = "ShipOrderId")
-    private Long shipOrderId;
+    private String shipOrderId;
 
     /**
      * 
      */
     @TableField(value = "ShipOrderItemId")
-    private Long shipOrderItemId;
+    private String shipOrderItemId;
 
     /**
      * 

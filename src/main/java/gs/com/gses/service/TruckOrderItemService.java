@@ -4,6 +4,7 @@ import gs.com.gses.model.entity.TruckOrderItem;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
 
 import java.util.List;
@@ -14,11 +15,11 @@ import java.util.List;
  * @createDate 2025-05-28 13:18:54
  */
 public interface TruckOrderItemService extends IService<TruckOrderItem> {
-    Boolean checkAvailable(TruckOrderItemRequest request) throws Exception;
+    Boolean checkAvailable(TruckOrderItemRequest request,List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
 
     Boolean add(TruckOrderItemRequest request);
 
     Boolean addBatch(List<TruckOrderItemRequest> requestList);
 
-    PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request);
+    PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request) throws Exception;
 }

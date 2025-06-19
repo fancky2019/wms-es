@@ -24,7 +24,7 @@ public class TruckOrderItemResponse implements Serializable {
      *
      */
     private Long truckOrderId;
-
+    private String truckOrderCode;
     /**
      *
      */
@@ -43,12 +43,12 @@ public class TruckOrderItemResponse implements Serializable {
     /**
      *
      */
-    private Long shipOrderId;
+    private String shipOrderId;
 
     /**
      *
      */
-    private Long shipOrderItemId;
+    private String shipOrderItemId;
 
     /**
      *
