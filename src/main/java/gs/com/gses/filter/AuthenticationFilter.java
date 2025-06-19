@@ -7,6 +7,7 @@ import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.wms.WmsResponse;
 import gs.com.gses.service.api.AuthorityService;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
@@ -24,12 +25,13 @@ import java.io.PrintWriter;
 import java.util.Map;
 
 
+@Slf4j
 //过配置文件中的开关控制 AuthenticationFilter 是否生效（即是否被注册为 Bean 并参与过滤器链）。
 @ConditionalOnProperty(value = "sbp.checkpermission", havingValue = "true")
 @Configuration
 public class AuthenticationFilter implements Filter {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
+//    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
     @Autowired
     private AuthorityService authorityService;
 

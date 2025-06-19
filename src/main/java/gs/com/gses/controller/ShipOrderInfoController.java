@@ -57,16 +57,30 @@ public class ShipOrderInfoController {
     private RabbitMQConfig rabbitMQConfig;
 
 
+    /**
+     * hello
+     * @param name
+     * @return
+     */
     @GetMapping("/hello")
     public String hello(@RequestParam(name = "name", defaultValue = "unknown user") String name) {
         return "Hello " + name;
     }
 
+    /**
+     * getWmsTask
+     * @return
+     */
     @GetMapping("/getWmsTask")
     public MessageResult<WmsTask> getWmsTask() {
         return MessageResult.success();
     }
 
+    /**
+     * esTest
+     * @param request
+     * @return
+     */
     @DuplicateSubmission
     @GetMapping("/esTest")
     public MessageResult<PageData<DemoProduct>> esTest(DemoProductRequest request) {
@@ -74,24 +88,46 @@ public class ShipOrderInfoController {
         return MessageResult.success(esDemoProductService.search(request));
     }
 
+    /**
+     * taskComplete
+     * @param wmsTaskId
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/taskComplete/{wmsTaskId}")
     public MessageResult<Void> taskComplete(@PathVariable("wmsTaskId") Long wmsTaskId) throws Exception {
         outBoundOrderService.taskComplete(wmsTaskId);
         return MessageResult.success();
     }
 
+    /**
+     * getShipOrderInfoList
+     * @param request
+     * @return
+     * @throws Exception
+     */
     //get 可以在body 内设置参数，但是通常用post 方法
     @GetMapping("/getShipOrderInfoList")
     public MessageResult<PageData<ShipOrderInfo>> getShipOrderInfoList(@RequestBody ShipOrderInfoRequest request) throws Exception {
         return MessageResult.success(outBoundOrderService.search(request));
     }
 
+    /**
+     * addBatch
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/addBatch")
     public MessageResult<Void> addBatch() throws Exception {
         outBoundOrderService.addBatch();
         return MessageResult.success();
     }
 
+    /**
+     * deleteShipOrderInfo
+     * @return
+     * @throws Exception
+     */
     @PostMapping("/deleteShipOrderInfo")
     public MessageResult<Void> deleteShipOrderInfo() throws Exception {
         outBoundOrderService.deleteShipOrderInfo();
@@ -99,27 +135,48 @@ public class ShipOrderInfoController {
     }
 
 
-
-
-
+    /**
+     * aggregationTopBucketQuery
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/aggregationTopBucketQuery")
     public MessageResult<Void> aggregationTopBucketQuery(ShipOrderInfoRequest request) throws Exception {
         outBoundOrderService.aggregationTopBucketQuery(request);
         return MessageResult.success();
     }
 
+    /**
+     * scriptQuery
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/scriptQuery")
     public MessageResult<Void> scriptQuery() throws Exception {
         //   shipOrderInfoService.scriptQuery();
         return MessageResult.success();
     }
 
+    /**
+     * aggregationStatisticsQuery
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @PostMapping("/aggregationStatisticsQuery")
     public MessageResult<LinkedHashMap<String, BigDecimal>> aggregationStatisticsQuery(@RequestBody ShipOrderInfoRequest request) throws Exception {
         LinkedHashMap<String, BigDecimal> map = outBoundOrderService.aggregationStatisticsQuery(request);
         return MessageResult.success(map);
     }
 
+    /**
+     * @ignore
+     * dateHistogramStatisticsQuery
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/dateHistogramStatisticsQuery")
     public MessageResult<LinkedHashMap<Object, Double>> dateHistogramStatisticsQuery(ShipOrderInfoRequest request) throws Exception {
         LinkedHashMap<Object, Double> map = outBoundOrderService.dateHistogramStatisticsQuery(request);
@@ -127,8 +184,11 @@ public class ShipOrderInfoController {
     }
 
 
-
-
+    /**
+     * rabbitMqTest
+     * @return
+     * @throws Exception
+     */
     @PostMapping("/rabbitMqTest")
     public MessageResult<Void> rabbitMqTest() throws Exception {
         RabbitMqMessage mqMessage =new RabbitMqMessage();

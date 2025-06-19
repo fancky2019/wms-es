@@ -15,12 +15,24 @@ public class TruckOrderItemController {
     @Autowired
     private TruckOrderItemService truckOrderItemService;
 
+    /**
+     * checkAvailable
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/checkAvailable")
     public MessageResult<Boolean> checkAvailable(TruckOrderItemRequest request) throws Exception {
         truckOrderItemService.checkAvailable(request);
         return MessageResult.success();
     }
 
+    /**
+     * getTruckOrderItemPage
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @PostMapping("/getTruckOrderItemPage")
     public MessageResult<PageData<TruckOrderItemResponse>> getTruckOrderItemPage(@RequestBody TruckOrderItemRequest request) throws Exception {
         PageData<TruckOrderItemResponse> page = truckOrderItemService.getTruckOrderItemPage(request);

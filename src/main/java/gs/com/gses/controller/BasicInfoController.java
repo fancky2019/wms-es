@@ -17,6 +17,11 @@ public class BasicInfoController {
     @Autowired
     private BasicInfoCacheService basicInfoCacheService;
 
+    /**
+     * 初始化缓存信息
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/initBasicInfoCache")
     public MessageResult<Void> initBasicInfoCache() throws Exception {
         basicInfoCacheService.initBasicInfoCache();

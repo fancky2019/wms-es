@@ -21,6 +21,14 @@ public class AuthorityController {
     private ObjectMapper objectMapper;
 
 
+
+    /**
+     *测试权限校验@ignore
+     * @param id
+     * @param token
+     * @return
+     * @throws InterruptedException
+     */
     @GetMapping("/checkPermissionRet/{id}")
     public MessageResult<LoginUserTokenDto> checkPermissionRet(@PathVariable Long id, @RequestHeader("Authorization") String token) throws InterruptedException {
         return MessageResult.success(wmsAuthorityService.wmsUserInfo(token));

@@ -32,6 +32,7 @@ import java.util.List;
  * @Operation：接口描述（summary、description）。
  *
  * @Schema：字段说明（description、example）。
+ *  @group 发车单
  */
 @RestController
 @Tag(name = "发车单", description = "发车单管理")
@@ -43,6 +44,13 @@ public class TruckOrderController {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * addTruckOrder
+     * @param request
+     * @param token
+     * @return
+     * @throws Throwable
+     */
     @DuplicateSubmission
     @PostMapping("/addTruckOrder")
     public MessageResult<Boolean> addTruckOrder(@RequestBody AddTruckOrderRequest request, @RequestHeader("Authorization") String token) throws Throwable {
@@ -67,6 +75,13 @@ public class TruckOrderController {
         return MessageResult.success();
     }
 
+    /**
+     * addTruckOrderOnly
+     * @param request
+     * @param token
+     * @return
+     * @throws Throwable
+     */
     @DuplicateSubmission
     @PostMapping("/addTruckOrderOnly")
     public MessageResult<Boolean> addTruckOrderOnly(@RequestBody AddTruckOrderRequest request, @RequestHeader("Authorization") String token) throws Throwable {
@@ -74,6 +89,12 @@ public class TruckOrderController {
         return MessageResult.success();
     }
 
+    /**
+     * updateTruckOrder
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @DuplicateSubmission
     @PostMapping("/updateTruckOrder")
     public MessageResult<Void> updateTruckOrder(@RequestBody TruckOrderRequest request) throws Exception {
@@ -82,6 +103,13 @@ public class TruckOrderController {
     }
 
 
+    /**
+     * getTruckOrderPage
+     * @param request
+     * @param token
+     * @return
+     * @throws Exception
+     */
     @Operation(summary = "TruckOrder 分页查询", description = "获取分页列表的详细说明")
     @PostMapping("/getTruckOrderPage")
     public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request, @RequestHeader("Authorization") String token) throws Exception {
@@ -90,12 +118,24 @@ public class TruckOrderController {
         return MessageResult.success(page);
     }
 
+    /**
+     * trunkOrderMq
+     * @param id
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/trunkOrderMq/{id}")
     public MessageResult<Void> trunkOrderMq(@PathVariable("id") Integer id) throws Exception {
         truckOrderService.trunkOrderMq(id);
         return MessageResult.success();
     }
 
+    /**
+     * exportTrunkOrderExcel
+     * @param id
+     * @param httpServletResponse
+     * @throws Exception
+     */
     @GetMapping(value = "/exportTrunkOrderExcel/{id}")
     public void exportTrunkOrderExcel(@PathVariable("id") Long id,HttpServletResponse httpServletResponse) throws Exception {
         this.truckOrderService.exportTrunkOrderExcel(id,httpServletResponse);

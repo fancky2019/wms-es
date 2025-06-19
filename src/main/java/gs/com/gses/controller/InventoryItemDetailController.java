@@ -31,22 +31,42 @@ public class InventoryItemDetailController {
     private HttpServletResponse httpServletResponse;
 
 
+    /**
+     * 分页
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @PostMapping("/getInventoryItemDetailPage")
     public MessageResult<PageData<InventoryItemDetailResponse>> getInventoryItemDetailPage(InventoryItemDetailRequest request) throws Exception {
         PageData<InventoryItemDetailResponse> page = inventoryItemDetailService.getInventoryItemDetailPage(request);
         return MessageResult.success(page);
     }
 
+    /**
+     * 获取导出模板
+     * @throws IOException
+     */
     @GetMapping(value = "/exportExcelModifyMStrTemplate")
     public void exportExcelModifyMStrTemplate() throws IOException {
         this.inventoryItemDetailService.exportExcelModifyMStrTemplate(httpServletResponse, ModifyMStr12Bo.class);
     }
 
+    /**
+     * 导入
+     * @param file
+     * @throws IOException
+     */
     @PostMapping(value = "/importExcelModifyMStr")
     public void importExcelModifyMStr(MultipartFile file) throws IOException {
         this.inventoryItemDetailService.importExcelModifyMStr12(httpServletResponse, file);
     }
 
+    /**
+     * 下载失败数据
+     * @param response
+     * @throws IOException
+     */
     //downloadLocalExcel
     @GetMapping("/downloadErrorData")
     public void downloadErrorData(HttpServletResponse response) throws IOException {

@@ -35,6 +35,12 @@ public class ShipOrderController {
     @Autowired
     private MqttProduce mqttProduce;
 
+    /**
+     * test
+     * @param id
+     * @return
+     * @throws JsonProcessingException
+     */
     @GetMapping("/test/{id}")
     public MessageResult<ShipOrder> test(Long id) throws JsonProcessingException {
 
@@ -47,28 +53,53 @@ public class ShipOrderController {
         return MessageResult.success(shipOrderService.test(id));
     }
 
+    /**
+     * 分页
+     * @param request
+     * @return
+     */
     @GetMapping("/getShipOrderPage")
     public MessageResult<PageData<ShipOrderResponse>> getShipOrderPage(ShipOrderRequest request) {
         return MessageResult.success(shipOrderService.getShipOrderPage(request));
     }
 
+    /**
+     * getShipOrderList
+     * @param request
+     * @return
+     */
     @GetMapping("/getShipOrderList")
     public MessageResult<List<ShipOrderResponse>> getShipOrderList(ShipOrderRequest request) {
         return MessageResult.success(shipOrderService.getShipOrderList(request));
     }
 
+    /**
+     * 分配
+     * @return
+     * @throws Exception
+     */
     @GetMapping("/allocate")
     public MessageResult<Void> allocate() throws Exception {
         shipOrderService.allocate();
         return MessageResult.success();
     }
 
+    /**
+     * 齐套率
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @PostMapping("/allocateDesignatedShipOrders")
     public MessageResult<HashMap<String, String>> allocateDesignatedShipOrders(@RequestBody ShipOrderRequest request) throws Exception {
         return MessageResult.success(shipOrderService.allocateDesignatedShipOrders(request));
     }
 
 
+    /**
+     * mqttTest
+     * @param msg
+     */
     @GetMapping(value = "/mqttTest")
     public void mqttTest(String msg) {
         /*
