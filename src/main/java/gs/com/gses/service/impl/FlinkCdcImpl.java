@@ -114,6 +114,7 @@ public class FlinkCdcImpl implements FlinkCdcService {
 //        debeziumProps.setProperty("snapshot.mode", "when_needed");
 //        debeziumProps.setProperty("snapshot.isolation.mode", "snapshot");
         debeziumProps.setProperty("scan.interval.ms", "200");
+        //拉取间隔
         debeziumProps.setProperty("poll.interval.ms", "100");
         debeziumProps.setProperty("max.batch.size", "2048");
         debeziumProps.setProperty("heartbeat.interval.ms", "500");
@@ -152,7 +153,7 @@ public class FlinkCdcImpl implements FlinkCdcService {
                         .build();
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        // enable checkpoint
+        // enable checkpoint  控制状态持久化的频率（容错用途）。
         env.enableCheckpointing(300);
         env.setParallelism(Runtime.getRuntime().availableProcessors());// 根据表数量和大小调整
         // set the source parallelism to 2
@@ -178,11 +179,11 @@ public class FlinkCdcImpl implements FlinkCdcService {
 //        env.setStateBackend(new RocksDBStateBackend("file:///D:/flinkcdc/checkpoints", true));
 
         // Flink 1.15+ 设置 Checkpoint 配置数据获取全量、增量
-        env.setStateBackend(new HashMapStateBackend());
+//        env.setStateBackend(new HashMapStateBackend());
         env.getCheckpointConfig().setCheckpointStorage("file:///" + flinkConfig.getCheckpointStoragePath());//file:///D:/flinkcdc/checkpoints
 
         //当前 checkpoint 成功后，Flink 至少等待这个时间，再开始下一个 checkpoint。
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(200);
         env.getCheckpointConfig().setCheckpointTimeout(60000);
         env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
         //任务被手动取消后，保留 checkpoint 数据，可用来恢复

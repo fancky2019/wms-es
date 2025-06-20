@@ -30,7 +30,7 @@ import java.util.UUID;
 @Slf4j
 public class DirectExchangeProducer {
 
- @Autowired
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -38,8 +38,6 @@ public class DirectExchangeProducer {
 
     @Autowired
     private BatchingRabbitTemplate batchingRabbitTemplate;
-
-
 
 
     public void produce(RabbitMqMessage mqMessage) {
@@ -51,10 +49,10 @@ public class DirectExchangeProducer {
         //设置优先级
         messageProperties.setPriority(9);
         messageProperties.setMessageId(msgId);
-        messageProperties.setHeader("businessId",mqMessage.getBusinessId());
-        messageProperties.setHeader("businessKey",mqMessage.getBusinessKey());
-        messageProperties.setHeader("traceId",mqMessage.getTraceId());
-        messageProperties.setHeader("retry",mqMessage.getRetry());
+        messageProperties.setHeader("businessId", mqMessage.getBusinessId());
+        messageProperties.setHeader("businessKey", mqMessage.getBusinessKey());
+        messageProperties.setHeader("traceId", mqMessage.getTraceId());
+        messageProperties.setHeader("retry", mqMessage.getRetry());
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
 
@@ -62,9 +60,38 @@ public class DirectExchangeProducer {
         //设置消息内容
         ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
         correlationData.setReturned(returnedMessage);
-        log.info("BeforeRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}",mqMessage.getMsgId(),mqMessage.getBusinessKey(),mqMessage.getBusinessId());
+        log.info("BeforeRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
         rabbitTemplate.send(exchange, routingKey, message, correlationData);
-        log.info("AfterRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}",mqMessage.getMsgId(),mqMessage.getBusinessKey(),mqMessage.getBusinessId());
+        log.info("AfterRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
+
+    }
+
+    public void produce(RabbitMqMessage mqMessage, MessageProperties messageProperties) {
+        String exchange = mqMessage.getExchange();
+        String routingKey = mqMessage.getRouteKey();
+//        String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+        if (messageProperties == null) {
+            messageProperties = new MessageProperties();
+        }
+
+        String msgId = mqMessage.getMsgId();
+        //设置优先级
+        messageProperties.setPriority(9);
+        messageProperties.setMessageId(msgId);
+        messageProperties.setHeader("businessId", mqMessage.getBusinessId());
+        messageProperties.setHeader("businessKey", mqMessage.getBusinessKey());
+        messageProperties.setHeader("traceId", mqMessage.getTraceId());
+        messageProperties.setHeader("retry", mqMessage.getRetry());
+        //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
+        Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
+
+        CorrelationData correlationData = new CorrelationData(msgId);
+        //设置消息内容
+        ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
+        correlationData.setReturned(returnedMessage);
+        log.info("BeforeRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
+        rabbitTemplate.send(exchange, routingKey, message, correlationData);
+        log.info("AfterRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
 
     }
 

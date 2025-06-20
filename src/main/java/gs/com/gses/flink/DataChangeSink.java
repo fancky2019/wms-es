@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.slf4j.MDC;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -45,6 +46,8 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
         ObjectMapper objectMapper = applicationContext.getBean(ObjectMapper.class);
         try {
             String jsonStr = objectMapper.writeValueAsString(dataChangeInfo);
+            MessageProperties messageProperties=new MessageProperties();
+            messageProperties.setHeader("changeTime", dataChangeInfo.getChangeTime());
             RabbitMqMessage mqMessage = new RabbitMqMessage();
             String msgId = UUID.randomUUID().toString().replaceAll("-", "");
             mqMessage.setMsgId(msgId);

@@ -21,16 +21,16 @@ public interface InventoryInfoService {
     HashMap<Long, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
     HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
-    void sink(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException ;
-    void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
+    void sink(DataChangeInfo dataChangeInfo) throws Exception ;
+    void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws Exception;
 
-    void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
+    void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws Exception;
 
-    void updateByInventory(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
+    void updateByInventory(DataChangeInfo dataChangeInfo) throws Exception;
 
-    void updateByLocation(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
+    void updateByLocation(DataChangeInfo dataChangeInfo) throws Exception;
 
-    void updateByLaneway(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException;
+    void updateByLaneway(DataChangeInfo dataChangeInfo) throws Exception;
 
     void test();
 

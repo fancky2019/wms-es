@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author
@@ -26,7 +27,6 @@ import java.util.List;
  */
 @Slf4j
 public class SqlServerDeserialization implements DebeziumDeserializationSchema<DataChangeInfo> {
-
 
 
     public static final String TS_MS = "ts_ms";
@@ -168,7 +168,8 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
 //        dataChangeInfo.setFilePos(Optional.ofNullable(source.get(POS)).map(x -> Integer.parseInt(x.toString())).orElse(0));
             dataChangeInfo.setDatabase(database);
             dataChangeInfo.setTableName(tableName);
-//        dataChangeInfo.setChangeTime(Optional.ofNullable(struct.get(TS_MS)).map(x -> Long.parseLong(x.toString())).orElseGet(System::currentTimeMillis));
+            // 北京时间的时间戳
+            dataChangeInfo.setChangeTime(Optional.ofNullable(struct.get(TS_MS)).map(x -> Long.parseLong(x.toString())).orElseGet(System::currentTimeMillis));
 
 
             try {

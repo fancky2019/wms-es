@@ -88,14 +88,12 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
 
 
         super.onMessage(DataChangeInfo.class, message, channel, (msg) -> {
-
             try {
                 inventoryInfoService.sink(msg);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+
         });
 
     }

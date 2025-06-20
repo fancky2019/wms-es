@@ -226,7 +226,7 @@ sbp:
       - dbo.InventoryItem
       - dbo.Inventory
       - dbo.Location
-      - dbo.Laneway_copy1
+      - dbo.Laneway
     hostname: 10.100.200.43
     port: 1433
     username: sa
