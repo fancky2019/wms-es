@@ -1,6 +1,5 @@
 package gs.com.gses.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
@@ -12,7 +11,7 @@ import java.util.List;
 
 public interface InventoryInfoService {
 
-    PageData<InventoryInfo> getInventoryInfoList(InventoryInfoRequest request) throws Exception;
+    PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception;
 
     PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
 
@@ -39,7 +38,7 @@ public interface InventoryInfoService {
     void updateByInventoryItemDb(Long id) throws InterruptedException;
     void updateByInventoryDb(Long id) throws InterruptedException;
 
-
+    String allocatedReason(String materialCode) throws Exception;
 
 
 }

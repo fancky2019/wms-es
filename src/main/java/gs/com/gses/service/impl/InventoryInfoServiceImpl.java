@@ -12,15 +12,13 @@ import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.service.*;
-import gs.com.gses.utility.ApplicationContextAwareImpl;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.flink.streaming.api.functions.sink.SinkFunction;
-import org.apache.poi.ss.formula.functions.T;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.ScriptQueryBuilder;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -34,10 +32,8 @@ import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
@@ -47,8 +43,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -572,7 +566,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         request.setPageIndex(0);
         request.setPageSize(50);
-        return getInventoryInfoList(request);
+        return getInventoryInfoPage(request);
 
     }
 
@@ -617,7 +611,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public PageData<InventoryInfo> getInventoryInfoList(InventoryInfoRequest request) throws Exception {
+    public PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception {
 
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         if (request.getZoneId() != null && request.getZoneId() > 0) {
@@ -697,7 +691,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryItemPackageQuantity").gt(0));
         boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemAllocatedPackageQuantity", 0));
         boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
-        boolQueryBuilder.must(QueryBuilders.termQuery("allocatedPackageQuantity", 0));
+        //  boolQueryBuilder.must(QueryBuilders.termQuery("allocatedPackageQuantity", 0));
         if (request.getMaterialId() != null && request.getMaterialId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("materialId", request.getMaterialId()));
         }
@@ -708,6 +702,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsSealed", request.getInventoryItemIsSealed()));
         }
 
+        if (request.getEnoughPackQuantity() != null) {
+            Script script = new Script("doc['packageQuantity'].value > doc['allocatedPackageQuantity'].value");
+            ScriptQueryBuilder scriptQuery = QueryBuilders.scriptQuery(script);
+            boolQueryBuilder.must(scriptQuery);
+        }
 
         if (StringUtils.isNotEmpty(request.getApplyOrOrderCode())) {
             boolQueryBuilder.must(QueryBuilders.termQuery("applyOrOrderCode", request.getApplyOrOrderCode()));
@@ -1595,368 +1594,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
-//region 删除
-//    private void updateInventoryInfoOfInventoryBatch(Inventory inventory, DataChangeInfo dataChangeInfo) throws InterruptedException {
-//
-//
-//        String lockKey = LOCK_KEY;
-//        RLock lock = redissonClient.getLock(lockKey);
-//        boolean lockSuccessfully = false;
-//        try {
-//            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
-//            if (!lockSuccessfully) {
-//                log.info("updateInventoryInfo - {} fail ,get lock fail", lockKey);
-//                return;
-//            }
-//            log.info("InventoryInfo - {} acquire lock  success ", lockKey);
-//
-//
-//            StopWatch stopWatch = new StopWatch("updateInventoryInfoOfInventoryBatch");
-//            stopWatch.start("updateInventoryInfoOfInventoryBatch");
-//
-//            List<String> sourceFieldList = new ArrayList<>();
-//            sourceFieldList.add("inventoryItemDetailId");
-//            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-//            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryId", inventory.getId()));
-//
-//            NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-//                    .withQuery(boolQueryBuilder)
-//                    .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
-//                    .withSourceFilter(new SourceFilter() {
-//                        //返回的字段
-//                        @Override
-//                        public String[] getIncludes() {
-//                            if (CollectionUtils.isNotEmpty(sourceFieldList)) {
-//                                return sourceFieldList.toArray(new String[0]);
-//                            } else {
-//                                return new String[0];
-//                            }
-//
-//                        }
-//
-//                        //不需要返回的字段
-//                        @Override
-//                        public String[] getExcludes() {
-//                            return new String[0];
-//                        }
-//                    })
-//                    .withTrackTotalHits(true)//返回命中的总行数
-//                    .build();
-//            //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
-//            SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
-//            long totalHits = search.getTotalHits();
-//            List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
-//
-//
-//            long count = inventoryInfoList.size();
-//            int step = 1000;
-//            long times = count / step;
-//            long left = count % step;
-//            if (left > 0) {
-//                times++;
-//            }
-//
-//            long pageIndex = 0L;
-//            long totalIndexSize = 0L;
-//            while (times > 0) {
-//
-//                long skip = (++pageIndex - 1) * step;
-//                times--;
-//
-//                List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
-//
-//                List<UpdateQuery> updateQueries = new ArrayList<>();
-//                for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
-//                    Map<String, Object> updatedMap = prepareInventoryUpdatedInfo(inventoryInfo, inventory);
-////                updateInventoryInfo(inventoryInfo.getInventoryItemDetailIinventoryd().toString(), updatedMap, dataChangeInfo.getTableName());
-//                    Document document = Document.create();
-//                    document.putAll(updatedMap);
-//                    UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
-//                            .withDocument(document)
-//                            .withIfSeqNo(null)  // 忽略 seq_no
-//                            .withIfPrimaryTerm(null) // 忽略 primary_term
-//                            .withDocAsUpsert(true)// 如果文档不存在则创建
-//                            .build();
-//                    updateQueries.add(updateQuery);
-//                }
-//                if (updateQueries.size() > 0) {
-//                    // 执行批量更新
-//                    elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
-//                }
-//
-//            }
-//
-//
-//            stopWatch.stop();
-//            long mills = stopWatch.getTotalTimeMillis();
-//            log.info("updateInventoryInfoOfInventoryBatch complete {} ms", mills);
-//
-//
-//        } catch (Exception ex) {
-//            log.error("", ex);
-//            throw ex;
-//        } finally {
-//
-//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-//                lock.unlock();
-//            }
-//
-//            log.info("InventoryInfo - {} release lock  success ", lockKey);
-//
-//        }
-//
-//    }
-//
-//    private void updateInventoryInfoOfLocation(Location location, DataChangeInfo dataChangeInfo) throws InterruptedException {
-//
-//        Criteria criteria = new Criteria("locationId").is(location.getId());
-//        CriteriaQuery query = new CriteriaQuery(criteria);
-//        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
-//        List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
-//        if (CollectionUtils.isEmpty(inventoryInfoList)) {
-//            log.info("can't get InventoryInfo by locationId - {} ", location.getId());
-//            return;
-//        }
-//        for (InventoryInfo inventoryInfo : inventoryInfoList) {
-//            Map<String, Object> updatedMap = prepareLocationUpdatedInfo(inventoryInfo, location);
-//            updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
-//
-//
-////            Document document = Document.create();
-////            document.putAll(updatedMap);
-////
-////            UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
-////                    .withDocument(document)
-////                    .build();
-//
-//        }
-//
-//    }
-//
-//    private void updateInventoryInfoOfLocationBatch(Location location, DataChangeInfo dataChangeInfo) throws InterruptedException {
-//        String lockKey = LOCK_KEY;
-//        RLock lock = redissonClient.getLock(lockKey);
-//        boolean lockSuccessfully = false;
-//        try {
-//            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
-//            if (!lockSuccessfully) {
-//                log.info("updateInventoryInfo - {} fail ,get lock fail", lockKey);
-//                return;
-//            }
-//            log.info("InventoryInfo - {} acquire lock  success ", lockKey);
-//
-//
-//            StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLocationBatch");
-//            stopWatch.start("updateInventoryInfoOfLocationBatch");
-//
-//            List<String> sourceFieldList = new ArrayList<>();
-//            sourceFieldList.add("inventoryItemDetailId");
-//            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-//            boolQueryBuilder.must(QueryBuilders.termQuery("locationId", location.getId()));
-//
-//            NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-//                    .withQuery(boolQueryBuilder)
-//                    .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
-//                    .withSourceFilter(new SourceFilter() {
-//                        //返回的字段
-//                        @Override
-//                        public String[] getIncludes() {
-//                            if (CollectionUtils.isNotEmpty(sourceFieldList)) {
-//                                return sourceFieldList.toArray(new String[0]);
-//                            } else {
-//                                return new String[0];
-//                            }
-//
-//                        }
-//
-//                        //不需要返回的字段
-//                        @Override
-//                        public String[] getExcludes() {
-//                            return new String[0];
-//                        }
-//                    })
-//                    .withTrackTotalHits(true)//返回命中的总行数
-//                    .build();
-//            //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
-//            SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
-//            long totalHits = search.getTotalHits();
-//            List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
-//
-//
-//            long count = inventoryInfoList.size();
-//            int step = 1000;
-//            long times = count / step;
-//            long left = count % step;
-//            if (left > 0) {
-//                times++;
-//            }
-//
-//            long pageIndex = 0L;
-//            long totalIndexSize = 0L;
-//            while (times > 0) {
-//
-//                long skip = (++pageIndex - 1) * step;
-//                times--;
-//
-//                List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
-//
-//                List<UpdateQuery> updateQueries = new ArrayList<>();
-//                for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
-//                    Map<String, Object> updatedMap = prepareLocationUpdatedInfo(inventoryInfo, location);
-////                updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
-//                    Document document = Document.create();
-//                    document.putAll(updatedMap);
-//                    UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
-//                            .withDocument(document)
-//                            .withIfSeqNo(null)  // 忽略 seq_no
-//                            .withIfPrimaryTerm(null) // 忽略 primary_term
-//                            .withDocAsUpsert(true)// 如果文档不存在则创建
-//                            .build();
-//                    updateQueries.add(updateQuery);
-//                }
-//                if (updateQueries.size() > 0) {
-//                    // 执行批量更新
-//                    elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
-//                }
-//
-//            }
-//
-//
-//            stopWatch.stop();
-//            long mills = stopWatch.getTotalTimeMillis();
-//            log.info("updateInventoryInfoOfLocationBatch complete {} ms", mills);
-//
-//
-//        } catch (Exception ex) {
-//            log.error("", ex);
-//            throw ex;
-//        } finally {
-//
-//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-//                lock.unlock();
-//            }
-//
-//            log.info("InventoryInfo - {} release lock  success ", lockKey);
-//
-//        }
-//    }
-//
-//    private void updateInventoryInfoOfLaneway(Laneway laneway, DataChangeInfo dataChangeInfo) throws InterruptedException {
-//
-//        String lockKey = LOCK_KEY;
-//        RLock lock = redissonClient.getLock(lockKey);
-//        boolean lockSuccessfully = false;
-//        try {
-//            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
-//            if (!lockSuccessfully) {
-//                log.info("updateInventoryInfo - {} fail ,get lock fail", lockKey);
-//                return;
-//            }
-//            log.info("InventoryInfo - {} acquire lock  success ", lockKey);
-//
-//            StopWatch stopWatch = new StopWatch("updateInventoryInfoOfLaneway");
-//            stopWatch.start("updateInventoryInfoOfLaneway");
-//
-//            List<String> sourceFieldList = new ArrayList<>();
-//            sourceFieldList.add("inventoryItemDetailId");
-//            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-//            boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", laneway.getId()));
-//
-//            NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-//                    .withQuery(boolQueryBuilder)
-//                    .withPageable(PageRequest.of(0, 500000)) // 返回前100条（page=0, size=100）
-//                    .withSourceFilter(new SourceFilter() {
-//                        //返回的字段
-//                        @Override
-//                        public String[] getIncludes() {
-//                            if (CollectionUtils.isNotEmpty(sourceFieldList)) {
-//                                return sourceFieldList.toArray(new String[0]);
-//                            } else {
-//                                return new String[0];
-//                            }
-//
-//                        }
-//
-//                        //不需要返回的字段
-//                        @Override
-//                        public String[] getExcludes() {
-//                            return new String[0];
-//                        }
-//                    })
-//                    .withTrackTotalHits(true)//返回命中的总行数
-//                    .build();
-//            //withTrackTotalHits ,但是只会返回分页（withPageable）指定的productList，默认10条
-//            SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
-//            long totalHits = search.getTotalHits();
-//            List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
-//
-//
-//            //有10000限制
-////        Criteria criteria = new Criteria("lanewayId").is(laneway.getId());
-////        CriteriaQuery query = new CriteriaQuery(criteria);
-////        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
-////        List<InventoryInfo> inventoryInfoList1 = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
-//
-//
-//            long count = inventoryInfoList.size();
-//            int step = 1000;
-//            long times = count / step;
-//            long left = count / step;
-//            if (left > 0) {
-//                times++;
-//            }
-//
-//            long pageIndex = 0L;
-//            long totalIndexSize = 0L;
-//            while (times > 0) {
-//
-//                long skip = (++pageIndex - 1) * step;
-//                times--;
-//
-//                List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
-//
-//                List<UpdateQuery> updateQueries = new ArrayList<>();
-//                for (InventoryInfo inventoryInfo : currentInventoryInfoList) {
-//                    Map<String, Object> updatedMap = prepareLanewayUpdatedInfo(inventoryInfo, laneway);
-////                updateInventoryInfo(inventoryInfo.getInventoryItemDetailId().toString(), updatedMap, dataChangeInfo.getTableName());
-//                    Document document = Document.create();
-//                    document.putAll(updatedMap);
-//                    UpdateQuery updateQuery = UpdateQuery.builder(inventoryInfo.getInventoryItemDetailId().toString())
-//                            .withDocument(document)
-//                            .withIfSeqNo(null)  // 忽略 seq_no
-//                            .withIfPrimaryTerm(null) // 忽略 primary_term
-//                            .withDocAsUpsert(true)// 如果文档不存在则创建
-//                            .build();
-//                    updateQueries.add(updateQuery);
-//                }
-//                if (updateQueries.size() > 0) {
-//                    // 执行批量更新
-//                    elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
-//                }
-//
-//            }
-//
-//
-//            stopWatch.stop();
-//            long mills = stopWatch.getTotalTimeMillis();
-//            log.info("updateInventoryInfoOfLaneway complete {} ms", mills);
-//
-//
-//        } catch (Exception ex) {
-//            log.error("", ex);
-//            throw ex;
-//        } finally {
-//
-//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-//                lock.unlock();
-//            }
-//
-//            log.info("InventoryInfo - {} release lock  success ", lockKey);
-//
-//        }
-//    }
-//
-////endregion
 
     private void deletedByInventoryItemDetail(InventoryItemDetail inventoryItemDetail) throws InterruptedException {
         Map<String, Object> updatedMap = new HashMap<>();
@@ -2267,6 +1904,108 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         updatedMap.put("positionLevel", inventoryItemDetail.getPositionLevel());
         updatedMap.put("packageMethod", inventoryItemDetail.getPackageMethod());
         return updatedMap;
+    }
+
+
+    @Override
+    public String allocatedReason(String materialCode) throws Exception {
+        Material material = this.materialService.getByCode(materialCode);
+        long materialId = material.getId();
+        InventoryInfoRequest request = new InventoryInfoRequest();
+        List<String> sourceFieldList = new ArrayList<>();
+        sourceFieldList.add("inventoryItemDetailId");
+        request.setSourceFieldList(sourceFieldList);
+        request.setPageIndex(0);
+        request.setPageSize(1);
+        request.setDeleted(0);
+        request.setMaterialId(materialId);
+        PageData<InventoryInfo> pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存不存在";
+        }
+        request.setInventoryXStatus(0);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存状态不是正常";
+        }
+        request.setInventoryIsExpired(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存已过期";
+        }
+        request.setInventoryIsLocked(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存已锁定";
+        }
+        request.setInventoryItemIsLocked(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存明细已锁定";
+        }
+        request.setInventoryItemXStatus(0);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存明细状态不是正常";
+        }
+        request.setInventoryItemIsExpired(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存明细已过期";
+        }
+        request.setXStatus(0);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存详情状态不是正常";
+        }
+        request.setIsLocked(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存详情已锁定";
+        }
+        request.setIsExpired(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存详情已过期";
+        }
+        request.setLocationXStatus(1);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "货位状态未启用";
+        }
+        request.setForbidOutbound(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "货位禁出";
+        }
+        request.setLocationIsLocked(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "货位已锁定";
+        }
+        request.setIsCountLocked(false);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "货位已盘点锁定";
+        }
+        //平库也可以分配，默认只能立库
+        request.setLocationXType(1);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "货位类型不是立库";
+        }
+        request.setLanewayXStatus(1);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "巷道状态未启用";
+        }
+        request.setEnoughPackQuantity(true);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "没有可分配的库存";
+        }
+        return "暂未查出公共原因";
+
     }
 
 

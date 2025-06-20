@@ -8,6 +8,7 @@ import gs.com.gses.service.InventoryInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -104,5 +105,15 @@ public class InventoryController {
     public MessageResult<Void> updateByInventoryDb(@PathVariable Long id) throws InterruptedException {
         inventoryInfoService.updateByInventoryDb(id);
         return MessageResult.success();
+    }
+
+    /**
+     * 下载失败数据
+     * @param materialCode
+     * @throws Exception
+     */
+    @GetMapping("/allocatedReason")
+    public MessageResult<String> allocatedReason(String materialCode) throws Exception {
+        return MessageResult.success(this.inventoryInfoService.allocatedReason(materialCode));
     }
 }

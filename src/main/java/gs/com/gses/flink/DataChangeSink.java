@@ -58,7 +58,7 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
             mqMessage.setRouteKey(RabbitMQConfig.DIRECT_ROUTING_KEY);
             mqMessage.setQueue(RabbitMQConfig.DIRECT_QUEUE_NAME);
             mqMessage.setTraceId(dataChangeInfo.getTraceId());
-            directExchangeProducer.produce(mqMessage);
+            directExchangeProducer.produce(mqMessage,messageProperties);
         } catch (Exception ex) {
             log.error("", ex);
         } finally {

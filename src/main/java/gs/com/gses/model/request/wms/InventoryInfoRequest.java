@@ -461,7 +461,7 @@ public class InventoryInfoRequest extends RequestPage {
      * 备注
      */
     private String comments;
-
+    private Boolean enoughPackQuantity;
     /**
      * 物料扩展属性预留字段1
      */

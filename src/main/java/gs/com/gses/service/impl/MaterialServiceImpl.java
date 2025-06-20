@@ -23,7 +23,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
     @Override
     public Material getByCode(String materialCode) throws Exception {
         if (StringUtils.isEmpty(materialCode)) {
-            return null;
+            throw new Exception("materialCode is null ");
         }
         LambdaQueryWrapper<Material> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Material::getXCode, materialCode);

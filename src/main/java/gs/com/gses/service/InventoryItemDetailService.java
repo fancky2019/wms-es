@@ -22,10 +22,9 @@ public interface InventoryItemDetailService extends IService<InventoryItemDetail
 
     void importExcelModifyMStr12(HttpServletResponse httpServletResponse, MultipartFile file) throws IOException;
 
-    <T> void exportExcelModifyMStrTemplate(HttpServletResponse httpServletResponse,Class<T> cla) throws IOException;
+    <T> void exportExcelModifyMStrTemplate(HttpServletResponse httpServletResponse, Class<T> cla) throws IOException;
 
     void downloadErrorData(HttpServletResponse response) throws IOException;
-
 
 
 
