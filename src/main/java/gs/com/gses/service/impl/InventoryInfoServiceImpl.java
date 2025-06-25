@@ -591,6 +591,13 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setIsCountLocked(false);
         //平库也可以分配，默认只能立库
 //        request.setLocationXType(1);
+        request.setInventoryPackageQuantityGtZero(true);
+        request.setInventoryAllocatedPackageQuantityEqualZero(true);
+        request.setInventoryItemPackageQuantityGtZero(true);
+        request.setInventoryItemAllocatedPackageQuantityEqualZero(true);
+        request.setPackageQuantityGtZero(true);
+        request.setAllocatedPackageQuantityEqualZero(true);
+
 
         request.setLanewayXStatus(1);
 
@@ -686,12 +693,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         }
         //rangeQuery gt  gte  lte
 
-        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryPackageQuantity").gt(0));
-        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryAllocatedPackageQuantity", 0));
-        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryItemPackageQuantity").gt(0));
-        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemAllocatedPackageQuantity", 0));
-        boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
+//        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryPackageQuantity").gt(0));
+//        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryAllocatedPackageQuantity", 0));
+//        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryItemPackageQuantity").gt(0));
+//        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemAllocatedPackageQuantity", 0));
+//        boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
         //  boolQueryBuilder.must(QueryBuilders.termQuery("allocatedPackageQuantity", 0));
+
+
         if (request.getMaterialId() != null && request.getMaterialId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("materialId", request.getMaterialId()));
         }
@@ -702,8 +711,43 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsSealed", request.getInventoryItemIsSealed()));
         }
 
-        if (request.getEnoughPackQuantity() != null) {
+        if (request.getPackageQuantityGtZero() != null && request.getPackageQuantityGtZero()) {
+            boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
+        }
+        if (request.getAllocatedPackageQuantityEqualZero() != null && request.getAllocatedPackageQuantityEqualZero()) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("allocatedPackageQuantity", 0));
+        }
+
+        if (request.getInventoryItemPackageQuantityGtZero() != null && request.getInventoryItemPackageQuantityGtZero()) {
+            boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryItemPackageQuantity").gt(0));
+        }
+        if (request.getInventoryPackageQuantityGtZero() != null && request.getInventoryPackageQuantityGtZero()) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemAllocatedPackageQuantity", 0));
+        }
+
+        if (request.getInventoryAllocatedPackageQuantityEqualZero() != null && request.getInventoryAllocatedPackageQuantityEqualZero()) {
+            boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryPackageQuantity").gt(0));
+        }
+        if (request.getInventoryAllocatedPackageQuantityEqualZero() != null && request.getInventoryAllocatedPackageQuantityEqualZero()) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryAllocatedPackageQuantity", 0));
+        }
+
+
+        if (request.getEnoughPackQuantity() != null && request.getEnoughPackQuantity()) {
             Script script = new Script("doc['packageQuantity'].value > doc['allocatedPackageQuantity'].value");
+            ScriptQueryBuilder scriptQuery = QueryBuilders.scriptQuery(script);
+            boolQueryBuilder.must(scriptQuery);
+        }
+
+        if (request.getItemEnoughPackQuantity() != null && request.getItemEnoughPackQuantity()) {
+            Script script = new Script("doc['inventoryItemPackageQuantity'].value > doc['inventoryItemAllocatedPackageQuantity'].value");
+            ScriptQueryBuilder scriptQuery = QueryBuilders.scriptQuery(script);
+            boolQueryBuilder.must(scriptQuery);
+        }
+
+
+        if (request.getInventoryEnoughPackQuantity() != null && request.getInventoryEnoughPackQuantity()) {
+            Script script = new Script("doc['inventoryPackageQuantity'].value > doc['inventoryAllocatedPackageQuantity'].value");
             ScriptQueryBuilder scriptQuery = QueryBuilders.scriptQuery(script);
             boolQueryBuilder.must(scriptQuery);
         }
@@ -1926,17 +1970,17 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setInventoryXStatus(0);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存状态不是正常";
+            return "库存主表状态不是正常";
         }
         request.setInventoryIsExpired(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存已过期";
+            return "库存主表已过期";
         }
         request.setInventoryIsLocked(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存已锁定";
+            return "库存主表已锁定";
         }
         request.setInventoryItemIsLocked(false);
         pageData = getInventoryInfoPage(request);
@@ -2002,8 +2046,21 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "没有可分配的库存";
+            return "库存详情没有可分配的库存";
         }
+
+        request.setItemEnoughPackQuantity(true);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存明细有可分配的库存";
+        }
+
+        request.setInventoryEnoughPackQuantity(true);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存主表没有可分配的库存";
+        }
+
         return "暂未查出公共原因";
 
     }

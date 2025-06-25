@@ -81,6 +81,9 @@ public class InventoryInfoRequest extends RequestPage {
      */
     private BigDecimal inventoryAllocatedSmallUnitQuantity;
 
+    private Boolean inventoryEnoughPackQuantity;
+    private Boolean  inventoryPackageQuantityGtZero;
+    private Boolean  inventoryAllocatedPackageQuantityEqualZero;
     /**
      * 已分配包装单位数量
      */
@@ -265,6 +268,10 @@ public class InventoryInfoRequest extends RequestPage {
      * 包装单位数量
      */
     private BigDecimal inventoryItemPackageQuantity;
+    private Boolean itemEnoughPackQuantity;
+    private Boolean  inventoryItemPackageQuantityGtZero;
+
+    private Boolean inventoryItemAllocatedPackageQuantityEqualZero;
 //
 //    /**
 //     * 已分配最小单位数量
@@ -462,6 +469,8 @@ public class InventoryInfoRequest extends RequestPage {
      */
     private String comments;
     private Boolean enoughPackQuantity;
+    private Boolean packageQuantityGtZero;
+    private Boolean allocatedPackageQuantityEqualZero;
     /**
      * 物料扩展属性预留字段1
      */

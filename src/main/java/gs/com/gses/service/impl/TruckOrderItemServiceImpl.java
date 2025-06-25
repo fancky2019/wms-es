@@ -9,6 +9,7 @@ import gs.com.gses.model.entity.Material;
 import gs.com.gses.model.entity.ShipOrder;
 import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.entity.TruckOrderItem;
+import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
@@ -242,7 +243,15 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrderItem> page = new Page<>(request.getPageIndex(), request.getPageSize());
-
+        if(CollectionUtils.isEmpty(request.getSortFieldList()))
+        {
+            List<Sort> sortFieldList=new ArrayList<>();
+            Sort sort=new Sort();
+            sort.setSortField("id");
+            sort.setSortType("desc");
+            sortFieldList.add(sort);
+            request.setSortFieldList(sortFieldList);
+        }
         if (CollectionUtils.isNotEmpty(request.getSortFieldList())) {
             List<OrderItem> orderItems = LambdaFunctionHelper.getWithDynamicSort(request.getSortFieldList());
             page.setOrders(orderItems);

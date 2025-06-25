@@ -35,6 +35,8 @@ import gs.com.gses.service.api.WmsService;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.keyvalue.MultiKey;
+import org.apache.commons.collections4.map.MultiKeyMap;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
@@ -92,6 +94,28 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
+        if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
+            throw new Exception("装车单明细为空");
+        }
+
+        MultiKeyMap<MultiKey, List<TruckOrderItemRequest>> multiKeyMap = new MultiKeyMap<>();
+        for (TruckOrderItemRequest p : request.getTruckOrderItemRequestList()) {
+            MultiKey key = new MultiKey<>(p.getProjectNo(), p.getDeviceNo(), p.getMaterialCode());
+            List<TruckOrderItemRequest> group = multiKeyMap.get(key);
+            if (group == null) {
+                group = new ArrayList<>();
+                multiKeyMap.put(key, group);
+            }
+            group.add(p);
+        }
+
+        for (MultiKey multiKey : multiKeyMap.keySet()) {
+            List<TruckOrderItemRequest> itemList = multiKeyMap.get(multiKey);
+            if (itemList.size() > 1) {
+                throw new Exception("项目号设备号物料号重复 - " + StringUtils.join(multiKey.getKeys(), ","));
+            }
+        }
+
         List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
         HashSet<String> shipOrderCodeSet = new HashSet<>();
         List<ShipOrderItemResponse> allMatchedShipOrderItemResponseList = new ArrayList<>();
@@ -142,7 +166,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             List<String> currentApplyShipOrderList = currentShipOrderItemResponseList.stream().map(p -> p.getApplyShipOrderCode()).distinct().collect(Collectors.toList());
             List<String> currentShipOrderIdStrList = currentShipOrderItemResponseList.stream().map(p -> p.getShipOrderId().toString()).distinct().collect(Collectors.toList());
             List<String> currentShipOrderCodeList = currentShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
-            List<String>  shipOrderItemIdStrList=currentShipOrderItemResponseList.stream().map(p -> p.getId().toString()).distinct().collect(Collectors.toList());
+            List<String> shipOrderItemIdStrList = currentShipOrderItemResponseList.stream().map(p -> p.getId().toString()).distinct().collect(Collectors.toList());
 
 
             String currentApplyShipOrderStr = String.join(",", currentApplyShipOrderList);
@@ -156,7 +180,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
             for (String shipOrderCode : currentShipOrderCodeList) {
                 BigDecimal currentOrderQuantity = currentShipOrderItemResponseList.stream()
-                        .filter(p->p.getShipOrderCode().equals(shipOrderCode))
+                        .filter(p -> p.getShipOrderCode().equals(shipOrderCode))
                         .map(ShipOrderItemResponse::getRequiredPkgQuantity)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 List<ShipOrderPalletRequest> added = shipOrderPalletRequestList.stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).collect(Collectors.toList());
@@ -407,6 +431,15 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrder> page = new Page<>(request.getPageIndex(), request.getPageSize());
 
+        if(CollectionUtils.isEmpty(request.getSortFieldList()))
+        {
+            List<Sort> sortFieldList=new ArrayList<>();
+            Sort sort=new Sort();
+            sort.setSortField("id");
+            sort.setSortType("desc");
+            sortFieldList.add(sort);
+            request.setSortFieldList(sortFieldList);
+        }
         if (CollectionUtils.isNotEmpty(request.getSortFieldList())) {
             List<OrderItem> orderItems = LambdaFunctionHelper.getWithDynamicSort(request.getSortFieldList());
             page.setOrders(orderItems);

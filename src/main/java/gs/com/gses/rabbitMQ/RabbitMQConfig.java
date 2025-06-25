@@ -39,7 +39,8 @@ public class RabbitMQConfig {
 
     @Autowired
     ObjectMapper objectMapper;
-
+    @Autowired
+    PushConfirmCallback pushConfirmCallback;
     //region 常量参数
     public static final int RETRY_INTERVAL = 100000;
 
@@ -149,7 +150,9 @@ public class RabbitMQConfig {
 
         //消息没有生产到交换机
 //        // 消息生产确认, yml需要配置 publisher-confirms: true
-        rabbitTemplate.setConfirmCallback(new PushConfirmCallback());
+        rabbitTemplate.setConfirmCallback(pushConfirmCallback);
+//        rabbitTemplate.setConfirmCallback(new PushConfirmCallback());
+
 
         return rabbitTemplate;
     }

@@ -13,8 +13,11 @@ import org.springframework.amqp.core.MessageProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.StopWatch;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +32,7 @@ public class BaseRabbitMqHandler {
 
 //    private static final Logger logger = LoggerFactory.getLogger(BaseRabbitMqHandler.class);
 
-    private static final String RABBIT_MQ_MESSAGE_ID_PREFIX = "rabbitMQ:messageId:";
+    private static final String RABBIT_MQ_MESSAGE_ID_PREFIX = "RabbitMQ:messageId:";
     //
     private static final int TOTAL_RETRY_COUNT = 4;
     private static final int EXPIRE_TIME = 24 * 60 * 60;
@@ -54,9 +57,12 @@ public class BaseRabbitMqHandler {
 
         int retryCount = 0;
         String msgContent = null;
+        StopWatch stopWatch = new StopWatch("onMessage");
+        stopWatch.start("onMessage");
         try {
             MDC.put("traceId", traceId);
             log.info("StartConsumeMessage msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+
             msgContent = new String(message.getBody());
 
             String mqMsgIdKey = RABBIT_MQ_MESSAGE_ID_PREFIX + msgId;
@@ -126,8 +132,28 @@ public class BaseRabbitMqHandler {
                 }
             }
         } finally {
+
+
+            try {
+                String queueName = message.getMessageProperties().getConsumerQueue();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm");
+                String nowStr = LocalDateTime.now().format(formatter);
+                String key="RabbitMQ:Consume:"+queueName+":"+nowStr;
+                Long newValue = redisTemplate.opsForValue().increment(key);
+                if (newValue == 1) {
+                    redisTemplate.expire(key, 24*12*60, TimeUnit.SECONDS);
+                }
+            } catch (Exception ex) {
+                log.error("", ex);
+            }
+
+            stopWatch.stop();
+            long mills = stopWatch.getTotalTimeMillis();
+            log.info("EndConsumeMessage msgId - {},businessKey - {} ,businessId - {} ,ConsumeMessageCostTime - {}", msgId, businessKey, businessId, mills);
             MDC.remove("traceId");
+
         }
+
     }
 
     private void retry(Channel channel, Message message, int retryCount, String exceptionMsg) throws IOException, InterruptedException {
