@@ -33,5 +33,19 @@ public interface BasicInfoCacheService {
 
     PackageUnit loadFromDbPackageUnit(Long packageUnitId) throws InterruptedException;
 
+    void updateLocation(Location location) throws InterruptedException;
+
+    void updateLaneway(Laneway laneway) throws InterruptedException;
+
+    void updateZone(Zone zone) throws InterruptedException;
+
+    void updateMaterial(Material material) throws InterruptedException;
+
+    void updateWarehouse(Warehouse wareHouse) throws InterruptedException;
+
+
+
+
+
     void batch();
 }

@@ -195,6 +195,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         return location;
     }
 
+
     @Override
     public Laneway loadFromDbLaneway(Long lanewayId) throws InterruptedException {
         HashOperations<String, String, Laneway> hashOps = redisTemplate.opsForHash();
@@ -202,7 +203,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         Laneway laneway = (Laneway) hashOps.get(key, lanewayId.toString());
         if (laneway == null) {
 
-            String lockKey = locationPrefix + "redisson";
+            String lockKey = lanewayPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             try {
@@ -239,7 +240,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         Zone zone = (Zone) hashOps.get(key, zoneId.toString());
         if (zone == null) {
 
-            String lockKey = locationPrefix + "redisson";
+            String lockKey = zonePrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             try {
@@ -319,7 +320,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         Warehouse warehouse = (Warehouse) hashOps.get(key, wareHouseId.toString());
         if (warehouse == null) {
 
-            String lockKey = locationPrefix + "redisson";
+            String lockKey = warehousePrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             try {
@@ -352,11 +353,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public Orgnization loadFromDbOrgnization(Long orgnizationd) throws InterruptedException {
         HashOperations<String, String, Orgnization> hashOps = redisTemplate.opsForHash();
-        String key = warehousePrefix;
+        String key = orgnizationPrefix;
         Orgnization orgnization = (Orgnization) hashOps.get(key, orgnizationd.toString());
         if (orgnization == null) {
 
-            String lockKey = locationPrefix + "redisson";
+            String lockKey = orgnizationPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             try {
@@ -389,11 +390,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public PackageUnit loadFromDbPackageUnit(Long packageUnitId) throws InterruptedException {
         HashOperations<String, String, PackageUnit> hashOps = redisTemplate.opsForHash();
-        String key = warehousePrefix;
+        String key = packageUnitPrefix;
         PackageUnit packageUnit = (PackageUnit) hashOps.get(key, packageUnitId.toString());
         if (packageUnit == null) {
 
-            String lockKey = locationPrefix + "redisson";
+            String lockKey = packageUnitPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             try {
@@ -423,13 +424,48 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         return packageUnit;
     }
 
+    @Override
+    public void updateLocation(Location location) throws InterruptedException {
+        HashOperations<String, String, Location> hashOps = redisTemplate.opsForHash();
+        String key = locationPrefix;
+        hashOps.put(key, location.getId().toString(), location);
+    }
+
+    @Override
+    public void updateLaneway(Laneway laneway) throws InterruptedException {
+        HashOperations<String, String, Laneway> hashOps = redisTemplate.opsForHash();
+        String key = lanewayPrefix;
+        hashOps.put(key, laneway.getId().toString(), laneway);
+    }
+
+    @Override
+    public void updateZone(Zone zone) throws InterruptedException {
+        HashOperations<String, String, Zone> hashOps = redisTemplate.opsForHash();
+        String key = zonePrefix;
+        hashOps.put(key, zone.getId().toString(), zone);
+    }
+
+    @Override
+    public void updateMaterial(Material material) throws InterruptedException {
+        HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
+        String key = materialPrefix;
+        hashOps.put(key, material.getId().toString(), material);
+    }
+
+    @Override
+    public void updateWarehouse(Warehouse wareHouse) throws InterruptedException {
+        HashOperations<String, String, Warehouse> hashOps = redisTemplate.opsForHash();
+        String key = warehousePrefix;
+        hashOps.put(key, wareHouse.getId().toString(), wareHouse);
+    }
+
 
     @Override
     public void batch() {
         //        Map<String, Material> materialMap=   redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
         Map<String, Warehouse> warehouseMap = new HashMap<>();
         Map<String, Orgnization> orgnizationMap = new HashMap<>();
-       // Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+        // Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
 
     }
 

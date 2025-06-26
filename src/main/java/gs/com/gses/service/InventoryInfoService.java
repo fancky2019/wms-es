@@ -3,6 +3,7 @@ package gs.com.gses.service;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
+import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 
 import java.util.HashMap;
@@ -38,7 +39,7 @@ public interface InventoryInfoService {
     void updateByInventoryItemDb(Long id) throws InterruptedException;
     void updateByInventoryDb(Long id) throws InterruptedException;
 
-    String allocatedReason(String materialCode) throws Exception;
+    String allocatedReason(ShipOrderItemRequest request) throws Exception;
 
-
+    void addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception;
 }

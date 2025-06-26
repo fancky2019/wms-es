@@ -10,7 +10,10 @@ import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
+import gs.com.gses.model.request.wms.ShipOrderItemRequest;
+import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +61,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Autowired
     private ShipOrderInfoRepository shipOrderInfoRepository;
+
+    @Autowired
+    private ShipOrderService shipOrderService;
 
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
@@ -222,20 +228,20 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             locationMap.put(location.getId().toString(), location);
 
 
-            Laneway laneway = (Laneway) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, location.getLanewayId().toString());
+            Laneway laneway = (Laneway) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.lanewayPrefix, location.getLanewayId().toString());
             if (laneway == null) {
                 laneway = this.basicInfoCacheService.loadFromDbLaneway(location.getLanewayId());
             }
             lanewayMap.put(laneway.getId().toString(), laneway);
 
 
-            Zone zone = (Zone) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, laneway.getZoneId().toString());
+            Zone zone = (Zone) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.zonePrefix, laneway.getZoneId().toString());
             if (zone == null) {
                 zone = this.basicInfoCacheService.loadFromDbZone(laneway.getZoneId());
             }
             zoneMap.put(zone.getId().toString(), zone);
 
-            Warehouse warehouse = (Warehouse) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, zone.getWarehouseId().toString());
+            Warehouse warehouse = (Warehouse) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.warehousePrefix, zone.getWarehouseId().toString());
             if (warehouse == null) {
                 warehouse = this.basicInfoCacheService.loadFromDbWarehouse(zone.getWarehouseId());
             }
@@ -624,6 +630,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (request.getZoneId() != null && request.getZoneId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("zoneId", request.getZoneId()));
         }
+        if (StringUtils.isNotEmpty(request.getZoneCode())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("zoneCode", request.getZoneCode()));
+        }
+
         if (request.getInventoryXStatus() != null && request.getInventoryXStatus() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("inventoryXStatus", request.getInventoryXStatus()));
         }
@@ -704,6 +714,12 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (request.getMaterialId() != null && request.getMaterialId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("materialId", request.getMaterialId()));
         }
+
+        if (CollectionUtils.isNotEmpty(request.getMaterialCodeList())) {
+            //materialId 字段必须匹配给定的列表中的任意一个值
+            boolQueryBuilder.must(QueryBuilders.termsQuery("materialCode", request.getMaterialCodeList()));
+        }
+
         if (request.getIsSealed() != null) {
             boolQueryBuilder.must(QueryBuilders.termQuery("isSealed", request.getIsSealed()));
         }
@@ -1219,6 +1235,17 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
+    public void addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception {
+        InventoryItemDetail inventoryItemDetail = this.inventoryItemDetailService.getById(inventoryItemDetailId);
+        if (inventoryItemDetail == null) {
+            throw new Exception("库存详情不存在 - " + inventoryItemDetailId);
+        }
+
+
+    }
+
+
+    @Override
     public void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws Exception {
 
         InventoryItem changedInventoryItem = null;
@@ -1319,6 +1346,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         Location changedLocation = null;
 
         changedLocation = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Location.class);
+        this.basicInfoCacheService.updateLocation(changedLocation);
         //更新时间
         if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -1349,6 +1377,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 //  updateInventoryInfoOfLocation(changedLocation, dataChangeInfo);
 //                updateInventoryInfoOfLocationBatch(changedLocation, dataChangeInfo);
                 updateInventoryInfoByEntityBatch(changedLocation, changedLocation.getId(), dataChangeInfo);
+
                 break;
             case "DELETE":
 
@@ -1367,6 +1396,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         Laneway changedILaneway = null;
 
         changedILaneway = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), Laneway.class);
+        this.basicInfoCacheService.updateLaneway(changedILaneway);
         //更新时间
         if (InventoryInfoServiceImpl.INIT_INVENTORY_TIME == null) {
 
@@ -1802,7 +1832,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
 
-    private Map<String, Object> prepareInventoryUpdatedInfo(InventoryInfo inventoryInfo, Inventory inventory) {
+    private Map<String, Object> prepareInventoryUpdatedInfo(InventoryInfo inventoryInfo, Inventory inventory) throws InterruptedException {
         //inventory
         Map<String, Object> updatedMap = new HashMap<>();
         updatedMap.put("pallet", inventory.getPallet());
@@ -1835,7 +1865,46 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         updatedMap.put("orginLocationCode", inventory.getOrginLocationCode());
         updatedMap.put("palletType", inventory.getPalletType());
         updatedMap.put("volume", inventory.getVolume());
+        if (!inventory.getLocationId().equals(inventoryInfo.getLocationId())) {
 
+            Location location = (Location) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, inventory.getLocationId().toString());
+            if (location == null) {
+                location = this.basicInfoCacheService.loadFromDbLocation(inventory.getLocationId());
+            }
+            if (location == null) {
+                return updatedMap;
+            }
+
+            Laneway laneway = (Laneway) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.lanewayPrefix, location.getLanewayId().toString());
+            if (laneway == null) {
+                laneway = this.basicInfoCacheService.loadFromDbLaneway(location.getLanewayId());
+            }
+
+            Zone zone = (Zone) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.zonePrefix, laneway.getZoneId().toString());
+            if (zone == null) {
+                zone = this.basicInfoCacheService.loadFromDbZone(laneway.getZoneId());
+            }
+
+
+            Warehouse warehouse = (Warehouse) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.warehousePrefix, zone.getWarehouseId().toString());
+            if (warehouse == null) {
+                warehouse = this.basicInfoCacheService.loadFromDbWarehouse(zone.getWarehouseId());
+            }
+
+            Map<String, Object> updatedLanewayMap = prepareLanewayUpdatedInfo(inventoryInfo, laneway);
+            Map<String, Object> updatedLocationMap = prepareLocationUpdatedInfo(inventoryInfo, location);
+
+
+            updatedMap.put("locationId", location.getId());
+            updatedMap.put("lanewayId", laneway.getId());
+
+            updatedMap.put("zoneId", zone.getId());
+            updatedMap.put("zoneCode", zone.getXCode());
+            updatedMap.put("whid", warehouse.getId());
+            updatedMap.put("whCode", warehouse.getXCode());
+            updatedMap.putAll(updatedLocationMap);
+            updatedMap.putAll(updatedLanewayMap);
+        }
         return updatedMap;
     }
 
@@ -1952,8 +2021,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
     @Override
-    public String allocatedReason(String materialCode) throws Exception {
-        Material material = this.materialService.getByCode(materialCode);
+    public String allocatedReason(ShipOrderItemRequest shipOrderItemRequest) throws Exception {
+        if (StringUtils.isEmpty(shipOrderItemRequest.getMaterialCode())) {
+            throw new Exception("物料号为空");
+        }
+        Material material = this.materialService.getByCode(shipOrderItemRequest.getMaterialCode());
         long materialId = material.getId();
         InventoryInfoRequest request = new InventoryInfoRequest();
         List<String> sourceFieldList = new ArrayList<>();
@@ -1965,7 +2037,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setMaterialId(materialId);
         PageData<InventoryInfo> pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存不存在";
+            return "库存详情不存在";
         }
         request.setInventoryXStatus(0);
         pageData = getInventoryInfoPage(request);
@@ -2059,6 +2131,25 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
             return "库存主表没有可分配的库存";
+        }
+
+        if (StringUtils.isNotEmpty(shipOrderItemRequest.getShipOrderCode())) {
+            ShipOrderRequest shipOrderRequest = new ShipOrderRequest();
+            shipOrderRequest.setXcode(shipOrderItemRequest.getShipOrderCode());
+            shipOrderRequest.setSearchCount(false);
+            PageData<ShipOrderResponse> shipOrderResponsePageData = this.shipOrderService.getShipOrderPage(shipOrderRequest);
+            if (shipOrderResponsePageData.getData().isEmpty()) {
+                throw new Exception("发货单不存在 - " + shipOrderItemRequest.getShipOrderCode());
+            }
+            ShipOrderResponse shipOrderResponse = shipOrderResponsePageData.getData().get(0);
+            if (shipOrderResponse.getZoneID() != null && shipOrderResponse.getZoneID() > 0) {
+                request.setZoneId(shipOrderResponse.getZoneID());
+                pageData = getInventoryInfoPage(request);
+                if (pageData.getCount() == 0) {
+                    return "发货单指定zone - " + shipOrderResponse.getZoneID() + " 没有库存";
+                }
+            }
+
         }
 
         return "暂未查出公共原因";

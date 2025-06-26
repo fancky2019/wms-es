@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
-@RequestMapping("/inventoryItemDetail")
+@RequestMapping("/api/inventoryItemDetail")
 public class InventoryItemDetailController {
 
     @Autowired

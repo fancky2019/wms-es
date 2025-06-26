@@ -21,7 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @RestController
-@RequestMapping("/shipOrder")
+@RequestMapping("/api/shipOrder")
 public class ShipOrderController {
 //    org.apache.flink.util.InstantiationUtil
 

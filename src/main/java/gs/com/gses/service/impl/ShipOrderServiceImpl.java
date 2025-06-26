@@ -20,6 +20,7 @@ import gs.com.gses.service.ShipOrderService;
 import gs.com.gses.mapper.ShipOrderMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -97,7 +98,11 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         if (CollectionUtils.isNotEmpty(request.getShipOrderIdList())) {
             queryWrapper.in("Id", request.getShipOrderIdList());
         }
+        if (StringUtils.isNotEmpty(request.getXcode())) {
+            queryWrapper.like("XCode", request.getXcode());
 
+            // truckOrderItemQueryWrapper.like(TruckOrderItem::getCreatorName, request.getCreatorName());
+        }
         // 创建分页对象 (当前页, 每页大小)
         Page<ShipOrder> page = new Page<>(request.getPageIndex(), request.getPageSize());
         if (request.getSearchCount() != null) {

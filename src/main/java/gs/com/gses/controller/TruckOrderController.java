@@ -36,7 +36,7 @@ import java.util.List;
  */
 @RestController
 @Tag(name = "发车单", description = "发车单管理")
-@RequestMapping("/truckOrder")
+@RequestMapping("/api/truckOrder")
 public class TruckOrderController {
 
     @Autowired

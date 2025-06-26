@@ -40,7 +40,7 @@ import java.util.LinkedHashMap;
  *
  */
 @RestController
-@RequestMapping("/shipOrderInfo")
+@RequestMapping("/api/shipOrderInfo")
 public class ShipOrderInfoController {
 
     @Autowired

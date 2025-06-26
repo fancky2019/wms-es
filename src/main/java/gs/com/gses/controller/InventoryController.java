@@ -1,7 +1,9 @@
 package gs.com.gses.controller;
 
 import gs.com.gses.model.elasticsearch.InventoryInfo;
+import gs.com.gses.model.entity.InventoryItemDetail;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
+import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.service.InventoryInfoService;
@@ -13,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 
 @RestController
-@RequestMapping("/inventory")
+@RequestMapping("/api/inventory")
 public class InventoryController {
 
 
@@ -44,6 +46,18 @@ public class InventoryController {
 
 
     }
+
+    /**
+     *getInventoryInfoList
+     * @param request
+     * @return
+     * @throws Exception
+     */
+    @PostMapping("/getInventoryInfoPage")
+    public MessageResult<PageData<InventoryInfo>> getInventoryInfoPage(@RequestBody InventoryInfoRequest request) throws Exception {
+        return MessageResult.success(inventoryInfoService.getInventoryInfoPage(request));
+    }
+
 
     /**
      *@ignore
@@ -109,11 +123,24 @@ public class InventoryController {
 
     /**
      * 下载失败数据
-     * @param materialCode
+     * @param request
      * @throws Exception
      */
     @GetMapping("/allocatedReason")
-    public MessageResult<String> allocatedReason(String materialCode) throws Exception {
-        return MessageResult.success(this.inventoryInfoService.allocatedReason(materialCode));
+    public MessageResult<String> allocatedReason(ShipOrderItemRequest request) throws Exception {
+        return MessageResult.success(this.inventoryInfoService.allocatedReason(request));
     }
+
+
+    /**
+     *
+     * @param inventoryItemDetailId
+     * @throws Exception
+     */
+    @PostMapping("/addByInventoryItemDetailInfo")
+    public MessageResult<Void> addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception {
+        inventoryInfoService.updateByInventoryDb(inventoryItemDetailId);
+        return MessageResult.success();
+    }
+
 }

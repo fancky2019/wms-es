@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 //public class BasicInfoController {
 @RestController
-@RequestMapping("/basicInfo")
+@RequestMapping("/api/basicInfo")
 public class BasicInfoController {
 
 
