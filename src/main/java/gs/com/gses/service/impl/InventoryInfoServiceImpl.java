@@ -14,6 +14,7 @@ import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
+import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +65,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Autowired
     private ShipOrderService shipOrderService;
+
+    @Autowired
+    private ShipOrderItemService shipOrderItemService;
 
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
@@ -627,6 +631,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     public PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception {
 
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        if (request.getDeleted() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("deleted", request.getDeleted()));
+        }
         if (request.getZoneId() != null && request.getZoneId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("zoneId", request.getZoneId()));
         }
@@ -770,7 +777,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         if (StringUtils.isNotEmpty(request.getApplyOrOrderCode())) {
             boolQueryBuilder.must(QueryBuilders.termQuery("applyOrOrderCode", request.getApplyOrOrderCode()));
-        } else {
+        }
+
+        if (request.getApplyOrOrderCodeEmpty() != null && request.getApplyOrOrderCodeEmpty()) {
             // 过滤字段存在且非空
             boolQueryBuilder.mustNot(QueryBuilders.existsQuery("applyOrOrderCode"));
         }
@@ -878,7 +887,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception {
+    public HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws
+            Exception {
 
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         if (request.getZoneId() != null && request.getZoneId() > 0) {
@@ -1165,7 +1175,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     @Override
-    public void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws JsonProcessingException, InterruptedException {
+    public void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws
+            JsonProcessingException, InterruptedException {
 //        InventoryItemDetail detail = this.inventoryItemDetailService.getById(509955479831328L);
 //        String json = objectMapper.writeValueAsString(detail);
         InventoryItemDetail changedInventoryItemDetail = null;
@@ -1468,7 +1479,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
 
-    private void updateInventoryInfoOfDetail(InventoryItemDetail inventoryItemDetail, DataChangeInfo dataChangeInfo) throws InterruptedException {
+    private void updateInventoryInfoOfDetail(InventoryItemDetail inventoryItemDetail, DataChangeInfo dataChangeInfo) throws
+            InterruptedException {
 
         InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
 
@@ -1487,7 +1499,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
-    private void updateInventoryInfoOfItem(InventoryItem inventoryItem, DataChangeInfo dataChangeInfo) throws InterruptedException {
+    private void updateInventoryInfoOfItem(InventoryItem inventoryItem, DataChangeInfo dataChangeInfo) throws
+            InterruptedException {
 
         //        CriteriaQuery 适合简单的查询场景，对于复杂的聚合查询，建议使用 NativeSearchQuery
         Criteria criteria = new Criteria("inventoryItemId").is(inventoryItem.getId());
@@ -1510,7 +1523,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         }
     }
 
-    private <T> void updateInventoryInfoByEntityBatch(T entity, Long id, DataChangeInfo dataChangeInfo) throws Exception {
+    private <T> void updateInventoryInfoByEntityBatch(T entity, Long id, DataChangeInfo dataChangeInfo) throws
+            Exception {
 
 
         String lockKey = LOCK_KEY;
@@ -1641,7 +1655,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
 
-    private void updateInventoryInfoOfInventory(Inventory inventory, DataChangeInfo dataChangeInfo) throws InterruptedException {
+    private void updateInventoryInfoOfInventory(Inventory inventory, DataChangeInfo dataChangeInfo) throws
+            InterruptedException {
 
         Criteria criteria = new Criteria("inventoryId").is(inventory.getId());
 
@@ -1687,7 +1702,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
     // 更新方法2：使用字段映射
-    private void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) throws InterruptedException {
+    private void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) throws
+            InterruptedException {
 
         String lockKey = LOCK_KEY;// "redisson:updateInventoryInfo:" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
@@ -1832,7 +1848,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     }
 
 
-    private Map<String, Object> prepareInventoryUpdatedInfo(InventoryInfo inventoryInfo, Inventory inventory) throws InterruptedException {
+    private Map<String, Object> prepareInventoryUpdatedInfo(InventoryInfo inventoryInfo, Inventory inventory) throws
+            InterruptedException {
         //inventory
         Map<String, Object> updatedMap = new HashMap<>();
         updatedMap.put("pallet", inventory.getPallet());
@@ -1908,7 +1925,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         return updatedMap;
     }
 
-    private Map<String, Object> prepareInventoryItemUpdatedInfo(InventoryInfo inventoryInfo, InventoryItem inventoryItem) {
+    private Map<String, Object> prepareInventoryItemUpdatedInfo(InventoryInfo inventoryInfo, InventoryItem
+            inventoryItem) {
         //inventoryItem
         Map<String, Object> updatedMap = new HashMap<>();
         if (inventoryItem.getExpiredTime() != null && inventoryItem.getExpiredTime().compareTo(1592409600000L) > 0) {
@@ -1929,7 +1947,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         return updatedMap;
     }
 
-    private Map<String, Object> prepareInventoryItemDetailUpdatedInfo(InventoryInfo inventoryInfo, InventoryItemDetail inventoryItemDetail) {
+    private Map<String, Object> prepareInventoryItemDetailUpdatedInfo(InventoryInfo
+                                                                              inventoryInfo, InventoryItemDetail inventoryItemDetail) {
 
         Map<String, Object> updatedMap = new HashMap<>();
         updatedMap.put("carton", inventoryItemDetail.getCarton());
@@ -2150,6 +2169,27 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 }
             }
 
+            shipOrderItemRequest.setShipOrderId(shipOrderResponse.getId());
+            shipOrderItemRequest.setSearchCount(false);
+            PageData<ShipOrderItemResponse> shipOrderItemResponsePageData = this.shipOrderItemService.getShipOrderItemPage(shipOrderItemRequest);
+            if (shipOrderResponsePageData.getData().isEmpty()) {
+                throw new Exception("发货单没有该物料的明细 - " + shipOrderItemRequest.getShipOrderCode() + " 物料 - " + shipOrderItemRequest.getMaterialCode());
+            }
+            ShipOrderItemResponse shipOrderItemResponse = shipOrderItemResponsePageData.getData().get(0);
+            if (StringUtils.isNotEmpty(shipOrderItemResponse.getShipAccordingToOrderCode())) {
+                request.setApplyOrOrderCode(shipOrderItemResponse.getShipAccordingToOrderCode());
+                pageData = getInventoryInfoPage(request);
+                if (pageData.getCount() == 0) {
+                    return "没有备货的库存";
+                }
+            }
+
+        }
+
+        request.setApplyOrOrderCodeEmpty(true);
+        pageData = getInventoryInfoPage(request);
+        if (pageData.getCount() == 0) {
+            return "库存被备货";
         }
 
         return "暂未查出公共原因";

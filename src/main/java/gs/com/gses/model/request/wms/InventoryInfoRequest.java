@@ -223,6 +223,7 @@ public class InventoryInfoRequest extends RequestPage {
      * 理货/备货单号
      */
     private String applyOrOrderCode;
+    private Boolean applyOrOrderCodeEmpty;
 
     /**
      * 该库存是用某辆AGVID车号执行的任务

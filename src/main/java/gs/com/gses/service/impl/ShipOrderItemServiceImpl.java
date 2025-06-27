@@ -186,7 +186,12 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 //        queryWrapper.orderByDesc(User::getAge)
 //                .orderByAsc(User::getName);
 
-
+        if (request.getShipOrderId()!=null&&request.getShipOrderId()>0) {
+            queryWrapper.eq(ShipOrderItem::getShipOrderId, request.getShipOrderId());
+        }
+        if (request.getMaterialId()!=null&&request.getMaterialId()>0) {
+            queryWrapper.eq(ShipOrderItem::getMaterialId, request.getMaterialId());
+        }
         if (StringUtils.isNotEmpty(request.getM_Str7())) {
             queryWrapper.eq(ShipOrderItem::getM_Str7, request.getM_Str7());
         }
