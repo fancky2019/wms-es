@@ -2,6 +2,7 @@ package gs.com.gses.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
+import gs.com.gses.config.CorsProperties;
 import gs.com.gses.model.request.authority.CheckPermissionRequest;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.response.MessageResult;
@@ -30,8 +31,9 @@ import java.util.Map;
 @ConditionalOnProperty(value = "sbp.checkpermission", havingValue = "true")
 @Configuration
 public class AuthenticationFilter implements Filter {
-
-//    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
+    @Autowired
+    private CorsProperties corsProperties;
+    //    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
     @Autowired
     private AuthorityService authorityService;
 
@@ -40,8 +42,7 @@ public class AuthenticationFilter implements Filter {
 
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
 
         //路径变量，根据 / 分割，获得数组，去除最有一个数组元素
 
@@ -102,7 +103,7 @@ public class AuthenticationFilter implements Filter {
                 String msg = objectMapper.writeValueAsString(messageResult);
 
                 try {
-                    returnJson(httpServletResponse, msg);
+                    returnJson(httpServletRequest, httpServletResponse, msg);
                 } catch (Exception e) {
                     log.error("returnJson ", e);
                 }
@@ -111,7 +112,7 @@ public class AuthenticationFilter implements Filter {
                     messageResult.setMessage(ex.getMessage());
                     messageResult.setCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                     String msg = objectMapper.writeValueAsString(messageResult);
-                    returnJson(httpServletResponse, msg);
+                    returnJson(httpServletRequest, httpServletResponse, msg);
                 } catch (Exception e) {
                     log.error("returnJson ", e);
                 }
@@ -128,7 +129,7 @@ public class AuthenticationFilter implements Filter {
 //        System.out.println("Final status code: " + statusCode);
     }
 
-    private void returnJson(HttpServletResponse response, String json) throws Exception {
+    private void returnJson(HttpServletRequest httpServletRequest, HttpServletResponse response, String json) throws Exception {
 
 //        response.setHeader("Access-Control-Allow-Origin", "*");
 //        response.setHeader("Cache-Control","no-cache");
@@ -136,13 +137,18 @@ public class AuthenticationFilter implements Filter {
         response.setCharacterEncoding("UTF-8");
 //        response.setContentType("text/html; charset=utf-8");
         response.setContentType("application/json; charset=utf-8");
-
+        String origin = httpServletRequest.getHeader("Origin");
         // 设置跨域响应头
 //        response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
         response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
         response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
-        response.setHeader("Access-Control-Allow-Origin", "http://localhost:8030");
+       //跨域返回给源
+        response.setHeader("Access-Control-Allow-Origin", origin);
+
+//        response.setHeader("Access-Control-Allow-Credentials", "false");//不允许携带 cookie 或其他认证信息
+//        response.setHeader("Access-Control-Allow-Origin", "*");
+
         try {
             writer = response.getWriter();
             writer.print(json);
