@@ -247,7 +247,9 @@ public class LogAspect {
                     return MessageResult.faile("DuplicateSubmission:获取锁失败");
                 }
             } catch (Exception e) {
-                return MessageResult.faile(e.getMessage());
+                throw  e;
+                //不要吞了异常，到不了全局异常
+//                return MessageResult.faile(e.getMessage());
             } finally {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key

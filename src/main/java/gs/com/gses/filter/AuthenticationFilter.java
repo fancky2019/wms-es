@@ -144,11 +144,8 @@ public class AuthenticationFilter implements Filter {
         response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
         response.setHeader("Access-Control-Allow-Origin", "http://localhost:8030");
         try {
-
-
             writer = response.getWriter();
             writer.print(json);
-
         } catch (IOException e) {
             // logger.error("response error",e);
         } finally {

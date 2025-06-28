@@ -70,7 +70,6 @@ public class TruckOrderController {
 //        String json = objectMapper.writeValueAsString(request1);
         //endregion
 
-        Thread.sleep(5*1000);
         truckOrderService.addTruckOrderAndItem(request, token);
         return MessageResult.success();
     }
