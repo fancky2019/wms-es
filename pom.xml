@@ -17,24 +17,25 @@
         <spring-boot-admin.version>2.5.4</spring-boot-admin.version>
         <springdoc.version>1.7.0</springdoc.version>
         <mysql.version>8.0.33</mysql.version>
+        <mssql-jdbc.version>12.10.0.jre8</mssql-jdbc.version>
         <mybatis-plus.version>3.5.4.1</mybatis-plus.version>
         <pagehelper.version>2.1.0</pagehelper.version>
         <jsqlparser.version>4.7</jsqlparser.version>
-
         <commons-io.version>2.19.0</commons-io.version>
         <commons-lang3.version>3.14.0</commons-lang3.version>
+        <commons-collections4.version>4.4</commons-collections4.version>
         <springdoc.version>1.7.0</springdoc.version>
         <disruptor.version>3.4.4</disruptor.version>
         <activation.version>1.1.1</activation.version>
         <javaxmail.version>1.6.2</javaxmail.version>
-        <redisson.version>3.25.2</redisson.version>
+        <redisson.version>3.17.7</redisson.version>
+        <commons-codec.version>1.15</commons-codec.version>
         <mybatis-plus.version>3.5.6</mybatis-plus.version>
         <mysql-connector.version>8.0.33</mysql-connector.version>
         <pagehelper.version>2.1.0</pagehelper.version>
         <easyexcel.version>4.0.3</easyexcel.version>
         <xxl-job.version>2.4.1</xxl-job.version>
-<!--        <flink.version>1.19.0</flink.version>-->
-
+        <flink-sql-connector-sqlserver-cdc.version>3.3.0</flink-sql-connector-sqlserver-cdc.version>
         <flink.version>1.20.1</flink.version>
         <debezium.version>2.7.4.Final</debezium.version>
     </properties>
@@ -77,8 +78,7 @@
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>12.10.0.jre8</version>
-            <scope>compile</scope>
+            <version>${mssql-jdbc.version}</version>
         </dependency>
 
         <dependency>
@@ -104,7 +104,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
-            <version>4.4</version>
+            <version>${commons-collections4.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
@@ -190,7 +190,7 @@
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>1.15</version>
+            <version>${commons-codec.version}</version>
         </dependency>
 
         <!--        redisson-->
@@ -198,7 +198,7 @@
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
-            <version>3.17.7</version>
+            <version>${redisson.version}</version>
         </dependency>
 
 <!--        兼容 Java 8 的版本（2.0.x 系列）-->
@@ -321,7 +321,7 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-sql-connector-sqlserver-cdc</artifactId>
-            <version>3.3.0</version>
+            <version>${flink-sql-connector-sqlserver-cdc.version}</version>
 <!--            <scope>provided</scope>-->
         </dependency>
 

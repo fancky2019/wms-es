@@ -103,7 +103,6 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         request.setPallet(inventoryItemDetailRequest.getPallet());
         request.setMaterialId(inventoryItemDetailRequest.getMaterialId());
         request.setInventoryItemDetailId(inventoryItemDetailRequest.getId());
-
         Material material = materialService.getById(request.getMaterialId());
         if (material == null) {
             throw new Exception("can't find material - " + request.getMaterialId());

@@ -215,11 +215,11 @@ sbp:
     - "http://127.0.0.1:[*]"
   authority: http://gen-song.vip:14001/api/app      #;//http://10.100.200.43:9001/api/app
   hostAndPort: 10.100.200.43:9200
-  checkpermission: true
+  checkpermission: false
   initCache: false
   logMq: false
   flink:
-    enable: false
+    enable: true
     databaseList:
       - liku
     tableList:

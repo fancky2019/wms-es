@@ -177,7 +177,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             truckOrderItemRequest.setShipOrderId(currentShipOrderIdStr);
             truckOrderItemRequest.setShipOrderCode(currentShipOrderCodeStr);
             truckOrderItemRequest.setShipOrderItemId(currentShipOrderItemIdStr);
-
+            truckOrderItemRequest.setProjectName(currentShipOrderItemResponseList.get(0).getM_Str8());
             for (String shipOrderCode : currentShipOrderCodeList) {
                 BigDecimal currentOrderQuantity = currentShipOrderItemResponseList.stream()
                         .filter(p -> p.getShipOrderCode().equals(shipOrderCode))
@@ -431,10 +431,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrder> page = new Page<>(request.getPageIndex(), request.getPageSize());
 
-        if(CollectionUtils.isEmpty(request.getSortFieldList()))
-        {
-            List<Sort> sortFieldList=new ArrayList<>();
-            Sort sort=new Sort();
+        if (CollectionUtils.isEmpty(request.getSortFieldList())) {
+            List<Sort> sortFieldList = new ArrayList<>();
+            Sort sort = new Sort();
             sort.setSortField("id");
             sort.setSortType("desc");
             sortFieldList.add(sort);

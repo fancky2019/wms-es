@@ -35,6 +35,9 @@ public class BaseRabbitMqHandler {
     private static final String RABBIT_MQ_MESSAGE_ID_PREFIX = "RabbitMQ:messageId:";
     //
     private static final int TOTAL_RETRY_COUNT = 4;
+    /**
+     * 一天
+     */
     private static final int EXPIRE_TIME = 24 * 60 * 60;
 
     @Autowired
@@ -59,13 +62,14 @@ public class BaseRabbitMqHandler {
         String msgContent = null;
         StopWatch stopWatch = new StopWatch("onMessage");
         stopWatch.start("onMessage");
+        String mqMsgIdKey = RABBIT_MQ_MESSAGE_ID_PREFIX + msgId;
         try {
             MDC.put("traceId", traceId);
             log.info("StartConsumeMessage msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
 
             msgContent = new String(message.getBody());
 
-            String mqMsgIdKey = RABBIT_MQ_MESSAGE_ID_PREFIX + msgId;
+
             ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
 
             //添加重复消费redis 校验，不会存在并发同一个message
@@ -113,6 +117,8 @@ public class BaseRabbitMqHandler {
             if (!retry) {
                 try {
                     channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+                    //不重试，设置过期删除key
+                    redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS);
                     log.error("ConsumerFailAckSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
 
                 } catch (Exception ex) {
@@ -187,6 +193,8 @@ public class BaseRabbitMqHandler {
             String routingKey = message.getMessageProperties().getReceivedRoutingKey();
             String exchange = message.getMessageProperties().getReceivedExchange();
             String queueName = message.getMessageProperties().getConsumerQueue();
+            //不重试，设置过期删除key
+            redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS);
 //            //错误日志入库
 //            MqFailLog mqFailLog = new MqFailLog();
 //            mqFailLog.setMsgContentId(id);

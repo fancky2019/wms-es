@@ -1,6 +1,7 @@
 package gs.com.gses.config;
 
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -35,7 +36,7 @@ public class JacksonConfig {
 //    @Autowired
 //    private ObjectMapper objectMapper;      // 注入带有@Primary的主bean
 */
-    /**
+    /*
      * 时区在配置文件中配置
      * @return
      */
@@ -54,7 +55,8 @@ public class JacksonConfig {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 // 使用小写字母开头的命名策略 LOWER_CAMEL_CASE
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE);
-
+        //默认JsonInclude.Include.ALWAYS
+//        objectMapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
         // 日期和时间格式化
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));

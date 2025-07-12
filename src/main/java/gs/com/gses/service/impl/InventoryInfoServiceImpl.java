@@ -209,8 +209,16 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                                                  Map<String, Orgnization> orgnizationMap) throws InterruptedException {
         List<InventoryInfo> inventoryInfos = new ArrayList<>();
         List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(inventoryItemIdList)) {
+            log.info("addByInventoryItemDetailInfo fail inventoryItemIdList is empty");
+            return 0;
+        }
         List<InventoryItem> inventoryItemList = this.inventoryItemService.listByIds(inventoryItemIdList);
         List<Long> inventoryIdList = inventoryItemList.stream().map(p -> p.getInventoryId()).distinct().collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(inventoryIdList)) {
+            log.info("addByInventoryItemDetailInfo fail inventoryIdList is empty");
+            return 0;
+        }
         List<Inventory> inventoryList = this.inventoryService.listByIds(inventoryIdList);
 
 
@@ -261,7 +269,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             if (!allOrganiztionIdList.isEmpty()) {
                 List<String> allOrganiztionIdStrList = allOrganiztionIdList.stream().map(p -> p.toString()).collect(Collectors.toList());
                 List<Orgnization> orgnizationList = redisTemplate.opsForHash().multiGet(BasicInfoCacheServiceImpl.orgnizationPrefix, allOrganiztionIdStrList);
-                orgnizationMap = orgnizationList.stream().collect(Collectors.toMap(p -> p.getId().toString(), item -> item));
+                if (CollectionUtils.isNotEmpty(orgnizationList)) {
+                    orgnizationMap = orgnizationList.stream().collect(Collectors.toMap(p -> p.getId().toString(), item -> item));
+                } else {
+                    orgnizationMap = new HashMap<>();
+                }
             }
             List<String> materialIdList = inventoryItemDetailList.stream().map(p -> p.getMaterialId().toString()).distinct().collect(Collectors.toList());
             materialMap = redisUtil.getHashEntries(BasicInfoCacheServiceImpl.materialPrefix, materialIdList);
@@ -634,6 +646,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (request.getDeleted() != null) {
             boolQueryBuilder.must(QueryBuilders.termQuery("deleted", request.getDeleted()));
         }
+        if (StringUtils.isNotEmpty(request.getPallet())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("pallet", request.getPallet()));
+        }
+
         if (request.getZoneId() != null && request.getZoneId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("zoneId", request.getZoneId()));
         }
@@ -2056,8 +2072,17 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setMaterialId(materialId);
         PageData<InventoryInfo> pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存详情不存在";
+            return "无库存:库存详情不存在";
         }
+
+        if (StringUtils.isNotEmpty(shipOrderItemRequest.getPalletCode())) {
+            request.setPallet(shipOrderItemRequest.getPalletCode());
+            pageData = getInventoryInfoPage(request);
+            if (pageData.getCount() == 0) {
+                return "无库存:托盘 - " + shipOrderItemRequest.getPalletCode() + " 没物料 " + shipOrderItemRequest.getMaterialCode() + " 库存";
+            }
+        }
+
         request.setInventoryXStatus(0);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
@@ -2143,7 +2168,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setItemEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存明细有可分配的库存";
+            return "库存明细没有可分配的库存";
         }
 
         request.setInventoryEnoughPackQuantity(true);

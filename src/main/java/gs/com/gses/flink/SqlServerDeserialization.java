@@ -172,11 +172,12 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
             dataChangeInfo.setChangeTime(Optional.ofNullable(struct.get(TS_MS)).map(x -> Long.parseLong(x.toString())).orElseGet(System::currentTimeMillis));
 
 
-            try {
-                String jsonStr = objectMapper.writeValueAsString(dataChangeInfo);
-            } catch (Exception ee) {
-                log.error("jsonStr error", ee);
-            }
+//            try {
+//                String jsonStr = objectMapper.writeValueAsString(dataChangeInfo);
+//                log.info("dataChangeInfoJson - ", jsonStr);
+//            } catch (Exception ee) {
+//                log.error("jsonStr error", ee);
+//            }
 
             //7.输出数据  把反序列化结果发出去
             collector.collect(dataChangeInfo);
