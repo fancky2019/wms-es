@@ -206,6 +206,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
 //        long createTime = LocalDateTime.now().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
         long createTime = Instant.now().toEpochMilli();
+        request.getTruckOrderRequest().setCreationTime(LocalDateTime.now());
         String addTruckOrderRequestJson = objectMapper.writeValueAsString(request);
         log.info("addTruckOrderRequestJson -:{}", addTruckOrderRequestJson);
         //未登录会得到全局异常
@@ -249,31 +250,36 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
             throw new Exception("TruckOrderItem is empty");
         }
-        String shipOrderIds = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
-        Long shipOrderId = Long.valueOf(shipOrderIds.split(",")[0]);
-        ShipPickOrderRequest shipPickOrderRequest = new ShipPickOrderRequest();
-        shipPickOrderRequest.setShipOrderId(shipOrderId);
-        if (createTime == 0) {
-            createTime = System.currentTimeMillis();
-        }
-        shipPickOrderRequest.setStartCreationTime(createTime);
-        Sort sort = new Sort();
-        sort.setSortType("desc");
-        sort.setSortField("Id");
-        List<Sort> sortList = new ArrayList<>();
-        sortList.add(sort);
-        shipPickOrderRequest.setSortFieldList(sortList);
-        shipPickOrderRequest.setPageSize(1);
-        shipPickOrderRequest.setPageIndex(1);
-        shipPickOrderRequest.setSearchCount(false);
-        PageData<ShipPickOrderResponse> shipPickOrderPage = shipPickOrderService.getShipPickOrderPage(shipPickOrderRequest);
-        List<ShipPickOrderResponse> shipPickOrderResponseList = shipPickOrderPage.getData();
-        if (shipPickOrderResponseList.size() != 1) {
-            String str = MessageFormat.format("Get ShipPickOrder by shipOrderId - {0} fail", shipOrderId);
-            throw new Exception(str);
-        }
-        ShipPickOrderResponse shipPickOrderResponse = shipPickOrderResponseList.get(0);
 
+//        String shipOrderIds = request.getTruckOrderItemRequestList().get(0).getShipOrderId();
+//        Long shipOrderId = Long.valueOf(shipOrderIds.split(",")[0]);
+//        ShipPickOrderRequest shipPickOrderRequest = new ShipPickOrderRequest();
+//        shipPickOrderRequest.setShipOrderId(shipOrderId);
+//        if (createTime == 0) {
+//            createTime = System.currentTimeMillis();
+//        }
+//        shipPickOrderRequest.setStartCreationTime(createTime);
+//        Sort sort = new Sort();
+//        sort.setSortType("desc");
+//        sort.setSortField("Id");
+//        List<Sort> sortList = new ArrayList<>();
+//        sortList.add(sort);
+//        shipPickOrderRequest.setSortFieldList(sortList);
+//        shipPickOrderRequest.setPageSize(1);
+//        shipPickOrderRequest.setPageIndex(1);
+//        shipPickOrderRequest.setSearchCount(false);
+//        PageData<ShipPickOrderResponse> shipPickOrderPage = shipPickOrderService.getShipPickOrderPage(shipPickOrderRequest);
+//        List<ShipPickOrderResponse> shipPickOrderResponseList = shipPickOrderPage.getData();
+//        if (shipPickOrderResponseList.size() != 1) {
+//            String str = MessageFormat.format("Get ShipPickOrder by shipOrderId - {0} fail", shipOrderId);
+////            throw new Exception(str);
+//        }
+//        ShipPickOrderResponse shipPickOrderResponse = shipPickOrderResponseList.get(0);
+
+
+
+
+        LoginUserTokenDto user= UserInfoHolder.getUser();
         TruckOrderRequest truckOrderRequest = request.getTruckOrderRequest();
         LocalDateTime creationTime = LocalDateTime.now();
         if (request.getTruckOrderRequest().getCreationTime() != null) {
@@ -281,16 +287,21 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         }
         truckOrderRequest.setCreationTime(creationTime);
         truckOrderRequest.setLastModificationTime(creationTime);
-        truckOrderRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
-        truckOrderRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
+        truckOrderRequest.setCreatorId(user.getId());
+        truckOrderRequest.setCreatorName(user.getAccountName());
+//        truckOrderRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
+//        truckOrderRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
 
         TruckOrder truckOrder = add(request.getTruckOrderRequest());
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
             truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
             truckOrderItemRequest.setCreationTime(LocalDateTime.now());
             truckOrderItemRequest.setLastModificationTime(LocalDateTime.now());
-            truckOrderItemRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
-            truckOrderItemRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
+            truckOrderItemRequest.setCreatorId(user.getId());
+            truckOrderItemRequest.setCreatorName(user.getAccountName());
+//            truckOrderItemRequest.setCreatorId(shipPickOrderResponse.getCreatorId().toString());
+//            truckOrderItemRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
+
         }
         truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
         return truckOrder;

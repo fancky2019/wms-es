@@ -159,6 +159,7 @@ public class InventoryItemDetailRequest extends RequestPage {
     /**
      * 物料扩展属性预留字段7
      */
+    @JsonProperty("m_Str7")
     private String m_Str7;
 
     /**
@@ -184,6 +185,7 @@ public class InventoryItemDetailRequest extends RequestPage {
     /**
      * 物料扩展属性预留字段12
      */
+    @JsonProperty("m_Str12")
     private String m_Str12;
 
     /**

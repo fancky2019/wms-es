@@ -9,7 +9,9 @@ import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
+import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.ShipOrderService;
+import gs.com.gses.service.impl.UtilityConst;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -112,7 +114,9 @@ public class ShipOrderController {
         boolean retained = false;
         String topic = "topic1";
 //        ThreadLocalRandom
-        mqttProduce.publish(qos, retained, topic, msg, UUID.randomUUID().toString().replaceAll("-", ""));
+//        mqttProduce.publish(qos, retained, topic, msg, UUID.randomUUID().toString().replaceAll("-", ""));
+
+        mqttProduce.publish(Topics.TEST,msg, UUID.randomUUID().toString().replaceAll("-", ""));
     }
 
 }

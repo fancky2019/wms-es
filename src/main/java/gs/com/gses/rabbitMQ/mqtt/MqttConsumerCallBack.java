@@ -67,6 +67,9 @@ public class MqttConsumerCallBack implements MqttCallback {
                     long wmsTaskId = Long.parseLong(msg);
                     outBoundOrderService.taskComplete(wmsTaskId);
                     break;
+                case Topics.TEST:
+                    test(msg);
+                    break;
                 default:
                     break;
             }
@@ -76,6 +79,11 @@ public class MqttConsumerCallBack implements MqttCallback {
             //仍异常 会断开
 //           throw  ex;
         }
+    }
+
+    private void test(String msg) {
+        int m = Integer.parseInt("m");
+
     }
 
     /**

@@ -38,7 +38,7 @@ public class InventoryItemDetailController {
      * @throws Exception
      */
     @PostMapping("/getInventoryItemDetailPage")
-    public MessageResult<PageData<InventoryItemDetailResponse>> getInventoryItemDetailPage(InventoryItemDetailRequest request) throws Exception {
+    public MessageResult<PageData<InventoryItemDetailResponse>> getInventoryItemDetailPage(@RequestBody InventoryItemDetailRequest request) throws Exception {
         PageData<InventoryItemDetailResponse> page = inventoryItemDetailService.getInventoryItemDetailPage(request);
         return MessageResult.success(page);
     }
@@ -75,4 +75,9 @@ public class InventoryItemDetailController {
     }
 
 
+    @PostMapping("/checkDetailExist")
+    public MessageResult<Boolean> checkDetailExist(@RequestBody InventoryItemDetailRequest request) throws Exception {
+        Boolean re = inventoryItemDetailService.checkDetailExist(request);
+        return MessageResult.success(re);
+    }
 }

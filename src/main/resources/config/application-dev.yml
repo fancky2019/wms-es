@@ -24,7 +24,7 @@ spring:
   datasource:
     #    # sqlserver
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=liku;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -63,7 +63,7 @@ spring:
 
     #    单机
     # 远程服务器地址 127.0.0.1 10.100.200.43
-    host: 10.100.200.43
+    host: 127.0.0.1
     # 远程服务器端口
     port: 6379
 
@@ -213,13 +213,13 @@ sbp:
     - "http://10.100.200.32:8088"
     - "http://localhost:[*]"
     - "http://127.0.0.1:[*]"
-  authority: http://gen-song.vip:14001/api/app      #;//http://10.100.200.43:9001/api/app
+  authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
   hostAndPort: 10.100.200.43:9200
-  checkpermission: false
+  checkpermission: true
   initCache: false
   logMq: false
   flink:
-    enable: true
+    enable: false
     databaseList:
       - liku
     tableList:
@@ -263,9 +263,16 @@ mybatis-plus:
   #  M_Str1  默认命中mStr1
   configuration:
     map-underscore-to-camel-case: false  #默认true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 不配置由log4j2控制 ，会打印在控制台和日志  SQL脚本输出到控制台
+#    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl  #SQL脚本输出文件
 logging:
   config: classpath:log4j2.xml
-  #mybatis-plus 日志级别配置，不用配置
+  #mybatis-plus 日志级别配置，不用配置，会打印sql日志到控制台和文件
 #  level:
-#    com.baomidou.mybatisplus: DEBUG
+#    #    com.baomidou.mybatisplus: DEBUG
+#    com:
+#      baomidou:
+#        mybatisplus: DEBUG
+#      example:
+#        demo:
+#          dao: DEBUG

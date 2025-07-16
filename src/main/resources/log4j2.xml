@@ -55,7 +55,7 @@
     <loggers>
 <!--        过滤框架的debug-->
         <logger name="org.springframework" level="INFO"/>
-        <logger name="org.mybatis" level="INFO"/>
+        <logger name="org.mybatis" level="DEBUG"/>
         <logger name="org.thymeleaf" level="INFO"/>
         <logger name="org.redisson" level="INFO"/>
         <logger name="com.zaxxer.hikari" level="INFO"/>
@@ -71,7 +71,7 @@
 
         <!--     all  info  异步-->
 <!--        <AsyncRoot level="info">-->
-        <AsyncRoot level="info">
+        <AsyncRoot level="all">
             <appender-ref ref="Console"/>
             <appender-ref ref="RollingFile"/>
 <!--            <appender-ref ref="Mail"/>-->

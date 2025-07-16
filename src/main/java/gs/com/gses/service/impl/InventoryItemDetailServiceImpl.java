@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.easyecel.DropDownSetField;
 import gs.com.gses.easyecel.ResoveDropAnnotationUtil;
 import gs.com.gses.easyecel.handler.DropDownCellWriteHandler;
@@ -76,6 +77,9 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
     @Autowired
     private SqlSessionFactory sqlSessionFactory;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
 //
 //    @Override
 //    public List<InventoryItemDetail> getInventoryItemDetailPage(InventoryItemDetailRequest request) {
@@ -125,11 +129,28 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 //            throw new Exception("Can't get inventoryItemDetail info by m_Str7 ,m_Str12,materialCode");
             throw new Exception("库存不存在");
         }
+        InventoryItemDetailResponse inventoryItemDetailResponse = null;
         if (size > 1) {
 //            throw new Exception("Get more than one inventoryItemDetail info by  m_Str7 ,m_Str12,materialCode");
-            throw new Exception("匹配多个库存");
+            List<InventoryItemDetailResponse> detailResponseList = page.getData();
+            int count = 0;
+            if (StringUtils.isNotEmpty(request.getM_Str12())) {
+                for (InventoryItemDetailResponse detailResponse : detailResponseList) {
+                    List<String> mStr12List = Arrays.stream(detailResponse.getM_Str12().split(",")).collect(Collectors.toList());
+                    if (mStr12List.contains(request.getM_Str12())) {
+                        count++;
+                        inventoryItemDetailResponse = detailResponse;
+                    }
+                }
+            }
+            if (count > 1) {
+                throw new Exception("匹配多个库存");
+            }
+        }else {
+            inventoryItemDetailResponse = page.getData().get(0);
         }
-        InventoryItemDetailResponse inventoryItemDetailResponse = page.getData().get(0);
+
+//        InventoryItemDetailResponse inventoryItemDetailResponse = page.getData().get(0);
         if (inventoryItemDetailResponse.getPackageQuantity().compareTo(request.getPackageQuantity()) < 0) {
             // 设置小数点后两位，并指定舍入模式（如四舍五入）
 //            BigDecimal rounded = number.setScale(2, RoundingMode.HALF_UP);
@@ -144,6 +165,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             String str = MessageFormat.format("inventoryItem - {0} lost", inventoryItemDetailResponse.getInventoryItemId().toString());
             throw new Exception(str);
         }
+
         Inventory inventory = this.inventoryService.getById(inventoryItem.getInventoryId());
         if (inventory == null) {
             String str = MessageFormat.format("Inventory - {0} lost", inventoryItem.getInventoryId().toString());
@@ -479,6 +501,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
     @Override
     public PageData<InventoryItemDetailResponse> getInventoryItemDetailPage(InventoryItemDetailRequest request) throws
             Exception {
+        log.info(objectMapper.writeValueAsString(request));
         LambdaQueryWrapper<InventoryItemDetail> queryWrapper = new LambdaQueryWrapper<>();
 
         if (StringUtils.isNotEmpty(request.getM_Str7())) {

@@ -3,8 +3,10 @@ package gs.com.gses.model.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
 import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 
@@ -64,25 +66,7 @@ public class MqMessage implements Serializable {
     /**
      * 
      */
-    @TableField(value = "PublishAck")
-    private Boolean publishAck;
-
-    /**
-     * 
-     */
-    @TableField(value = "ConsumeAck")
-    private Boolean consumeAck;
-
-    /**
-     * 
-     */
-    @TableField(value = "ConsumeFail")
-    private Boolean consumeFail;
-
-    /**
-     * 
-     */
-    @TableField(value = "remark")
+    @TableField(value = "Remark")
     private String remark;
 
     /**
@@ -120,6 +104,72 @@ public class MqMessage implements Serializable {
      */
     @TableField(value = "LastModificationTime")
     private Long lastModificationTime;
+
+    /**
+     * 
+     */
+    @TableField(value = "BusinessKey")
+    private String businessKey;
+
+    /**
+     * 
+     */
+    @TableField(value = "Deleted")
+    private Integer deleted;
+
+    /**
+     * 
+     */
+    @TableField(value = "ErrorStack")
+    private String errorStack;
+
+    /**
+     * 
+     */
+    @TableField(value = "FailureReason")
+    private String failureReason;
+
+    /**
+     * 
+     */
+    @TableField(value = "MaxRetryCount")
+    private Integer maxRetryCount;
+
+    /**
+     * 
+     */
+    @TableField(value = "NextRetryTime")
+    private Date nextRetryTime;
+
+    /**
+     * 
+     */
+    @TableField(value = "RetryCount")
+    private Integer retryCount;
+
+    /**
+     * 
+     */
+    @TableField(value = "Status")
+    private Integer status;
+
+    /**
+     * 
+     */
+    @TableField(value = "Version")
+    private Integer version;
+
+    /**
+     * 
+     */
+    @TableField(value = "BusinessId")
+    private Long businessId;
+
+    /**
+     * 
+     */
+    @TableField(value = "Retry")
+    private Boolean retry;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

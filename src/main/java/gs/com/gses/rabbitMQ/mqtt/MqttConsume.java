@@ -15,6 +15,17 @@ import org.springframework.context.annotation.Configuration;
 import javax.annotation.PostConstruct;
 import java.util.List;
 
+/**
+ * Paho 没有暴露 ack 控制的 API，也没有设计延迟 ACK 或手动 ACK 的机制。
+ *
+ * Spring Integration 的 MqttPahoMessageDrivenChannelAdapter 封装了 Paho，但自己做了消息投递的“延迟确认”处理机制：
+ * 拦截 messageArrived()；
+ * 将消息封装成 Spring 的 Message 对象；
+ * 附加一个 MqttAckCallback；
+ * 直到你调用 ack() 才真正从内部确认消息（或标记为失败重试）。
+ * 换句话说，Spring Integration 封装了一层“手动 ACK 管理器”。
+ *
+ */
 @Slf4j
 @Configuration
 public class MqttConsume {
@@ -106,7 +117,7 @@ public class MqttConsume {
 
     public void subscribe() throws MqttException {
 
-        //订阅主题
+        //订阅主题:生产和消费都要指定qos 为1
         //消息等级，和主题数组一一对应，服务端将按照指定等级给订阅了主题的客户端推送消息
         int[] qos = {1, 1, 1, 1};
         String[] topics = {"topic1", "topic2", "topic3", "OutBoundTaskComplete"};
