@@ -805,6 +805,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             boolQueryBuilder.must(QueryBuilders.termsQuery("materialId", request.getMaterialIdList()));
         }
 
+        if (CollectionUtils.isNotEmpty(request.getInventoryItemDetailIdList())) {
+            boolQueryBuilder.must(QueryBuilders.termsQuery("inventoryItemDetailId", request.getInventoryItemDetailIdList()));
+        }
+
 
 // 日期大于某个时间点
 //        RangeQueryBuilder dateQuery = QueryBuilders.rangeQuery("timestamp")

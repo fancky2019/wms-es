@@ -82,8 +82,8 @@ public class InventoryInfoRequest extends RequestPage {
     private BigDecimal inventoryAllocatedSmallUnitQuantity;
 
     private Boolean inventoryEnoughPackQuantity;
-    private Boolean  inventoryPackageQuantityGtZero;
-    private Boolean  inventoryAllocatedPackageQuantityEqualZero;
+    private Boolean inventoryPackageQuantityGtZero;
+    private Boolean inventoryAllocatedPackageQuantityEqualZero;
     /**
      * 已分配包装单位数量
      */
@@ -270,7 +270,7 @@ public class InventoryInfoRequest extends RequestPage {
      */
     private BigDecimal inventoryItemPackageQuantity;
     private Boolean itemEnoughPackQuantity;
-    private Boolean  inventoryItemPackageQuantityGtZero;
+    private Boolean inventoryItemPackageQuantityGtZero;
 
     private Boolean inventoryItemAllocatedPackageQuantityEqualZero;
 //
@@ -371,6 +371,7 @@ public class InventoryInfoRequest extends RequestPage {
      */
     private Long inventoryItemDetailId;
 
+    private List<Long> inventoryItemDetailIdList;
 //脚本设置 为long
 //    @Field(type = FieldType.Long)
 //    private Long id;

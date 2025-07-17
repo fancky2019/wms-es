@@ -19,16 +19,15 @@ import gs.com.gses.easyecel.DropDownSetField;
 import gs.com.gses.easyecel.ResoveDropAnnotationUtil;
 import gs.com.gses.easyecel.handler.DropDownCellWriteHandler;
 import gs.com.gses.model.bo.ModifyMStr12BoGroupKey;
+import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.mapper.InventoryItemDetailMapper;
+import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
-import gs.com.gses.service.InventoryItemDetailService;
-import gs.com.gses.service.InventoryItemService;
-import gs.com.gses.service.InventoryService;
-import gs.com.gses.service.MaterialService;
+import gs.com.gses.service.*;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -80,6 +79,8 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private InventoryInfoService inventoryInfoService;
 //
 //    @Override
 //    public List<InventoryItemDetail> getInventoryItemDetailPage(InventoryItemDetailRequest request) {
@@ -131,7 +132,6 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         }
         InventoryItemDetailResponse inventoryItemDetailResponse = null;
         if (size > 1) {
-//            throw new Exception("Get more than one inventoryItemDetail info by  m_Str7 ,m_Str12,materialCode");
             List<InventoryItemDetailResponse> detailResponseList = page.getData();
             int count = 0;
             if (StringUtils.isNotEmpty(request.getM_Str12())) {
@@ -142,40 +142,77 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                         inventoryItemDetailResponse = detailResponse;
                     }
                 }
+
+                if (count > 1) {
+                    throw new Exception("匹配多个库存");
+                }
+                request.setId(inventoryItemDetailResponse.getId());
+                checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+
+                String pallet = getPalletInfo(Arrays.asList(inventoryItemDetailResponse.getId()));
+                request.setPallet(pallet);
+            } else {
+                //求和
+                BigDecimal sum = detailResponseList.stream()
+                        .map(InventoryItemDetailResponse::getPackageQuantity)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                checkPackageQuantity(sum, request.getPackageQuantity());
+
+                List<Long> detailIdList = detailResponseList.stream().map(p -> p.getId()).collect(Collectors.toList());
+                String pallet = getPalletInfo(detailIdList);
+                request.setPallet(pallet);
+                inventoryItemDetailResponse = page.getData().get(0);
             }
-            if (count > 1) {
-                throw new Exception("匹配多个库存");
-            }
-        }else {
+
+        } else {
             inventoryItemDetailResponse = page.getData().get(0);
+            checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+            request.setId(inventoryItemDetailResponse.getId());
+            String pallet = getPalletInfo(Arrays.asList(inventoryItemDetailResponse.getId()));
+            request.setPallet(pallet);
         }
-
-//        InventoryItemDetailResponse inventoryItemDetailResponse = page.getData().get(0);
-        if (inventoryItemDetailResponse.getPackageQuantity().compareTo(request.getPackageQuantity()) < 0) {
-            // 设置小数点后两位，并指定舍入模式（如四舍五入）
-//            BigDecimal rounded = number.setScale(2, RoundingMode.HALF_UP);
-            // 固定两位小数
-            DecimalFormat df = new DecimalFormat("#0.00");
-            String formatted = df.format(inventoryItemDetailResponse.getPackageQuantity());
-            throw new Exception("库存不足 ,库存数量 - " + formatted);
-        }
-
-        InventoryItem inventoryItem = this.inventoryItemService.getById(inventoryItemDetailResponse.getInventoryItemId());
-        if (inventoryItem == null) {
-            String str = MessageFormat.format("inventoryItem - {0} lost", inventoryItemDetailResponse.getInventoryItemId().toString());
-            throw new Exception(str);
-        }
-
-        Inventory inventory = this.inventoryService.getById(inventoryItem.getInventoryId());
-        if (inventory == null) {
-            String str = MessageFormat.format("Inventory - {0} lost", inventoryItem.getInventoryId().toString());
-            throw new Exception(str);
-        }
-        request.setId(inventoryItemDetailResponse.getId());
         request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
-        request.setPallet(inventory.getPallet());
         return true;
     }
+
+    private void checkPackageQuantity(BigDecimal inventoryPackageQuantity, BigDecimal needPackageQuantity) throws Exception {
+        if (inventoryPackageQuantity.compareTo(needPackageQuantity) < 0) {
+            DecimalFormat df = new DecimalFormat("#0.00");
+            String inventoryFormatted = df.format(inventoryPackageQuantity);
+            String needFormatted = df.format(inventoryPackageQuantity);
+            throw new Exception("库存不足 ,库存数量 - " + inventoryFormatted + " 需求数量 - " + needFormatted);
+
+        }
+    }
+
+    private String getPalletInfo(List<Long> detailIdList) throws Exception {
+        InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
+        List<String> sourceFieldList = new ArrayList<>();
+        sourceFieldList.add("pallet");
+        sourceFieldList.add("inventoryItemDetailId");
+        inventoryInfoRequest.setSourceFieldList(sourceFieldList);
+        inventoryInfoRequest.setPageIndex(0);
+        inventoryInfoRequest.setPageSize(10000);
+        inventoryInfoRequest.setDeleted(0);
+        inventoryInfoRequest.setInventoryItemDetailIdList(detailIdList);
+        PageData<InventoryInfo> pageData = inventoryInfoService.getInventoryInfoPage(inventoryInfoRequest);
+        List<InventoryInfo> inventoryInfoList = pageData.getData();
+        if (inventoryInfoList == null || inventoryInfoList.size() == 0) {
+            throw new Exception("es库存数据异常");
+        }
+
+        List<String> palletList = inventoryInfoList.stream().map(p -> p.getPallet()).distinct().collect(Collectors.toList());
+
+        if (CollectionUtils.isEmpty(palletList)) {
+            throw new Exception("es库存托盘数据异常");
+        }
+
+        if (palletList.size() > 1) {
+            throw new Exception("暂不支持多个托盘直接出库");
+        }
+        return palletList.get(0);
+    }
+
 
     @Override
     public void importExcelModifyMStr12(HttpServletResponse httpServletResponse, MultipartFile file) throws IOException {
