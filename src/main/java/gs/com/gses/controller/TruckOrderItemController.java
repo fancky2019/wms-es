@@ -39,4 +39,9 @@ public class TruckOrderItemController {
         return MessageResult.success(page);
     }
 
+    @GetMapping("/trunkBarCodeMq")
+    public MessageResult<Void> trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest ) throws Exception {
+        truckOrderItemService.trunkBarCodeMq(truckOrderItemRequest);
+        return MessageResult.success();
+    }
 }

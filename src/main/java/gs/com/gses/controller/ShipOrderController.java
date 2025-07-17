@@ -8,6 +8,8 @@ import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
+import gs.com.gses.model.response.mqtt.PrintWrapper;
+import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
 import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.ShipOrderService;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -30,9 +33,13 @@ public class ShipOrderController {
     //    org.apache.flink.api.common.ExecutionConfig
     @Autowired
     private ShipOrderService shipOrderService;
+
     @Autowired
     @Qualifier("upperObjectMapper")
     private ObjectMapper upperObjectMapper;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private MqttProduce mqttProduce;
@@ -103,7 +110,7 @@ public class ShipOrderController {
      * @param msg
      */
     @GetMapping(value = "/mqttTest")
-    public void mqttTest(String msg) {
+    public void mqttTest(String msg) throws JsonProcessingException {
         /*
         QoS 0（最多一次）：消息发布完全依赖底层 TCP/IP 网络。会发生消息丢失或重复。这个级别可用于如下情况，环境传感器数据，丢失一次数据无所谓，因为不久后还会有第二次发送。
         QoS 1（至少一次）：确保消息到达，但消息重复可能会发生。
@@ -116,7 +123,19 @@ public class ShipOrderController {
 //        ThreadLocalRandom
 //        mqttProduce.publish(qos, retained, topic, msg, UUID.randomUUID().toString().replaceAll("-", ""));
 
-        mqttProduce.publish(Topics.TEST,msg, UUID.randomUUID().toString().replaceAll("-", ""));
+//        mqttProduce.publish(Topics.TEST,msg, UUID.randomUUID().toString().replaceAll("-", ""));
+
+
+        TrunkOrderBarCode trunkOrderBarCode = new TrunkOrderBarCode();
+        trunkOrderBarCode.setBarCode("sddsdsds,323232,3232325555");
+
+        PrintWrapper<TrunkOrderBarCode> printWrapper = new PrintWrapper<>();
+        printWrapper.setCount(1);
+        printWrapper.setData(Arrays.asList(trunkOrderBarCode));
+//        C#接收
+        String json = upperObjectMapper.writeValueAsString(printWrapper);
+        mqttProduce.publish(Topics.TRUNK_CODE, json, UUID.randomUUID().toString().replaceAll("-", ""));
+
     }
 
 }

@@ -16,17 +16,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
-import gs.com.gses.model.bo.trunkorderexcel.TruckOrderItemBo;
 import gs.com.gses.model.entity.TruckOrder;
-import gs.com.gses.model.entity.TruckOrderItem;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
-import gs.com.gses.model.response.mqtt.MqttWrapper;
+import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
+import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
 import gs.com.gses.model.response.wms.*;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
+import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.ShipPickOrderService;
 import gs.com.gses.service.TruckOrderItemService;
 import gs.com.gses.service.TruckOrderService;
@@ -38,7 +38,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.apache.commons.collections4.map.MultiKeyMap;
 import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -333,7 +332,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         trunkOderMq.setTruckOrderItemResponseList(itemList);
 
 
-        MqttWrapper<TrunkOderMq> mqttWrapper = new MqttWrapper();
+        PrintWrapper<TrunkOderMq> mqttWrapper = new PrintWrapper();
         mqttWrapper.setCount(1);
         mqttWrapper.setData(Arrays.asList(trunkOderMq));
         String jsonStr = upperObjectMapper.writeValueAsString(mqttWrapper);

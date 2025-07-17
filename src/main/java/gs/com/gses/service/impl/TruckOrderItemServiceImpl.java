@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.Material;
 import gs.com.gses.model.entity.ShipOrder;
 import gs.com.gses.model.entity.TruckOrder;
@@ -15,10 +16,14 @@ import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
+import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderResponse;
+import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
+import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.*;
 import gs.com.gses.mapper.TruckOrderItemMapper;
 import gs.com.gses.utility.LambdaFunctionHelper;
@@ -29,13 +34,12 @@ import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -65,6 +69,11 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
 
+    @Autowired
+    private MqttProduce mqttProduce;
+    @Autowired
+    @Qualifier("upperObjectMapper")
+    private ObjectMapper upperObjectMapper;
 
     @Override
     public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception {
@@ -134,6 +143,21 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 //        this.customSaveBatch(truckOrderItemList);
 
         return true;
+    }
+
+    @Override
+    public void trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest) throws Exception {
+        String trunkBarCode=MessageFormat.format("{0},{1},{2}",truckOrderItemRequest.getProjectNo(),truckOrderItemRequest.getDeviceNo(),truckOrderItemRequest.getMaterialCode());
+        TrunkOrderBarCode trunkOrderBarCode = new TrunkOrderBarCode();
+        trunkOrderBarCode.setBarCode(trunkBarCode);
+
+        PrintWrapper<TrunkOrderBarCode> printWrapper = new PrintWrapper<>();
+        printWrapper.setCount(1);
+        printWrapper.setData(Arrays.asList(trunkOrderBarCode));
+        //        C#接收
+        String json = upperObjectMapper.writeValueAsString(printWrapper);
+        mqttProduce.publish(Topics.TRUNK_CODE, json, UUID.randomUUID().toString().replaceAll("-", ""));
+
     }
 
     @Transactional(rollbackFor = Exception.class)

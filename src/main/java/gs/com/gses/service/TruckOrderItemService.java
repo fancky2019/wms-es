@@ -21,5 +21,7 @@ public interface TruckOrderItemService extends IService<TruckOrderItem> {
 
     Boolean addBatch(List<TruckOrderItemRequest> requestList);
 
+    void trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest) throws Exception;
+
     PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request) throws Exception;
 }
