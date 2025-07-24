@@ -9,6 +9,7 @@ import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.rabbitMQ.BaseRabbitMqHandler;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.service.InventoryInfoService;
+import gs.com.gses.service.ShipOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,6 +35,9 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
 
     @Autowired
     private InventoryInfoService inventoryInfoService;
+
+    @Autowired
+    private ShipOrderService shipOrderService;
 
 //    private static Logger logger = LogManager.getLogger(DirectExchangeConsumer.class);
 
@@ -89,7 +93,15 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
 
         super.onMessage(DataChangeInfo.class, message, channel, (msg) -> {
             try {
-                inventoryInfoService.sink(msg);
+                switch (msg.getTableName())
+                {
+                    case "ShipOrder":
+                        shipOrderService.sink(msg);
+                        break;
+                    default:
+                        inventoryInfoService.sink(msg);
+                        break;
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

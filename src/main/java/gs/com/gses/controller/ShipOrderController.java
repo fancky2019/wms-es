@@ -51,7 +51,7 @@ public class ShipOrderController {
      * @throws JsonProcessingException
      */
     @GetMapping("/test/{id}")
-    public MessageResult<ShipOrder> test(Long id) throws JsonProcessingException {
+    public MessageResult<ShipOrder> test(@PathVariable("id") Long id) throws JsonProcessingException {
 
 //        SFunction function=LambdaFunctionHelper.getSFunctionByFieldName(ShipOrder.class,"id");
 //        InventoryItemDetail changedInventoryItemDetail = null;
@@ -102,6 +102,12 @@ public class ShipOrderController {
     @PostMapping("/allocateDesignatedShipOrders")
     public MessageResult<HashMap<String, String>> allocateDesignatedShipOrders(@RequestBody ShipOrderRequest request) throws Exception {
         return MessageResult.success(shipOrderService.allocateDesignatedShipOrders(request));
+    }
+
+    @PostMapping("/copyShipOrder/{id}")
+    public MessageResult<Void> copyShipOrder(@PathVariable Long id) throws Exception {
+        shipOrderService.copyShipOrder(id);
+        return MessageResult.success();
     }
 
 

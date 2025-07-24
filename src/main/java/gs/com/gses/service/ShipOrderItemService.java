@@ -3,9 +3,11 @@ package gs.com.gses.service;
 import gs.com.gses.model.entity.ShipOrderItem;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
+import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -19,4 +21,7 @@ public interface ShipOrderItemService extends IService<ShipOrderItem> {
     Boolean checkItemExist(ShipOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
 
     PageData<ShipOrderItemResponse> getShipOrderItemPage(ShipOrderItemRequest request) throws Exception;
+
+    HashMap<Long, Long> copyShipOrderItem(long shipOrderId, long cloneShipOrderId) throws Exception;
+    List<Long> nextId(List<Long> idList) throws Exception;
 }

@@ -1,11 +1,12 @@
 package gs.com.gses.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+
+import java.io.Serializable;
 
 /**
  * 
@@ -24,18 +25,21 @@ public class BillType implements Serializable {
      * 单据类型代码
      */
     @TableField(value = "XCode")
+    @JsonProperty("XCode")
     private String XCode;
 
     /**
      * 单据类型名称
      */
     @TableField(value = "XName")
+    @JsonProperty("XName")
     private String XName;
 
     /**
      * 状态
      */
     @TableField(value = "XStatus")
+    @JsonProperty("XStatus")
     private Integer XStatus;
 
     /**

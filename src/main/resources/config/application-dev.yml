@@ -22,9 +22,9 @@ spring:
     name: springBootProject
 
   datasource:
-    #    # sqlserver
+    #    # sqlserver   liku  GensongWms3DB
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=liku;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=GensongWms3DB;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -219,15 +219,16 @@ sbp:
   initCache: false
   logMq: false
   flink:
-    enable: false
+    enable: true
     databaseList:
-      - liku
+      - GensongWms3DB
     tableList:
-      - dbo.InventoryItemDetail
-      - dbo.InventoryItem
-      - dbo.Inventory
-      - dbo.Location
-      - dbo.Laneway
+#      - dbo.InventoryItemDetail
+#      - dbo.InventoryItem
+#      - dbo.Inventory
+#      - dbo.Location
+      - dbo.ShipOrder
+      - dbo.InventoryItemDetail_copy1
     hostname: 10.100.200.43
     port: 1433
     username: sa

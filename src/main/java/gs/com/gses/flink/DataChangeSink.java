@@ -41,6 +41,8 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
     @Override
     public void invoke(DataChangeInfo dataChangeInfo, Context context) throws JsonProcessingException, InterruptedException {
         MDC.put("traceId", dataChangeInfo.getTraceId());
+        long threadId = Thread.currentThread().getId();
+        log.info("Produce threadId - {}", threadId);
         ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
         DirectExchangeProducer directExchangeProducer = applicationContext.getBean(DirectExchangeProducer.class);
         ObjectMapper objectMapper = applicationContext.getBean(ObjectMapper.class);

@@ -155,7 +155,7 @@ public class SqlServerDeserialization implements DebeziumDeserializationSchema<D
 //        dataChangeInfo.setAfterData(getJsonObject(struct, AFTER).toJSONString());
             dataChangeInfo.setBeforeData(beforeJson);
             dataChangeInfo.setAfterData(afterJson);
-
+            String lsn = source.getString("change_lsn");
             //5.获取操作类型  CREATE UPDATE DELETE
             Envelope.Operation operation = Envelope.operationFor(sourceRecord);
 //        String type = operation.toString().toUpperCase(

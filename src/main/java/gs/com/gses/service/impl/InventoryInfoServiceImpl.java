@@ -15,6 +15,7 @@ import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
+import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -128,7 +129,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     public static LocalDateTime INIT_INVENTORY_TIME = null;
 
-    public static final String LOCK_KEY = "redisson:updateInventoryInfo";
+//    public static final String LOCK_KEY = "redisson:updateInventoryInfo";
 
     private final static int WAIT_TIME = 300000;
     private final static int LEASE_TIME = 300000;
@@ -136,66 +137,89 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Override
     public void initInventoryInfoFromDb() throws InterruptedException {
-        INIT_INVENTORY_TIME = LocalDateTime.now();
-        String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        redisTemplate.opsForValue().set("InitInventoryTime", initInventoryTimeStr);
-        StopWatch stopWatch = new StopWatch("initInventoryInfoFromDb");
-        stopWatch.start("initInventoryInfoFromDb");
 
-        IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(InventoryInfo.class);
+        String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+            //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            INIT_INVENTORY_TIME = LocalDateTime.now();
+            String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            redisTemplate.opsForValue().set("InitInventoryTime", initInventoryTimeStr);
+            StopWatch stopWatch = new StopWatch("initInventoryInfoFromDb");
+            stopWatch.start("initInventoryInfoFromDb");
 
-        // 删除索引
-        if (indexOperations.exists()) {
-            indexOperations.delete();
+            IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(InventoryInfo.class);
 
-        }
+            // 删除索引
+            if (indexOperations.exists()) {
+                indexOperations.delete();
 
-        createIndexAndMapping(InventoryInfo.class);
+            }
 
-        Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
-        Map<String, Laneway> lanewayMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.lanewayPrefix);
-        Map<String, Zone> zoneMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.zonePrefix);
-        Map<String, Warehouse> warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.warehousePrefix);
-        Map<String, Orgnization> orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.orgnizationPrefix);
+            createIndexAndMapping(InventoryInfo.class);
 
-        Map<String, Material> materialMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
-        Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
+            Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
+            Map<String, Laneway> lanewayMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.lanewayPrefix);
+            Map<String, Zone> zoneMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.zonePrefix);
+            Map<String, Warehouse> warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.warehousePrefix);
+            Map<String, Orgnization> orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.orgnizationPrefix);
 
-        long count = this.inventoryItemDetailService.count();
-        int step = 1000;
-        long times = count / step;
-        long left = count / step;
-        if (left > 0) {
-            times++;
-        }
-        //current :pageIndex  ,size:pageSize
-        Page<InventoryItemDetail> page = new Page<>(1, step);
-        long pageIndex = 0L;
-        long totalIndexSize = 0L;
-        while (times > 0) {
-            times--;
-            page.setCurrent(++pageIndex);
-            page.setSearchCount(false);
-            //page 内部调用selectPage
-            IPage<InventoryItemDetail> inventoryItemDetailPage = this.inventoryItemDetailService.page(page);
-            Integer size = addByInventoryItemDetailInfo(inventoryItemDetailPage.getRecords(),
-                    materialMap,
-                    packageUnitMap,
-                    locationMap,
-                    lanewayMap,
-                    zoneMap,
-                    warehouseMap,
-                    orgnizationMap
-            );
-            totalIndexSize += size;
-            log.info("totalIndexSize - {} inventory_info - {}", totalIndexSize, size);
-        }
+            Map<String, Material> materialMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
+            Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
 
-        stopWatch.stop();
+            long count = this.inventoryItemDetailService.count();
+            int step = 1000;
+            long times = count / step;
+            long left = count / step;
+            if (left > 0) {
+                times++;
+            }
+            //current :pageIndex  ,size:pageSize
+            Page<InventoryItemDetail> page = new Page<>(1, step);
+            long pageIndex = 0L;
+            long totalIndexSize = 0L;
+            while (times > 0) {
+                times--;
+                page.setCurrent(++pageIndex);
+                page.setSearchCount(false);
+                //page 内部调用selectPage
+                IPage<InventoryItemDetail> inventoryItemDetailPage = this.inventoryItemDetailService.page(page);
+                Integer size = addByInventoryItemDetailInfo(inventoryItemDetailPage.getRecords(),
+                        materialMap,
+                        packageUnitMap,
+                        locationMap,
+                        lanewayMap,
+                        zoneMap,
+                        warehouseMap,
+                        orgnizationMap
+                );
+                totalIndexSize += size;
+                log.info("totalIndexSize - {} inventory_info - {}", totalIndexSize, size);
+            }
+
+            stopWatch.stop();
 //        stopWatch.start("BatchInsert_Trace2");
-        long mills = stopWatch.getTotalTimeMillis();
-        log.info("initInventoryInfoFromDb complete {} ms", mills);
-        log.info("inventory_info total:" + totalIndexSize);
+            long mills = stopWatch.getTotalTimeMillis();
+            log.info("initInventoryInfoFromDb complete {} ms", mills);
+            log.info("inventory_info total:" + totalIndexSize);
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            if (lockSuccessfully) {
+                try {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                } catch (Exception e) {
+                    log.warn("Redis check lock ownership failed: ", e);
+                }
+            }
+        }
     }
 
 
@@ -641,7 +665,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Override
     public PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception {
-
+        log.info("getInventoryInfoPage - {}", objectMapper.writeValueAsString(request));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
         if (request.getDeleted() != null) {
             boolQueryBuilder.must(QueryBuilders.termQuery("deleted", request.getDeleted()));
@@ -1156,7 +1180,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //        InventoryInfoService inventoryInfoService = applicationContext.getBean(InventoryInfoService.class);
 //        int m = Integer.parseInt("d");
 
+
+        String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
         try {
+            //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
             long startChangeTime = dataChangeInfo.getChangeTime();
             log.info("start sink - {}", dataChangeInfo.getId());
             if (StringUtils.isEmpty(dataChangeInfo.getAfterData()) || "READ".equals(dataChangeInfo.getEventType())) {
@@ -1190,6 +1221,16 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             //待优化处理
             log.error("", ex);
             throw ex;
+        } finally {
+            if (lockSuccessfully) {
+                try {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                } catch (Exception e) {
+                    log.warn("Redis check lock ownership failed: ", e);
+                }
+            }
         }
 
     }
@@ -1547,7 +1588,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             Exception {
 
 
-        String lockKey = LOCK_KEY;
+        String lockKey = RedisKey.UPDATE_INVENTORY_INFO;
         RLock lock = redissonClient.getLock(lockKey);
         boolean lockSuccessfully = false;
         try {
@@ -1725,7 +1766,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     private void updateInventoryInfo(String id, Map<String, Object> fieldsMap, String table) throws
             InterruptedException {
 
-        String lockKey = LOCK_KEY;// "redisson:updateInventoryInfo:" + id;
+        String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
         RLock lock = redissonClient.getLock(lockKey);
         boolean lockSuccessfully = false;

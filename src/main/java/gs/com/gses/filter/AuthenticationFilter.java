@@ -54,7 +54,17 @@ public class AuthenticationFilter implements Filter {
         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
         // 转换为HttpServletRequest
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+        String requestURI = httpServletRequest.getRequestURI();
         log.info("RequestURI:{}", httpServletRequest.getRequestURI());
+
+        // 放行 Swagger 相关路径,不校验
+        if (requestURI.contains("/swagger-ui") ||
+                requestURI.contains("/v3/api-docs") ||
+                requestURI.contains("/swagger-resources")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         //OPTIONS 请求不会到此过滤器，应该到cors 中
         try {
             CheckPermissionRequest checkPermissionRequest = new CheckPermissionRequest();
@@ -143,7 +153,7 @@ public class AuthenticationFilter implements Filter {
         response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
         response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
         response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
-       //跨域返回给源
+        //跨域返回给源
         response.setHeader("Access-Control-Allow-Origin", origin);
 
 //        response.setHeader("Access-Control-Allow-Credentials", "false");//不允许携带 cookie 或其他认证信息

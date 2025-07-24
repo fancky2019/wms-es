@@ -48,7 +48,6 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
 //    IMqMessageService mqMessageService;
 
 
-
 //    @Autowired
 //    public PushConfirmCallback(
 //            @Qualifier("redisTemplate") RedisTemplate<String, Object> redisTemplate,
@@ -69,6 +68,9 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
             String queueName = messageProperties.getHeader("queueName");
 
             MDC.put("traceId", traceId);
+            //生产线程和生产确认线程不是同一个线程
+            long threadId = Thread.currentThread().getId();
+            log.info("ProduceConfirm threadId - {}", threadId);
             if (ack) {
                 //发送消息时候指定的消息的id，根据此id设置消息表的消息状态为已发送
                 log.info("ProduceSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
@@ -90,10 +92,10 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
                 try {
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm");
                     String nowStr = LocalDateTime.now().format(formatter);
-                    String key="RabbitMQ:Produce:"+queueName+":"+nowStr;
+                    String key = "RabbitMQ:Produce:" + queueName + ":" + nowStr;
                     Long newValue = redisTemplate.opsForValue().increment(key);
                     if (newValue == 1) {
-                        redisTemplate.expire(key, 24*12*60, TimeUnit.SECONDS);
+                        redisTemplate.expire(key, 24 * 12 * 60, TimeUnit.SECONDS);
                     }
                 } catch (Exception ex) {
                     log.error("", ex);

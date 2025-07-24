@@ -2,39 +2,52 @@ package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
+import gs.com.gses.model.enums.OutboundOrderXStatus;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
-import gs.com.gses.service.ShipOrderItemService;
-import gs.com.gses.service.ShipOrderService;
+import gs.com.gses.model.utility.RedisKey;
+import gs.com.gses.service.*;
 import gs.com.gses.mapper.ShipOrderMapper;
+import gs.com.gses.utility.SnowFlake;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StopWatch;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.MessageFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -54,13 +67,27 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
     private ShipOrderItemService shipOrderItemService;
 
     @Autowired
+    private BillTypeService billTypeService;
+
+    @Autowired
+    private WaveShipOrderItemRelationService waveShipOrderItemRelationService;
+
+    @Autowired
     private RedisTemplate redisTemplate;
+
+    @Autowired
+    private SnowFlake snowFlake;
 
 
     public static final String shipOrderPreparePercent = "ShipOrderPreparePercent";
     @Qualifier("objectMapper")
     @Autowired
     private ObjectMapper objectMapper;
+    @Qualifier("upperObjectMapper")  // 明确指定名称
+    @Autowired
+    private ObjectMapper upperObjectMapper;
+    @Autowired
+    private RedissonClient redissonClient;
 
 
     @Override
@@ -418,7 +445,154 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         return shipOrderPreparePercentMap;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void copyShipOrder(long shipOrderId) throws Exception {
 
+        ShipOrder shipOrderDb = this.getById(shipOrderId);
+        if (shipOrderDb == null) {
+            throw new Exception("shipOrder - {shipOrderId} doesn't exist");
+        }
+
+        LambdaQueryWrapper<ShipOrder> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShipOrder::getXCode, shipOrderDb.getXCode() + "_理货");
+        List<ShipOrder> clonedShipOrderList = this.list(queryWrapper);
+        if (CollectionUtils.isNotEmpty(clonedShipOrderList)) {
+            log.info("{}_理货,has been copyed", shipOrderDb.getXCode());
+            return;
+        }
+//        if (shipOrderDb.getXStatus() != OutboundOrderXStatus.NEW.getValue()) {
+//            String msg = MessageFormat.format("shipOrder - {0} XStatus is not new", shipOrderId);
+//            throw new Exception(msg);
+//        }
+
+        BillType billType = billTypeService.getByCode("OutWarehouse");
+        ShipOrder shipOrder = new ShipOrder();
+        BeanUtils.copyProperties(shipOrderDb, shipOrder);
+        long id1 = snowFlake.nextId() / 1000;
+        Long id = nextId(Arrays.asList(shipOrderDb.getId() + 1)).get(0);
+        shipOrder.setId(id);
+        shipOrder.setBillTypeId(billType.getId());
+        shipOrder.setXStatus(OutboundOrderXStatus.NEW.getValue());
+        shipOrder.setAlloactedPkgQuantity(BigDecimal.ZERO);
+        shipOrder.setPickedPkgQuantity(BigDecimal.ZERO);
+
+        LambdaUpdateWrapper<ShipOrder> shipOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        shipOrderLambdaUpdateWrapper.set(ShipOrder::getXCode, shipOrderDb.getXCode() + "_理货");
+        if (StringUtils.isNotEmpty(shipOrderDb.getApplyShipOrderCode())) {
+            shipOrderLambdaUpdateWrapper.set(ShipOrder::getApplyShipOrderCode, shipOrderDb.getApplyShipOrderCode() + "_理货");
+        }
+        shipOrderLambdaUpdateWrapper.eq(ShipOrder::getId, shipOrderDb.getId());
+        this.update(shipOrderLambdaUpdateWrapper);
+        this.save(shipOrder);
+
+        HashMap<Long, Long> cloneRelation = this.shipOrderItemService.copyShipOrderItem(shipOrderId, shipOrder.getId());
+        waveShipOrderItemRelationService.bindingNewRelation(cloneRelation);
+
+    }
+
+    @Override
+    public void sink(DataChangeInfo dataChangeInfo) throws Exception {
+
+
+        String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+            //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            long startChangeTime = dataChangeInfo.getChangeTime();
+            log.info("start sink - {}", dataChangeInfo.getId());
+            if (StringUtils.isEmpty(dataChangeInfo.getAfterData()) || "READ".equals(dataChangeInfo.getEventType())) {
+                log.info("read - {}", dataChangeInfo.getId());
+                return;
+            }
+
+
+            ShipOrder shipOrder = upperObjectMapper.readValue(dataChangeInfo.getAfterData(), ShipOrder.class);
+            if (shipOrder.getId() == null) {
+                log.info("changedInventoryItemDetail {} id is null ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
+                shipOrder = upperObjectMapper.readValue(dataChangeInfo.getBeforeData(), ShipOrder.class);
+            }
+
+
+            switch (dataChangeInfo.getEventType()) {
+                case "CREATE":
+                    break;
+                case "UPDATE":
+//                    AJ02 AJ05
+                    if (shipOrder.getXStatus().equals(OutboundOrderXStatus.COMPLETED.getValue())) {
+                        if (shipOrder.getApplyShipOrderCode().contains("_理货")) {
+                            return;
+                        }
+                        String mqMsgIdKey = RedisKey.SHIP_ORDER_COMPLETE + shipOrder.getId();
+                        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+                        //添加重复消费redis 校验，不会存在并发同一个message
+                        Boolean hasKey = redisTemplate.hasKey(mqMsgIdKey);
+                        boolean exist = hasKey != null && hasKey;
+//                        exist = false;
+                        if (!exist) {
+                            //设置key并制定过期时间
+                            valueOperations.set(mqMsgIdKey, shipOrder.getId(), 1, TimeUnit.DAYS);
+
+                            Object proxyObj = AopContext.currentProxy();
+                            ShipOrderService shipOrderService = null;
+                            if (proxyObj instanceof ShipOrderService) {
+                                shipOrderService = (ShipOrderService) proxyObj;
+                                shipOrderService.copyShipOrder(shipOrder.getId());
+                            }
+                        }
+                    }
+
+                    break;
+                case "DELETE":
+                    break;
+                case "READ":
+                    break;
+                default:
+                    break;
+            }
+
+
+            long sinkCompletedTime = System.currentTimeMillis();
+            long sinkCostTime = sinkCompletedTime - startChangeTime;
+            log.info("Sink {} completed sinkCostTime {}", dataChangeInfo.getId(), sinkCostTime);
+        } catch (Exception ex) {
+            log.error("Sink {} exception ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
+            //待优化处理
+            log.error("", ex);
+            throw ex;
+        } finally {
+            if (lockSuccessfully) {
+                try {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                } catch (Exception e) {
+                    log.warn("Redis check lock ownership failed: ", e);
+                }
+            }
+        }
+
+    }
+
+    @Override
+    public List<Long> nextId(List<Long> idList) throws Exception {
+        List<ShipOrder> shipOrderList = this.listByIds(idList);
+        List<Long> result = new ArrayList<>();
+        List<Long> existList = new ArrayList<>();
+        for (Long id : idList) {
+            Optional<ShipOrder> opt = shipOrderList.stream().filter(shipOrder -> shipOrder.getId().equals(id)).findFirst();
+            if (!opt.isPresent()) {
+                result.add(id);
+            } else {
+                result.add(snowFlake.nextId() / 1000);
+            }
+
+        }
+        return result;
+    }
 }
 
 

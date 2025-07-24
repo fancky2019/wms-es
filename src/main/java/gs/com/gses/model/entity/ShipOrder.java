@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
@@ -30,6 +32,7 @@ public class ShipOrder implements Serializable {
     /**
      * 出库单号
      */
+    @JsonProperty("XCode")
     @TableField(value = "XCode")
     private String XCode;
 
@@ -42,6 +45,7 @@ public class ShipOrder implements Serializable {
     /**
      * 状态（1 open新建，2生效，3执行中，4已完成，5已发运,-1作废）
      */
+    @JsonProperty("XStatus")
     @TableField(value = "XStatus")
     private Integer XStatus;
 

@@ -1,5 +1,6 @@
 package gs.com.gses.service;
 
+import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.entity.ShipOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.ShipOrderRequest;
@@ -25,4 +26,10 @@ public interface ShipOrderService extends IService<ShipOrder> {
     void allocate() throws Exception;
 
     HashMap<String, String> allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception;
+
+    void copyShipOrder(long shipOrderId) throws Exception;
+
+    void sink(DataChangeInfo dataChangeInfo) throws Exception;
+
+    List<Long> nextId(List<Long> idList) throws Exception;
 }

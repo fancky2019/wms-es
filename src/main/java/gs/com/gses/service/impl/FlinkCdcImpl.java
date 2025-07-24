@@ -6,12 +6,16 @@ import gs.com.gses.flink.DataChangeSink;
 import gs.com.gses.flink.SqlServerDeserialization;
 import gs.com.gses.service.FlinkCdcService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.cdc.connectors.base.options.StartupOptions;
 import org.apache.flink.cdc.connectors.sqlserver.source.SqlServerSourceBuilder;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +23,11 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 
 @Service
@@ -72,7 +80,6 @@ public class FlinkCdcImpl implements FlinkCdcService {
         debeziumProps.setProperty("transforms.errorHandler.on.failure", "retry");
         debeziumProps.setProperty("transforms.errorHandler.retry.delay.ms", "5000");
         debeziumProps.setProperty("transforms.errorHandler.max.retries", "3");
-
 //        // 使用内存存储数据库历史（不持久化，重启后丢失） Debezium 默认使用 MemoryDatabaseHistory
 //        debeziumProps.setProperty("database.history", "io.debezium.relational.history.MemoryDatabaseHistory");
 //// 必须配置每次启动都执行快照
@@ -129,6 +136,7 @@ public class FlinkCdcImpl implements FlinkCdcService {
 
         debeziumProps.setProperty("max.batch.size", "4096");
         debeziumProps.setProperty("log.level", "DEBUG");
+
 //        Flink DataStream API 方式
         SqlServerSourceBuilder.SqlServerIncrementalSource<DataChangeInfo> sqlServerSource =
                 new SqlServerSourceBuilder()
@@ -144,13 +152,15 @@ public class FlinkCdcImpl implements FlinkCdcService {
                         .deserializer(new SqlServerDeserialization())
 //                        .startupOptions(StartupOptions.initial())
                         //latest ： 程序启动后最新的变更，启动前的变更捕捉不到
+                        //sqlserver  不支持 StartupOptions.timestamp(timestamp)。  mysql支持
+                        //即使有 Checkpoint，StartupOptions.latest() 也会强制从最新位点开始
                         .startupOptions(StartupOptions.latest())  // 改成 latest()  initial()
-
-
                         .fetchSize(1024)                   // 增大每次fetch行数
                         .connectTimeout(Duration.ofSeconds(30 * 60)) // 增加连接超时
                         .connectionPoolSize(20)             // 增加连接池大小
                         .build();
+
+        String checkpointBasePath = "file:///" + flinkConfig.getCheckpointStoragePath();//"file:///D:/flinkcdc/checkpoints";
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // enable checkpoint  控制状态持久化的频率（容错用途）。
@@ -179,9 +189,12 @@ public class FlinkCdcImpl implements FlinkCdcService {
 //        env.setStateBackend(new RocksDBStateBackend("file:///D:/flinkcdc/checkpoints", true));
 
         // Flink 1.15+ 设置 Checkpoint 配置数据获取全量、增量
-//        env.setStateBackend(new HashMapStateBackend());
-        env.getCheckpointConfig().setCheckpointStorage("file:///" + flinkConfig.getCheckpointStoragePath());//file:///D:/flinkcdc/checkpoints
+        env.setStateBackend(new HashMapStateBackend());
+        // 1. 设置本地 checkpoint 路径
 
+        env.getCheckpointConfig().setCheckpointStorage(checkpointBasePath);//file:///D:/flinkcdc/checkpoints
+
+        env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
         //当前 checkpoint 成功后，Flink 至少等待这个时间，再开始下一个 checkpoint。
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(200);
         env.getCheckpointConfig().setCheckpointTimeout(60000);
@@ -191,6 +204,7 @@ public class FlinkCdcImpl implements FlinkCdcService {
                 CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION
         );
 
+
         //重试
         env.setRestartStrategy(
                 RestartStrategies.fixedDelayRestart(
@@ -198,6 +212,13 @@ public class FlinkCdcImpl implements FlinkCdcService {
                         Time.seconds(2) // 重试间隔
                 ));
         log.info("flink cdc start running");
+
+
+
+//        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
+
+
         env.execute("WmsToEs");
+
     }
 }

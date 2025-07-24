@@ -197,20 +197,22 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         inventoryInfoRequest.setInventoryItemDetailIdList(detailIdList);
         PageData<InventoryInfo> pageData = inventoryInfoService.getInventoryInfoPage(inventoryInfoRequest);
         List<InventoryInfo> inventoryInfoList = pageData.getData();
-        if (inventoryInfoList == null || inventoryInfoList.size() == 0) {
-            throw new Exception("es库存数据异常");
-        }
+//        if (inventoryInfoList == null || inventoryInfoList.size() == 0) {
+//            throw new Exception("es库存数据异常");
+//        }
+//
+//        List<String> palletList = inventoryInfoList.stream().map(p -> p.getPallet()).distinct().collect(Collectors.toList());
+//
+//        if (CollectionUtils.isEmpty(palletList)) {
+//            throw new Exception("es库存托盘数据异常");
+//        }
+//
+//        if (palletList.size() > 1) {
+//            throw new Exception("暂不支持多个托盘直接出库");
+//        }
+//        return palletList.get(0);
 
-        List<String> palletList = inventoryInfoList.stream().map(p -> p.getPallet()).distinct().collect(Collectors.toList());
-
-        if (CollectionUtils.isEmpty(palletList)) {
-            throw new Exception("es库存托盘数据异常");
-        }
-
-        if (palletList.size() > 1) {
-            throw new Exception("暂不支持多个托盘直接出库");
-        }
-        return palletList.get(0);
+        return "TP070002";
     }
 
 

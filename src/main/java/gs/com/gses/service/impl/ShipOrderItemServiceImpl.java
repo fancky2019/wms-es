@@ -7,14 +7,14 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import gs.com.gses.model.entity.InventoryItemDetail;
-import gs.com.gses.model.entity.Material;
-import gs.com.gses.model.entity.ShipOrder;
-import gs.com.gses.model.entity.ShipOrderItem;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.model.entity.*;
+import gs.com.gses.model.enums.OutboundOrderXStatus;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.ShipOrderRequest;
+import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
@@ -23,19 +23,19 @@ import gs.com.gses.service.ShipOrderItemService;
 import gs.com.gses.mapper.ShipOrderItemMapper;
 import gs.com.gses.service.ShipOrderService;
 import gs.com.gses.utility.LambdaFunctionHelper;
+import gs.com.gses.utility.SnowFlake;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -53,6 +53,9 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
     private MaterialService materialService;
     @Autowired
     private ShipOrderService shipOrderService;
+
+    @Autowired
+    private SnowFlake snowFlake;
 
     @Override
     public List<ShipOrderItem> getByShipOrderIds(List<Long> shipOrderIdList) {
@@ -186,10 +189,10 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 //        queryWrapper.orderByDesc(User::getAge)
 //                .orderByAsc(User::getName);
 
-        if (request.getShipOrderId()!=null&&request.getShipOrderId()>0) {
+        if (request.getShipOrderId() != null && request.getShipOrderId() > 0) {
             queryWrapper.eq(ShipOrderItem::getShipOrderId, request.getShipOrderId());
         }
-        if (request.getMaterialId()!=null&&request.getMaterialId()>0) {
+        if (request.getMaterialId() != null && request.getMaterialId() > 0) {
             queryWrapper.eq(ShipOrderItem::getMaterialId, request.getMaterialId());
         }
         if (StringUtils.isNotEmpty(request.getM_Str7())) {
@@ -282,10 +285,55 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         return pageData;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public HashMap<Long, Long> copyShipOrderItem(long shipOrderId, long cloneShipOrderId) throws Exception {
+
+        HashMap<Long, Long> cloneRelation = new HashMap<>();
+        LambdaQueryWrapper<ShipOrderItem> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShipOrderItem::getShipOrderId, shipOrderId);
+        List<ShipOrderItem> shipOrderItemList = this.list(queryWrapper);
+        if (shipOrderItemList.isEmpty()) {
+            return cloneRelation;
+        }
+
+        List<ShipOrderItem> cloneShipOrderItemList = new ArrayList<>();
+        for (ShipOrderItem shipOrderItemDb : shipOrderItemList) {
+            ShipOrderItem cloneShipOrderItem = new ShipOrderItem();
+            BeanUtils.copyProperties(shipOrderItemDb, cloneShipOrderItem);
+//            cloneShipOrderItem.setId(snowFlake.nextId());
+            Long id=nextId(Arrays.asList(shipOrderItemDb.getId()+3000)).get(0);
+            cloneShipOrderItem.setId(id);
+            cloneShipOrderItem.setShipOrderId(cloneShipOrderId);
+            cloneShipOrderItem.setXStatus(OutboundOrderXStatus.NEW.getValue());
+            cloneShipOrderItem.setAlloactedPkgQuantity(BigDecimal.ZERO);
+            cloneShipOrderItem.setPickedPkgQuantity(BigDecimal.ZERO);
+            this.save(cloneShipOrderItem);
+            cloneRelation.put(shipOrderItemDb.getId(), cloneShipOrderItem.getId());
+            cloneShipOrderItemList.add(cloneShipOrderItem);
+        }
+        return cloneRelation;
+    }
+
 
     // 调用示例
 //    applySort(queryWrapper, "createTime", "desc");  // 按createTime降序
+    @Override
+    public List<Long> nextId(List<Long> idList) throws Exception {
+        List<ShipOrderItem> itemList = this.listByIds(idList);
+        List<Long> result = new ArrayList<>();
 
+        for (Long id : idList) {
+            Optional<ShipOrderItem> opt = itemList.stream().filter(ShipOrderItem -> ShipOrderItem.getId().equals(id)).findFirst();
+            if (!opt.isPresent()) {
+                result.add(id);
+            } else {
+                result.add(snowFlake.nextId()/1000);
+            }
+
+        }
+        return result;
+    }
 
 }
 
