@@ -182,6 +182,9 @@ public class FlinkCdcImpl implements FlinkCdcService {
         //如果 Checkpoint 失败，Flink 会回滚到上一个成功的 Checkpoint 状态
 
         //本项目sink 到rabbitmq 会有重复数据，保证的是最终一致性
+        //Kafka	使用事务保证，只有 Checkpoint 完成时才提交消息
+        //Kafka Sink 通过事务机制与 Flink Checkpoint 深度集成，确保只有在 Checkpoint 完成时才提交消息，这是实现端到端精确一次(exactly-once)语义的关键。
+        //Flink Kafka Sink 实现了 "只有 Checkpoint 成功，消息才对外可见
         env.enableCheckpointing(300);
         env.setParallelism(Runtime.getRuntime().availableProcessors());// 根据表数量和大小调整
         // set the source parallelism to 2

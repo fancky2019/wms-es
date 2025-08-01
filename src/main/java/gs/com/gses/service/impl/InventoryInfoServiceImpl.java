@@ -1669,7 +1669,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             while (times > 0) {
                 log.info("time - {}", times);
                 long skip = (++pageIndex - 1) * step;
-                times--;
+
 
                 List<InventoryInfo> currentInventoryInfoList = inventoryInfoList.stream().skip(skip).limit(step).collect(Collectors.toList());
 
@@ -1692,7 +1692,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                         default:
                             break;
                     }
-                    log.info("time - {} prepareUpdatedInfo complete", times);
 //                updateInventoryInfo(inventoryInfo.getInventoryItemDetailIinventoryd().toString(), updatedMap, dataChangeInfo.getTableName());
                     Document document = Document.create();
                     document.putAll(updatedMap);
@@ -1704,12 +1703,13 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                             .build();
                     updateQueries.add(updateQuery);
                 }
+                log.info("time - {} prepareUpdatedInfo complete", times);
                 if (updateQueries.size() > 0) {
                     // 执行批量更新
                     elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
                     log.info("time - {} bulkUpdate complete", times);
                 }
-
+                times--;
             }
 
 
