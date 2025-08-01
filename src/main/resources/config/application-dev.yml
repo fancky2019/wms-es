@@ -22,9 +22,9 @@ spring:
     name: springBootProject
 
   datasource:
-    #    # sqlserver   liku  GensongWms3DB
+    #    # sqlserver   liku  GensongWms3DB wms_liku
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=GensongWms3DB;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -215,20 +215,21 @@ sbp:
     - "http://127.0.0.1:[*]"
   authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
   hostAndPort: 10.100.200.43:9200
-  checkpermission: true
+  checkpermission: false
   initCache: false
   logMq: false
+#  enableCopyShipOrder: false
   flink:
-    enable: true
+    enable: false
     databaseList:
-      - GensongWms3DB
+      - wms_liku
     tableList:
-#      - dbo.InventoryItemDetail
-#      - dbo.InventoryItem
-#      - dbo.Inventory
-#      - dbo.Location
+      - dbo.InventoryItemDetail
+      - dbo.InventoryItem
+      - dbo.Inventory
+      - dbo.Location
       - dbo.ShipOrder
-      - dbo.InventoryItemDetail_copy1
+#      - dbo.InventoryItemDetail_copy1
     hostname: 10.100.200.43
     port: 1433
     username: sa

@@ -1281,7 +1281,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (changedInventoryItemDetail.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                String modificationTimeStr = modificationTime.format(formatter);
+                String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
+                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1339,9 +1342,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         if (changedInventoryItem.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
-
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                String modificationTimeStr = modificationTime.format(formatter);
+                String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
+                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1390,7 +1395,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventory.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                String modificationTimeStr = modificationTime.format(formatter);
+                String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
+                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1436,7 +1444,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (changedLocation.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedLocation.getLastModificationTime()), ZoneOffset.of("+8"));
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                String modificationTimeStr = modificationTime.format(formatter);
+                String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
+                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1487,7 +1498,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedILaneway.getLastModificationTime()), ZoneOffset.of("+8"));
 
             if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
-                log.info("modificationTime isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                String modificationTimeStr = modificationTime.format(formatter);
+                String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
+                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1597,11 +1611,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 log.info("updateInventoryInfo - {} fail ,get lock fail", lockKey);
                 return;
             }
-            log.info("InventoryInfo - {} acquire lock  success ", lockKey);
+            log.info("updateInventoryInfo - {} acquire lock  success ", lockKey);
 
 
-            StopWatch stopWatch = new StopWatch("updateInventoryInfoOfItemBatch");
-            stopWatch.start("updateInventoryInfoOfItemBatch");
+            StopWatch stopWatch = new StopWatch("updateInventoryInfoByEntityBatch");
+            stopWatch.start("updateInventoryInfoByEntityBatch");
 
             List<String> sourceFieldList = new ArrayList<>();
             sourceFieldList.add("inventoryItemDetailId");
@@ -1638,7 +1652,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
             long totalHits = search.getTotalHits();
             List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
-
+            log.info("query es InventoryInfo complete");
             long count = inventoryInfoList.size();
             int step = 1000;
             long times = count / step;
@@ -1650,7 +1664,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             long pageIndex = 0L;
             long totalIndexSize = 0L;
             while (times > 0) {
-
+                log.info("time - {}", times);
                 long skip = (++pageIndex - 1) * step;
                 times--;
 
@@ -1675,7 +1689,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                         default:
                             break;
                     }
-
+                    log.info("time - {} prepareUpdatedInfo complete", times);
 //                updateInventoryInfo(inventoryInfo.getInventoryItemDetailIinventoryd().toString(), updatedMap, dataChangeInfo.getTableName());
                     Document document = Document.create();
                     document.putAll(updatedMap);
@@ -1690,6 +1704,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 if (updateQueries.size() > 0) {
                     // 执行批量更新
                     elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+                    log.info("time - {} bulkUpdate complete", times);
                 }
 
             }
@@ -1697,7 +1712,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             stopWatch.stop();
             long mills = stopWatch.getTotalTimeMillis();
-            log.info("updateInventoryInfoOfItemBatch complete {} ms", mills);
+            log.info("updateInventoryInfoByEntityBatch complete {} ms", mills);
 
 
         } catch (Exception ex) {

@@ -106,6 +106,10 @@ public class MqttProduce {
         mqttMessage.setQos(qos);
         mqttMessage.setRetained(retained);
         mqttMessage.setPayload(message.getBytes(StandardCharsets.UTF_8));
+//      if(  !client.isConnected())
+//      {
+//          throw new Exception("mqtt 未连接");
+//      }
         //主题的目的地，用于发布/订阅信息
         MqttTopic mqttTopic = client.getTopic(topic);
         //提供一种机制来跟踪消息的传递进度

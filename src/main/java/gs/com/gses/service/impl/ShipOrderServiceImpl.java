@@ -32,6 +32,7 @@ import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -59,6 +60,9 @@ import java.util.stream.Collectors;
 @Service
 public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder> implements ShipOrderService {
 
+
+    @Value("${sbp.enableCopyShipOrder:false}") // 默认 false，避免报错
+    private boolean enableCopyShipOrder;
 
     @Autowired
     private InventoryInfoServiceImpl inventoryInfoService;
@@ -494,7 +498,9 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
     @Override
     public void sink(DataChangeInfo dataChangeInfo) throws Exception {
 
-
+        if (!enableCopyShipOrder) {
+            return;
+        }
         String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
         RLock lock = redissonClient.getLock(lockKey);
