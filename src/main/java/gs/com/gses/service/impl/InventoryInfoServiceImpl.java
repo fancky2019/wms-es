@@ -541,6 +541,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
             inventoryInfos.add(inventoryInfo);
         }
+        //Spring Data Elasticsearch 实现不存在就插入（upsert）功能
+//        如果文档 不存在：会执行插入操作
+//        如果文档 已存在：会执行更新操作（全量替换，不是部分更新）
         elasticsearchRestTemplate.save(inventoryInfos);
         return inventoryInfos.size();
     }

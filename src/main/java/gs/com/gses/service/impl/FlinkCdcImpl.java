@@ -164,6 +164,24 @@ public class FlinkCdcImpl implements FlinkCdcService {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // enable checkpoint  控制状态持久化的频率（容错用途）。
+        // Flink 将处理结果(如写入ES)提交的频率.即使 Debezium 更频繁地捕获变更(如每100ms)，结果提交仍受 Checkpoint 控制
+        //端到端延迟：
+        //较小的 Checkpoint 间隔(如1000ms)可以减少端到端延迟,但会增加系统开销(频繁做Checkpoint)
+        //
+        //Exactly-Once保证：
+        //
+        //Checkpoint 是 Flink 实现精确一次语义的基础,所有Sink操作会在Checkpoint完成时提交
+        //两阶段提交协议 (2PC):
+        //
+        //Flink 使用两阶段提交协议来协调 Sink 和 Checkpoint
+        //
+        //Sink 操作实际上分为"预提交"和"正式提交"两个阶段
+        //
+        //Checkpoint 完成时的行为:
+        //只有当 Checkpoint 成功完成时，Sink 才会正式提交数据
+        //如果 Checkpoint 失败，Flink 会回滚到上一个成功的 Checkpoint 状态
+
+        //本项目sink 到rabbitmq 会有重复数据，保证的是最终一致性
         env.enableCheckpointing(300);
         env.setParallelism(Runtime.getRuntime().availableProcessors());// 根据表数量和大小调整
         // set the source parallelism to 2
