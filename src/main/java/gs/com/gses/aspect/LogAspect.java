@@ -190,7 +190,9 @@ public class LogAspect {
                 String requestFingerprint = DigestUtils.md5DigestAsHex(fingerprintBase.getBytes(StandardCharsets.UTF_8));
                 submissionToken = requestFingerprint;
                 key = "repeat:" + userId + ":" + uri + ":" + submissionToken;
+                //从redis 中获取请求指纹 key
                 Object tokenObj = valueOperations.get(key);
+                //请求key 不存在就新增
                 if (tokenObj == null) {
 
 //                    boolean setSuccess = valueOperations.setIfAbsent(key, submissionToken, 3600, TimeUnit.SECONDS);
@@ -203,6 +205,7 @@ public class LogAspect {
                 }
             }
 
+            //查看请求key 是否设置了过期时间，设置了就是请求过。超过60s 请求key 也不存在。
             Long expireTime = redisTemplate.getExpire(key);
             //有过期时间
             if (expireTime != null && !expireTime.equals(-1L)) {

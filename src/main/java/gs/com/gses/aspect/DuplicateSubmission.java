@@ -20,5 +20,6 @@ public @interface DuplicateSubmission {
 
     DuplicateSubmissionCheckType checkType() default DuplicateSubmissionCheckType.FINGERPRINT;
 
+    //重复提交校验有效时间   超过提交指纹从redis删除这个时间无法校验
     int timeOut() default 60;
 }

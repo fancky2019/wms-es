@@ -21,6 +21,8 @@ import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.ScriptQueryBuilder;
@@ -143,6 +145,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         RLock lock = redissonClient.getLock(lockKey);
         boolean lockSuccessfully = false;
         try {
+            //            lockSuccessfully = lock.tryLock();
+//            lock.tryLock(waitTime, TimeUnit.SECONDS);
+//            lock.lock(leaseTime, TimeUnit.SECONDS);
             //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
             lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
             INIT_INVENTORY_TIME = LocalDateTime.now();
@@ -544,6 +549,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         //Spring Data Elasticsearch 实现不存在就插入（upsert）功能
 //        如果文档 不存在：会执行插入操作
 //        如果文档 已存在：会执行更新操作（全量替换，不是部分更新）
+        //elasticsearchTemplate.save(...)实际上是 PUT ，存在就覆盖  不存在就创建,要判断版本号，
+        //不然覆盖成历史数据造成脏读
         elasticsearchRestTemplate.save(inventoryInfos);
         return inventoryInfos.size();
     }
@@ -1807,6 +1814,49 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            .withIfSeqNo(null)  // 忽略 seq_no
 //                    .withIfPrimaryTerm(null) // 忽略 primary_term
 
+
+            /*
+            . _seq_no（序列号）
+            作用：
+            是一个单调递增的编号，分配给每个文档的写入操作（如索引、更新、删除）。
+            用于跟踪操作顺序，确保同一分片内的操作有序。
+            仅在分片内唯一（不同分片或索引的 _seq_no 可能重复）。
+
+            2. _primary_term（主任期）
+            作用：
+            是一个计数器，当分片的主副本（Primary Shard）发生切换时（如节点故障、重启），该值会递增。
+            用于区分新旧主分片，防止过期的旧主分片写入数据（类似分布式系统中的“任期”概念）。
+            示例：
+            如果主分片切换过，_primary_term 会变大（例如从 1 变为 2）。
+
+            在并发更新时，可通过 if_seq_no 和 if_primary_term 确保基于最新版本修改，避免覆盖冲突。
+            类似数据库的 CAS（Compare-And-Swap）机制。
+
+            . _version 的作用
+            版本号：每次对文档进行 写入操作（如索引、更新、删除）时，_version 会自动递增（+1）。
+            乐观并发控制：客户端可以通过指定 version 参数来确保基于特定版本修改文档，避免覆盖冲突。
+            外部系统集成：允许外部系统（如数据库）管理版本号（需启用 external 或 external_gte 版本类型）。
+
+            _version 的区别
+            _version：由用户或系统控制的版本号，可能因外部操作（如手动指定版本）变化。
+            _seq_no + _primary_term：由 Elasticsearch 内部严格管理，更精准地反映操作顺序和分片状态
+
+            并发更新控制：确保多人修改同一文档时不会丢失更改。
+            数据一致性：在分布式环境下避免脑裂（Split-Brain）导致的数据冲突。
+
+            _version版本号不匹配 → 409 Conflict	_seq_no 或 _primary_term 不匹配 → 409 Conflict
+
+
+            _version vs _seq_no + _primary_term
+            特性     	_version	                        _seq_no + _primary_term
+            作用	        文档版本号（用户/系统可控）	           内部操作顺序 + 分片主副本状态
+            递增方式	    每次修改 +1	                       _seq_no 单调递增，_primary_term 主分片切换时递增
+            适用场景	    简单版本控制、外部系统集成	          分布式一致性、严格并发控制
+            并发控制方式	?version=X	                      ?if_seq_no=X&if_primary_term=Y
+            冲突检测	    版本号不匹配 → 409 Conflict	      _seq_no 或 _primary_term 不匹配 → 409 Conflict
+
+            */
+
             Document document = Document.create();
             document.putAll(fieldsMap);
 // .retryOnConflict(3) // 冲突时重试3次
@@ -1820,9 +1870,25 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     .withDocAsUpsert(true)// 如果文档不存在则创建
                     .build();
             //InventoryInfo
+            //此处要根据版本号判断是否更新
+//            elasticsearchRestTemplate 实现了接口  elasticsearchOperations
             UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
             log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
 
+
+//           int version=1;
+//            UpdateRequest request = new UpdateRequest("inventory_info", id)
+////                    .doc(elasticsearchTemplate.getElasticsearchConverter().mapObject(entity))
+//                    .doc(document)
+//                    .docAsUpsert(true)
+//                    .version(version)
+//                    .versionType(VersionType.EXTERNAL); // 或 VersionType.EXTERNAL_GTE
+//
+//            UpdateResponse response = restHighLevelClient.update(request, RequestOptions.DEFAULT);
+//            return response.getResult() == Result.UPDATED || response.getResult() == Result.CREATED;
+//
+
+//            elasticsearchRestTemplate.updateByQuery(updateQuery, IndexCoordinates.of("inventory_info"));
 
         } catch (Exception ex) {
             log.error("", ex);
