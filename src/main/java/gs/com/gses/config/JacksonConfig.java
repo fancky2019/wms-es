@@ -51,7 +51,7 @@ public class JacksonConfig {
         objectMapper.setTimeZone(TimeZone.getTimeZone("GMT+8"));
         // 关闭时间戳模式:jackson ZonedDateTime  默认序列化是时间戳
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-//        全局配置忽略 _class 字段
+//        全局配置忽略实体中不存在的字段  _class 字段
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 // 使用小写字母开头的命名策略 LOWER_CAMEL_CASE
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE);

@@ -162,21 +162,6 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             shipOrderItemResponse.setShipOrderCode(shipOrder.getXCode());
             matchedShipOrderItemResponseList.add(shipOrderItemResponse);
         }
-
-
-//        ShipOrderItemResponse shipOrderItemResponse = page.getData().get(0);
-//        ShipOrder shipOrder = shipOrderService.getById(shipOrderItemResponse.getShipOrderId());
-//        if (shipOrder == null) {
-//            String str = MessageFormat.format("ShipOrder - {0} lost", shipOrderItemResponse.getShipOrderId().toString());
-//            throw new Exception(str);
-//        }
-
-//        request.setId(shipOrderItemResponse.getId());
-//        request.setShipOrderId(shipOrderItemResponse.getShipOrderId());
-//        request.setShipOrderCode(shipOrder.getXCode());
-//        request.setApplyShipOrderCode(shipOrder.getApplyShipOrderCode());
-//        request.setM_Str8(shipOrderItemResponse.getM_Str8());
-//        request.setMaterialId(shipOrderItemResponse.getMaterialId());
         return true;
     }
 

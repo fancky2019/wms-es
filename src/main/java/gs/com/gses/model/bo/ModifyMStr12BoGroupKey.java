@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+/**
+ * 多个字段分组统计 MultiKey addTruckOrderAndItem
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

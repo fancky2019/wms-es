@@ -19,14 +19,17 @@ import gs.com.gses.easyecel.DropDownSetField;
 import gs.com.gses.easyecel.ResoveDropAnnotationUtil;
 import gs.com.gses.easyecel.handler.DropDownCellWriteHandler;
 import gs.com.gses.model.bo.ModifyMStr12BoGroupKey;
+import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.mapper.InventoryItemDetailMapper;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
+import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
+import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import lombok.extern.slf4j.Slf4j;
@@ -98,20 +101,20 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 ////        List<InventoryItemDetail> records1=this.list();
 //
 //
-////        // 测试单个字段查询,selectOne 内部调用list
-////        Object entity = this.baseMapper.selectOne(new QueryWrapper<InventoryItemDetail>()
-////                .select("M_Str1")
-////                .eq("Id", 509955479831320L));
-////
-////// 使用简单查询测试
-////        InventoryItemDetail entity11 = this.baseMapper.selectById(509955479831320L);
+
+    ////        // 测试单个字段查询,selectOne 内部调用list
+    ////        Object entity = this.baseMapper.selectOne(new QueryWrapper<InventoryItemDetail>()
+    ////                .select("M_Str1")
+    ////                .eq("Id", 509955479831320L));
+    ////
+    ////// 使用简单查询测试
+    ////        InventoryItemDetail entity11 = this.baseMapper.selectById(509955479831320L);
 //
 //        return records;
 //    }
 
-
     @Override
-    public Boolean checkDetailExist(InventoryItemDetailRequest request) throws Exception {
+    public Boolean checkDetailExist(InventoryItemDetailRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
 
         if (StringUtils.isEmpty(request.getM_Str7())) {
             throw new Exception("m_Str7 is null");
@@ -125,14 +128,19 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         request.setSearchCount(false);
 
         PageData<InventoryItemDetailResponse> page = getInventoryItemDetailPage(request);
-        int size = page.getData().size();
+        List<InventoryItemDetailResponse> detailResponseList = page.getData();
+        if (StringUtils.isEmpty(request.getM_Str12())) {
+            detailResponseList = detailResponseList.stream().filter(p -> StringUtils.isEmpty(p.getM_Str12())).collect(Collectors.toList());
+        }
+        int size = detailResponseList.size();
         if (size == 0) {
 //            throw new Exception("Can't get inventoryItemDetail info by m_Str7 ,m_Str12,materialCode");
             throw new Exception("库存不存在");
         }
+
         InventoryItemDetailResponse inventoryItemDetailResponse = null;
         if (size > 1) {
-            List<InventoryItemDetailResponse> detailResponseList = page.getData();
+
             int count = 0;
             if (StringUtils.isNotEmpty(request.getM_Str12())) {
                 for (InventoryItemDetailResponse detailResponse : detailResponseList) {
@@ -148,44 +156,103 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                 }
                 request.setId(inventoryItemDetailResponse.getId());
                 checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList);
+                allocateModelList.addAll(currentAllocateModelList);
 
-                String pallet = getPalletInfo(Arrays.asList(inventoryItemDetailResponse.getId()));
-                request.setPallet(pallet);
             } else {
                 //求和
                 BigDecimal sum = detailResponseList.stream()
                         .map(InventoryItemDetailResponse::getPackageQuantity)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 checkPackageQuantity(sum, request.getPackageQuantity());
-
-                List<Long> detailIdList = detailResponseList.stream().map(p -> p.getId()).collect(Collectors.toList());
-                String pallet = getPalletInfo(detailIdList);
-                request.setPallet(pallet);
-                inventoryItemDetailResponse = page.getData().get(0);
+                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList);
+                allocateModelList.addAll(currentAllocateModelList);
+                inventoryItemDetailResponse = detailResponseList.get(0);
             }
 
         } else {
-            inventoryItemDetailResponse = page.getData().get(0);
+            inventoryItemDetailResponse = detailResponseList.get(0);
             checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
-            request.setId(inventoryItemDetailResponse.getId());
-            String pallet = getPalletInfo(Arrays.asList(inventoryItemDetailResponse.getId()));
-            request.setPallet(pallet);
+            List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList);
+            allocateModelList.addAll(currentAllocateModelList);
         }
         request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
         return true;
     }
 
+    @Override
+    public List<AllocateModel> allocate(List<ShipOrderItemResponse> shipOrderItemList,
+                                        List<InventoryItemDetailResponse> detailList) throws Exception {
+        List<AllocateModel> allocateModelList = new ArrayList<>();
+        if (CollectionUtils.isEmpty(shipOrderItemList)) {
+            log.info("shipOrderItemList is empty");
+            return allocateModelList;
+        }
+        shipOrderItemList = shipOrderItemList.stream().sorted(Comparator.comparingLong(ShipOrderItemResponse::getId)).collect(Collectors.toList());
+        HashMap<Long, BigDecimal> usedDetailDic = new HashMap<Long, BigDecimal>();
+        List<Long> detailIdList = detailList.stream().map(m -> m.getId()).collect(Collectors.toList());
+        Map<Long, String> palletMap = getPalletInfo(detailIdList);
+
+        for (int i = 0; i < shipOrderItemList.size(); i++) {
+            ShipOrderItemResponse shipOrderItem = shipOrderItemList.get(i);
+            BigDecimal itemNeedPackageQuantity = shipOrderItem.getRequiredPkgQuantity().subtract(shipOrderItem.getAlloactedPkgQuantity());
+            if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            for (InventoryItemDetailResponse detailResponse : detailList) {
+                if (detailResponse.getIsLocked()) {
+                    String msg = MessageFormat.format("InventoryItemDetail - {0} is locked", detailResponse.getInventoryItemId());
+                    throw new Exception(msg);
+                }
+
+                BigDecimal detailLeftPackageQuantity = detailResponse.getPackageQuantity();
+                if (usedDetailDic.containsKey(detailResponse.getId())) {
+                    detailLeftPackageQuantity = usedDetailDic.get(detailResponse.getId());
+                    if (detailLeftPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                        continue;
+                    }
+                }
+
+                BigDecimal detailPickedPkgQuantity = BigDecimal.ZERO;
+                if (itemNeedPackageQuantity.compareTo(detailLeftPackageQuantity) >= 0) {
+                    itemNeedPackageQuantity = itemNeedPackageQuantity.subtract(detailLeftPackageQuantity);
+                    detailPickedPkgQuantity = detailLeftPackageQuantity;
+                    detailLeftPackageQuantity = BigDecimal.ZERO;
+                } else {
+
+                    detailLeftPackageQuantity = detailLeftPackageQuantity.subtract(itemNeedPackageQuantity);
+                    detailPickedPkgQuantity = itemNeedPackageQuantity;
+                    itemNeedPackageQuantity = BigDecimal.ZERO;
+                }
+                usedDetailDic.put(detailResponse.getId(), detailLeftPackageQuantity);
+                AllocateModel allocateModel = new AllocateModel();
+                allocateModel.setPallet(palletMap.get(detailResponse.getId()));
+                allocateModel.setInventoryItemDetailId(detailResponse.getId());
+                allocateModel.setAllocateQuantity(detailPickedPkgQuantity);
+                allocateModel.setShipOrderItemId(shipOrderItem.getId());
+                allocateModelList.add(allocateModel);
+                if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) == 0) {
+                    break;
+                }
+
+            }
+        }
+        return allocateModelList;
+    }
+
+
     private void checkPackageQuantity(BigDecimal inventoryPackageQuantity, BigDecimal needPackageQuantity) throws Exception {
         if (inventoryPackageQuantity.compareTo(needPackageQuantity) < 0) {
             DecimalFormat df = new DecimalFormat("#0.00");
             String inventoryFormatted = df.format(inventoryPackageQuantity);
-            String needFormatted = df.format(inventoryPackageQuantity);
+            String needFormatted = df.format(needPackageQuantity);
             throw new Exception("库存不足 ,库存数量 - " + inventoryFormatted + " 需求数量 - " + needFormatted);
 
         }
     }
 
-    private String getPalletInfo(List<Long> detailIdList) throws Exception {
+    private Map<Long, String> getPalletInfo(List<Long> detailIdList) throws Exception {
         InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
         List<String> sourceFieldList = new ArrayList<>();
         sourceFieldList.add("pallet");
@@ -207,12 +274,28 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             throw new Exception("es库存托盘数据异常");
         }
 
-        if (palletList.size() > 1) {
-            throw new Exception("暂不支持多个托盘直接出库");
-        }
-        return palletList.get(0);
+//        if (palletList.size() > 1) {
+//            throw new Exception("暂不支持多个托盘直接出库");
+//        }
+//        return palletList.get(0);
 
 //        return "TP070002";
+
+        String pallet = "";
+        if (palletList.size() > 1) {
+//            throw new Exception("暂不支持多个托盘直接出库");
+            pallet = String.join(",", palletList);
+        } else {
+            pallet = palletList.get(0);
+        }
+
+        //转map
+        Map<Long, String> map = inventoryInfoList.stream()
+                .collect(Collectors.toMap(
+                        InventoryInfo::getInventoryItemDetailId, // Key Mapper
+                        item -> item.getPallet()               // Value Mapper (对象本身)
+                ));
+        return map;
     }
 
 

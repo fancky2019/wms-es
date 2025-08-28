@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.entity.Material;
 import gs.com.gses.model.entity.ShipOrder;
 import gs.com.gses.model.entity.TruckOrder;
@@ -76,7 +77,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     private ObjectMapper upperObjectMapper;
 
     @Override
-    public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception {
+    public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
         ShipOrderItemRequest shipOrderItemRequest = new ShipOrderItemRequest();
         shipOrderItemRequest.setM_Str7(request.getProjectNo());
         shipOrderItemRequest.setM_Str12(request.getDeviceNo());
@@ -85,6 +86,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         if (matchedShipOrderItemResponseList == null) {
             matchedShipOrderItemResponseList = new ArrayList<>();
         }
+        if (allocateModelList == null) {
+            allocateModelList = new ArrayList<>();
+        }
         Boolean shipOrderItemExist = shipOrderItemService.checkItemExist(shipOrderItemRequest, matchedShipOrderItemResponseList);
 
         InventoryItemDetailRequest inventoryItemDetailRequest = new InventoryItemDetailRequest();
@@ -92,22 +96,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         inventoryItemDetailRequest.setM_Str12(request.getDeviceNo());
         inventoryItemDetailRequest.setMaterialCode(request.getMaterialCode());
         inventoryItemDetailRequest.setPackageQuantity(request.getQuantity());
-        Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest);
-
-        if (CollectionUtils.isNotEmpty(matchedShipOrderItemResponseList)) {
-//            List<Long> shipOrderIdList=matchedShipOrderItemResponseList.stream().map(p->p.getShipOrderId()).collect(Collectors.toList());
-//            List<String> shipOrderCodeList=    matchedShipOrderItemResponseList.stream().map(p->p.getShipOrderCode()).collect(Collectors.toList());
-//            List<String> applyShipOrderCodeList=    matchedShipOrderItemResponseList.stream().map(p->p.getApplyShipOrderCode()).collect(Collectors.toList());
-//
-//
-//
-//            request.setShipOrderId(shipOrderItemRequest.getShipOrderId());
-//            request.setApplyShipOrderCode(shipOrderItemRequest.getApplyShipOrderCode());
-//            request.setShipOrderCode(shipOrderItemRequest.getShipOrderCode());
-//            request.setShipOrderItemId(shipOrderItemRequest.getId());
-//            request.setProjectName(shipOrderItemRequest.getM_Str8());
-        }
-
+        Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest,matchedShipOrderItemResponseList, allocateModelList);
 
         request.setPallet(inventoryItemDetailRequest.getPallet());
         request.setMaterialId(inventoryItemDetailRequest.getMaterialId());

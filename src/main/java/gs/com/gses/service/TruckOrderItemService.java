@@ -1,5 +1,6 @@
 package gs.com.gses.service;
 
+import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.entity.TruckOrderItem;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
@@ -15,7 +16,7 @@ import java.util.List;
  * @createDate 2025-05-28 13:18:54
  */
 public interface TruckOrderItemService extends IService<TruckOrderItem> {
-    Boolean checkAvailable(TruckOrderItemRequest request,List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
+    Boolean checkAvailable(TruckOrderItemRequest request,List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
 
     Boolean add(TruckOrderItemRequest request);
 

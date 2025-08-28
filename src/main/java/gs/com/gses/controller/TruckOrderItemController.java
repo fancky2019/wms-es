@@ -23,7 +23,7 @@ public class TruckOrderItemController {
      */
     @GetMapping("/checkAvailable")
     public MessageResult<Boolean> checkAvailable(TruckOrderItemRequest request) throws Exception {
-        truckOrderItemService.checkAvailable(request,null);
+        truckOrderItemService.checkAvailable(request,null,null);
         return MessageResult.success();
     }
 

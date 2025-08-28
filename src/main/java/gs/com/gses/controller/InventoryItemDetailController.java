@@ -77,7 +77,7 @@ public class InventoryItemDetailController {
 
     @PostMapping("/checkDetailExist")
     public MessageResult<Boolean> checkDetailExist(@RequestBody InventoryItemDetailRequest request) throws Exception {
-        Boolean re = inventoryItemDetailService.checkDetailExist(request);
+        Boolean re = inventoryItemDetailService.checkDetailExist(request,null,null);
         return MessageResult.success(re);
     }
 }

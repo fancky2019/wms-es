@@ -44,6 +44,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
+import org.springframework.data.elasticsearch.core.index.AliasAction;
+import org.springframework.data.elasticsearch.core.index.AliasActionParameters;
+import org.springframework.data.elasticsearch.core.index.AliasActions;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.*;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -581,10 +584,29 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             Document mapping = indexOperations.createMapping();
             //推送映射
             return indexOperations.putMapping(mapping);
+
+
+//            // 4. 添加别名
+//            String aliasName = "inventory_info_all";
+//            AliasActions aliasActions = new AliasActions();
+//            aliasActions.add(new AliasAction.Add(
+//                    AliasActionParameters.builder()
+//                            .withIndices(indexOperations.getIndexCoordinates().getIndexName())
+//                            .withAliases(aliasName)
+//                            .build()
+//            ));
+//
+//            return elasticsearchRestTemplate.indexOps(IndexCoordinates.of(aliasName))
+//                    .alias(aliasActions);
         } else {
             return result;
         }
     }
+
+
+
+
+
 
     @Override
     public PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception {
