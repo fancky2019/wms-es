@@ -99,6 +99,15 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             throw new Exception("装车单明细为空");
         }
 
+        for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
+            if (StringUtils.isNotEmpty(itemRequest.getDeviceNo())) {
+                if (itemRequest.getIgnoreDeviceNo()) {
+                    String msg = MessageFormat.format("DeviceNo - {0} is not empty,can not ignore DeviceNo ", itemRequest.getDeviceNo());
+                    throw new Exception(msg);
+                }
+            }
+        }
+
         //多个字段分组
         MultiKeyMap<MultiKey, List<TruckOrderItemRequest>> multiKeyMap = new MultiKeyMap<>();
         for (TruckOrderItemRequest p : request.getTruckOrderItemRequestList()) {

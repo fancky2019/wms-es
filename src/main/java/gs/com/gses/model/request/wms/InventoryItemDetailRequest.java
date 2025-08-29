@@ -76,7 +76,7 @@ public class InventoryItemDetailRequest extends RequestPage {
      * 已分配最小单位数量
      */
     private BigDecimal allocatedSmallUnitQuantity;
-
+    private Boolean ignoreDeviceNo = false;
     /**
      * 已分配包装单位数量
      */

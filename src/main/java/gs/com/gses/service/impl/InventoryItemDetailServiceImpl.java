@@ -112,7 +112,6 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 //
 //        return records;
 //    }
-
     @Override
     public Boolean checkDetailExist(InventoryItemDetailRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
 
@@ -129,9 +128,6 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
         PageData<InventoryItemDetailResponse> page = getInventoryItemDetailPage(request);
         List<InventoryItemDetailResponse> detailResponseList = page.getData();
-        if (StringUtils.isEmpty(request.getM_Str12())) {
-            detailResponseList = detailResponseList.stream().filter(p -> StringUtils.isEmpty(p.getM_Str12())).collect(Collectors.toList());
-        }
         int size = detailResponseList.size();
         if (size == 0) {
 //            throw new Exception("Can't get inventoryItemDetail info by m_Str7 ,m_Str12,materialCode");
@@ -272,21 +268,6 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
         if (CollectionUtils.isEmpty(palletList)) {
             throw new Exception("es库存托盘数据异常");
-        }
-
-//        if (palletList.size() > 1) {
-//            throw new Exception("暂不支持多个托盘直接出库");
-//        }
-//        return palletList.get(0);
-
-//        return "TP070002";
-
-        String pallet = "";
-        if (palletList.size() > 1) {
-//            throw new Exception("暂不支持多个托盘直接出库");
-            pallet = String.join(",", palletList);
-        } else {
-            pallet = palletList.get(0);
         }
 
         //转map
@@ -629,8 +610,21 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         if (StringUtils.isNotEmpty(request.getM_Str7())) {
             queryWrapper.eq(InventoryItemDetail::getM_Str7, request.getM_Str7());
         }
-        if (StringUtils.isNotEmpty(request.getM_Str12())) {
-            queryWrapper.like(InventoryItemDetail::getM_Str12, request.getM_Str12());
+
+        if(!request.getIgnoreDeviceNo())
+        {
+            if (StringUtils.isNotEmpty(request.getM_Str12())) {
+                queryWrapper.like(InventoryItemDetail::getM_Str12, request.getM_Str12());
+            }
+            else {
+                //空过滤  AND (M_Str12 IS NULL OR M_Str12 = ?)
+                queryWrapper.and(wrapper -> wrapper
+                        .isNull(InventoryItemDetail::getM_Str12)
+                        .or()
+                        .eq(InventoryItemDetail::getM_Str12, "")
+                );
+//                queryWrapper.apply("( m_str12 IS NULL OR m_str12 = '')");
+            }
         }
         if (StringUtils.isNotEmpty(request.getMaterialCode())) {
             Material material = materialService.getByCode(request.getMaterialCode());

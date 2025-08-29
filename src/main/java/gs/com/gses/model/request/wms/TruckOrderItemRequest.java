@@ -82,11 +82,12 @@ public class TruckOrderItemRequest extends RequestPage {
      *
      */
     private String deviceNo;
+    private Boolean ignoreDeviceNo = false;
 
     /**
      *
      */
-    private BigDecimal quantity=BigDecimal.ONE;
+    private BigDecimal quantity = BigDecimal.ONE;
 
     /**
      *
