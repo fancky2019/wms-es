@@ -60,6 +60,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
             queryWrapper.eq(Material::getId, request.getId());
         }
 
+        if (CollectionUtils.isNotEmpty(request.getMaterialCodeList())){
+            queryWrapper.in(Material::getXCode, request.getMaterialCodeList());
+        }
+
         if (StringUtils.isNotEmpty(request.getXCode())){
             queryWrapper.in(Material::getXCode, request.getXCode());
         }

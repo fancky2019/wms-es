@@ -2299,11 +2299,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (pageData.getCount() == 0) {
             return "货位已盘点锁定";
         }
-        //平库也可以分配，默认只能立库
+        //平库也可以分配，默认只能存储  货位类型 （0未知,1存储，2越库，3地面，4收货区,5月台
         request.setLocationXType(1);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "货位类型不是立库";
+            return "货位类型不是存储";
         }
         request.setLanewayXStatus(1);
         pageData = getInventoryInfoPage(request);

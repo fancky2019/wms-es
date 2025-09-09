@@ -9,6 +9,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 @Data
 public class TruckOrderItemRequest extends RequestPage {
@@ -22,6 +23,7 @@ public class TruckOrderItemRequest extends RequestPage {
      */
     private Long truckOrderId;
 
+    private List<Long> truckOrderIdList;
     /**
      *
      */

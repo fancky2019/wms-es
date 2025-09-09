@@ -148,7 +148,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
             allAllocateModelList.addAll(allocateModelList);
         }
+        String allMatchedShipOrderItemResponseListJson = objectMapper.writeValueAsString(allMatchedShipOrderItemResponseList);
+        log.info("allMatchedShipOrderItemResponseList -:{}", allMatchedShipOrderItemResponseListJson);
 
+        String allAllocateModelListJson = objectMapper.writeValueAsString(allAllocateModelList);
+        log.info("allAllocateModelList -:{}", allAllocateModelListJson);
         List<TruckOrderItemRequest> splitTruckOrderItemRequestList = new ArrayList<>();
         TruckOrderItemRequest newTruckOrderItemRequest = null;
         //分组成map
@@ -165,6 +169,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             }
 
             List<String> currentShipOrderCodeList = currentShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
+
             for (String shipOrderCode : currentShipOrderCodeList) {
 
                 //当前装车明细对应发货单的明细
@@ -178,8 +183,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 for (ShipOrderItemResponse itemResponse : orderItemList) {
                     for (AllocateModel allocateModel : shipOrderAllocateModelList) {
                         newTruckOrderItemRequest = new TruckOrderItemRequest();
-                        newTruckOrderItemRequest.setProjectName(itemResponse.getM_Str8());
                         BeanUtils.copyProperties(truckOrderItemRequest, newTruckOrderItemRequest);
+                        newTruckOrderItemRequest.setProjectName(itemResponse.getM_Str8());
                         newTruckOrderItemRequest.setQuantity(allocateModel.getAllocateQuantity());
                         newTruckOrderItemRequest.setApplyShipOrderCode(itemResponse.getApplyShipOrderCode());
                         newTruckOrderItemRequest.setShipOrderId(itemResponse.getShipOrderId().toString());
@@ -190,7 +195,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                         splitTruckOrderItemRequestList.add(newTruckOrderItemRequest);
                     }
                 }
-
+                if (CollectionUtils.isEmpty(splitTruckOrderItemRequestList)) {
+                    throw new Exception("AllocateException:splitTruckOrderItemRequestList is empty");
+                }
 
                 //分配的托盘
                 List<String> itemAllocatedPalletList = shipOrderAllocateModelList.stream().map(AllocateModel::getPallet).distinct().collect(Collectors.toList());
@@ -219,6 +226,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 }
             }
         }
+
+        if (CollectionUtils.isEmpty(shipOrderPalletRequestList)) {
+            throw new Exception("AllocateException:shipOrderPalletRequestList is empty");
+        }
+
         //校验
         for (ShipOrderPalletRequest shipOrderPalletRequest : shipOrderPalletRequestList) {
             if (StringUtils.isEmpty(shipOrderPalletRequest.getShipOrderCode())) {
@@ -608,6 +620,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
     }
 
+
     private void prepareResponds(String fileName, HttpServletResponse response) throws IOException {
         response.setContentType("application/vnd.ms-excel");
         response.setCharacterEncoding("utf-8");
@@ -622,6 +635,18 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //        response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
 
 
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean deleteByIds(List<Long> idList) {
+        LambdaUpdateWrapper<TruckOrder> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList)
+                .set(TruckOrder::getDeleted, 1);
+
+        boolean re = this.update(null, truckOrderLambdaUpdateWrapper);
+        return re;
     }
 
 }

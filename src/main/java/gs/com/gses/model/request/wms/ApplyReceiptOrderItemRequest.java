@@ -1,56 +1,40 @@
 package gs.com.gses.model.request.wms;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import gs.com.gses.model.request.EsRequestPage;
-import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Data
-public class ShipOrderItemRequest extends RequestPage {
+public class ApplyReceiptOrderItemRequest {
     /**
      *
      */
     private Long id;
 
     /**
-     * 关联的出库单主表id
+     * 关联的申请单主表id
      */
-    private Long shipOrderId;
+    private Long applyReceiptOrderId;
 
-    private String shipOrderCode;
-
-    private String applyShipOrderCode;
     /**
      * 行号
      */
     private Integer rowNo;
 
     /**
-     * 第三方系统单号（兼容字符型）
-     */
-    private String erpCode;
-
-    /**
-     * 第三方系统行号（兼容字符型）
+     * 第三方系统行号
      */
     private String thirdPartyRowNo;
 
     /**
-     * 状态（1open新建，2生效，3执行中，4已完成，-1作废）
+     * 状态(1-打开;2-生效;3-执行中;4-已完成;5-手动完成;-1-作废)
      */
     private Integer XStatus;
 
-    private List<Integer> XStatusList;
     /**
      * 物料id
      */
     private Long materialId;
-
-    private String materialCode;
 
     /**
      * 批号
@@ -68,29 +52,29 @@ public class ShipOrderItemRequest extends RequestPage {
     private String batchNo3;
 
     /**
-     * 包装单位id
+     * 包装单位
      */
     private Long packageUnitId;
 
     /**
-     * 需求数量
+     * 期望数量
      */
-    private BigDecimal requiredPkgQuantity;
+    private BigDecimal expectedNumber;
 
     /**
-     * 需求数量单位
+     * 期望数量单位
      */
-    private String requiredUnit;
+    private String expectedUnit;
 
     /**
-     * 分配数量
+     * 收货数量
      */
-    private BigDecimal alloactedPkgQuantity;
+    private BigDecimal receivedNumber;
 
     /**
-     * 已拣货数量
+     * 收货数量单位
      */
-    private BigDecimal pickedPkgQuantity;
+    private String receivedUnit;
 
     /**
      * 备注
@@ -433,94 +417,37 @@ public class ShipOrderItemRequest extends RequestPage {
     private Long lastModificationTime;
 
     /**
-     * 过期时间
+     * 已分配数量
      */
-    private Long expiredTime;
+    private BigDecimal allocatedNumber;
 
     /**
-     * 入库时间
+     * 仓库
      */
-    private Long inboundTime;
+    private Long warehouseId;
 
     /**
-     * 生产时间
+     * 可分配数量
      */
-    private Long productTime;
+    private BigDecimal waitAllocateNumber;
 
     /**
-     * 质检状态
+     * 质检状态值
      */
     private Integer QCStatus;
 
     /**
-     * 箱号
+     * 上架数量
      */
-    private String carton;
+    private BigDecimal movedPkgQuantity;
 
     /**
-     * 序列号
+     * 是否保税
      */
-    private String serialNo;
+    private Boolean isBonded;
 
     /**
-     * 单据优先级[0,8]
+     * 生产日期
      */
-    private Integer proirity;
-
-    /**
-     * 起点位置Code
-     */
-    private String fromLocationCode;
-
-    /**
-     * 起点位置ID
-     */
-    private Long fromLocationId;
-
-    /**
-     * 组织（客户，供应商）
-     */
-    private Long organiztionId;
-
-    /**
-     *
-     */
-    private String shipAccordingToOrderCode;
-
-    /**
-     * 终点位置Code
-     */
-    private String toLocCode;
-
-    /**
-     * 终点位置ID
-     */
-    private Long toLocId;
-
-    /**
-     * 包装方式
-     */
-    private String packageMethod;
-
-    /**
-     * 是否封存
-     */
-    private Boolean isSealed;
-
-    /**
-     * 库存是否足够
-     */
-    private Boolean sufficientInventory;
-
-    /**
-     * 缺少数量
-     */
-    private BigDecimal lackQuantity;
-
-    /**
-     * 起点位置Code
-     */
-    private String palletCode;
-
-    private static final long serialVersionUID = 1L;
+    private Long productTime;
 }

@@ -8,6 +8,8 @@ import gs.com.gses.service.TruckOrderItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/truckOrderItem")
 public class TruckOrderItemController {
@@ -23,7 +25,7 @@ public class TruckOrderItemController {
      */
     @GetMapping("/checkAvailable")
     public MessageResult<Boolean> checkAvailable(TruckOrderItemRequest request) throws Exception {
-        truckOrderItemService.checkAvailable(request,null,null);
+        truckOrderItemService.checkAvailable(request, null, null);
         return MessageResult.success();
     }
 
@@ -40,8 +42,15 @@ public class TruckOrderItemController {
     }
 
     @GetMapping("/trunkBarCodeMq")
-    public MessageResult<Void> trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest ) throws Exception {
+    public MessageResult<Void> trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest) throws Exception {
         truckOrderItemService.trunkBarCodeMq(truckOrderItemRequest);
         return MessageResult.success();
     }
+
+    @PostMapping("/mergeTruckOrder")
+    public MessageResult<Void> mergeTruckOrder(@RequestBody List<Long> truckOrderIdList) throws Exception {
+        truckOrderItemService.mergeTruckOrder(truckOrderIdList);
+        return MessageResult.success();
+    }
+
 }

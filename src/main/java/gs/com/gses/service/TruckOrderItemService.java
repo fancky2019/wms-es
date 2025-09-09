@@ -25,4 +25,8 @@ public interface TruckOrderItemService extends IService<TruckOrderItem> {
     void trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest) throws Exception;
 
     PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request) throws Exception;
+
+    void mergeTruckOrder(List<Long> truckOrderIdList) throws Exception;
+
+
 }

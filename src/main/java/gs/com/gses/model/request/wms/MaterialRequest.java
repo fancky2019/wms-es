@@ -21,6 +21,7 @@ public class MaterialRequest  extends RequestPage {
      */
     private String XCode;
 
+    private List<String> materialCodeList;
     /**
      * 名称
      */

@@ -1,16 +1,14 @@
 package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.bo.wms.AllocateModel;
-import gs.com.gses.model.entity.Material;
-import gs.com.gses.model.entity.ShipOrder;
-import gs.com.gses.model.entity.TruckOrder;
-import gs.com.gses.model.entity.TruckOrderItem;
+import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
@@ -28,6 +26,7 @@ import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.*;
 import gs.com.gses.mapper.TruckOrderItemMapper;
 import gs.com.gses.utility.LambdaFunctionHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.ExecutorType;
@@ -48,6 +47,7 @@ import java.util.stream.Collectors;
  * @description 针对表【TruckOrderItem】的数据库操作Service实现
  * @createDate 2025-05-28 13:18:54
  */
+@Slf4j
 @Service
 public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper, TruckOrderItem>
         implements TruckOrderItemService {
@@ -97,7 +97,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         inventoryItemDetailRequest.setMaterialCode(request.getMaterialCode());
         inventoryItemDetailRequest.setPackageQuantity(request.getQuantity());
         inventoryItemDetailRequest.setIgnoreDeviceNo(request.getIgnoreDeviceNo());
-        Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest,matchedShipOrderItemResponseList, allocateModelList);
+        Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest, matchedShipOrderItemResponseList, allocateModelList);
 
         request.setPallet(inventoryItemDetailRequest.getPallet());
         request.setMaterialId(inventoryItemDetailRequest.getMaterialId());
@@ -137,7 +137,12 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
     @Override
     public void trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest) throws Exception {
-        String trunkBarCode=MessageFormat.format("{0},{1},{2}",truckOrderItemRequest.getProjectNo(),truckOrderItemRequest.getDeviceNo(),truckOrderItemRequest.getMaterialCode());
+        if (StringUtils.isNotEmpty(truckOrderItemRequest.getDeviceNo())) {
+            if (truckOrderItemRequest.getDeviceNo().contains(",")) {
+                throw new Exception("设备号不能包含逗号");
+            }
+        }
+        String trunkBarCode = MessageFormat.format("{0},{1},{2}", truckOrderItemRequest.getProjectNo(), truckOrderItemRequest.getDeviceNo(), truckOrderItemRequest.getMaterialCode());
         TrunkOrderBarCode trunkOrderBarCode = new TrunkOrderBarCode();
         trunkOrderBarCode.setBarCode(trunkBarCode);
 
@@ -208,6 +213,10 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             truckOrderItemQueryWrapper.eq(TruckOrderItem::getTruckOrderId, request.getTruckOrderId());
         }
 
+        if (CollectionUtils.isNotEmpty(request.getTruckOrderIdList())) {
+            truckOrderItemQueryWrapper.in(TruckOrderItem::getTruckOrderId, request.getTruckOrderIdList());
+        }
+
         if (StringUtils.isNotEmpty(request.getProjectNo())) {
             truckOrderItemQueryWrapper.like(TruckOrderItem::getProjectNo, request.getProjectNo());
         }
@@ -256,10 +265,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrderItem> page = new Page<>(request.getPageIndex(), request.getPageSize());
-        if(CollectionUtils.isEmpty(request.getSortFieldList()))
-        {
-            List<Sort> sortFieldList=new ArrayList<>();
-            Sort sort=new Sort();
+        if (CollectionUtils.isEmpty(request.getSortFieldList())) {
+            List<Sort> sortFieldList = new ArrayList<>();
+            Sort sort = new Sort();
             sort.setSortField("id");
             sort.setSortType("desc");
             sortFieldList.add(sort);
@@ -303,6 +311,58 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         pageData.setData(truckOrderItemResponseResponseList);
         pageData.setCount(total);
         return pageData;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void mergeTruckOrder(List<Long> truckOrderIdList) throws Exception {
+        truckOrderIdList = truckOrderIdList.stream().distinct().collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(truckOrderIdList)) {
+            throw new Exception("truckOrderIdList empty");
+        }
+
+        if (truckOrderIdList.size() < 2) {
+            throw new Exception("truckOrderIdList size 1");
+        }
+
+        List<TruckOrder> truckOrderList = this.truckOrderService.listByIds(truckOrderIdList);
+        Map<Long, TruckOrder> truckOrderMap = truckOrderList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
+        for (Long truckOrderId : truckOrderIdList) {
+            TruckOrder truckOrder = truckOrderMap.get(truckOrderId);
+            if (truckOrder == null) {
+                throw new Exception(MessageFormat.format("TruckOrder - {0} lost", truckOrderId));
+            }
+        }
+
+        truckOrderList = truckOrderList.stream().sorted(Comparator.comparingLong(TruckOrder::getId)).collect(Collectors.toList());
+        Long retainId = truckOrderList.get(0).getId();
+        List<Long> deletedTruckOrderIdList = truckOrderIdList.stream().filter(p -> !p.equals(retainId)).collect(Collectors.toList());
+        String mergeMsg = MessageFormat.format("retainId:{0},deletedTruckOrderIdList:{1}", retainId, deletedTruckOrderIdList.stream().map(Object::toString).collect(Collectors.joining(",")));
+
+        log.info(mergeMsg);
+
+        boolean re = this.truckOrderService.deleteByIds(deletedTruckOrderIdList);
+        if (!re) {
+            throw new Exception("Delete truckOrder fail");
+        }
+        TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
+        truckOrderItemRequest.setSearchCount(false);
+        truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
+        truckOrderItemRequest.setTruckOrderIdList(deletedTruckOrderIdList);
+        PageData<TruckOrderItemResponse> pageData = this.getTruckOrderItemPage(truckOrderItemRequest);
+
+        List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
+        List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
+
+        LambdaUpdateWrapper<TruckOrderItem> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        truckOrderLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
+                .set(TruckOrderItem::getTruckOrderId, retainId);
+
+        boolean re1 = this.update(null, truckOrderLambdaUpdateWrapper);
+        if (!re1) {
+            throw new Exception("Update TruckOrderItem truckOrderId fail");
+        }
+
     }
 }
 

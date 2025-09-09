@@ -11,6 +11,7 @@ import gs.com.gses.model.response.wms.TruckOrderResponse;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * @author lirui
@@ -30,5 +31,8 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
     void trunkOrderMq(Integer id) throws Exception;
 
-    void exportTrunkOrderExcel(Long id,HttpServletResponse httpServletResponse) throws Exception;
+    void exportTrunkOrderExcel(Long id, HttpServletResponse httpServletResponse) throws Exception;
+
+
+    Boolean deleteByIds(List<Long> idList);
 }
