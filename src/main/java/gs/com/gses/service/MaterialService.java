@@ -7,6 +7,8 @@ import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MaterialResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * @author lirui
@@ -20,4 +22,5 @@ public interface MaterialService extends IService<Material> {
 
     Material getByCode(String materialCode) throws Exception;
 
+    void uploadInspectionTemple(MultipartFile[] files, MaterialRequest materialRequest) throws Exception;
 }

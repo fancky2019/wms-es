@@ -606,7 +606,13 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             Exception {
         log.info(objectMapper.writeValueAsString(request));
         LambdaQueryWrapper<InventoryItemDetail> queryWrapper = new LambdaQueryWrapper<>();
-
+        /**
+         * gt: Greater than（大于）
+         * ge: Greater than or equal to（大于等于）
+         * lt: Less than（小于）
+         * le: Less than or equal to（小于等于）
+         */
+        queryWrapper.gt(InventoryItemDetail::getPackageQuantity, 0);
         if (StringUtils.isNotEmpty(request.getM_Str7())) {
             queryWrapper.eq(InventoryItemDetail::getM_Str7, request.getM_Str7());
         }

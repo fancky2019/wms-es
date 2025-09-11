@@ -181,7 +181,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             long count = this.inventoryItemDetailService.count();
             int step = 1000;
             long times = count / step;
-            long left = count / step;
+            long left = count % step;
             if (left > 0) {
                 times++;
             }
@@ -705,7 +705,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (StringUtils.isNotEmpty(request.getPallet())) {
             boolQueryBuilder.must(QueryBuilders.termQuery("pallet", request.getPallet()));
         }
-
+        if (request.getWhid() != null && request.getWhid() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("whid", request.getWhid()));
+        }
         if (request.getZoneId() != null && request.getZoneId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("zoneId", request.getZoneId()));
         }
@@ -2342,6 +2344,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 pageData = getInventoryInfoPage(request);
                 if (pageData.getCount() == 0) {
                     return "发货单指定zone - " + shipOrderResponse.getZoneID() + " 没有库存";
+                }
+            }
+
+            if (shipOrderResponse.getWhid() != null && shipOrderResponse.getWhid() > 0) {
+                request.setWhid(shipOrderResponse.getWhid());
+                pageData = getInventoryInfoPage(request);
+                if (pageData.getCount() == 0) {
+                    return "发货单指定Whid - " + shipOrderResponse.getWhid() + " 没有库存";
                 }
             }
 

@@ -29,6 +29,6 @@ public interface FtpService {
     ResponseEntity<byte[]> ftpPreviewFile(String filePath);
 
     void ftpDownloadFile(String filePath, HttpServletResponse response);
-
+    boolean deleteAllFilesInDirectory(String directoryPath) throws Exception;
 
 }

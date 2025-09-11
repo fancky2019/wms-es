@@ -116,7 +116,7 @@ public class FtpServiceImpl implements FtpService {
             boolean success = uploadFile(file.getBytes(), filePath);
             filePathList.add(filePath);
         }
-        return  true;
+        return true;
     }
 
     /**
@@ -139,7 +139,7 @@ public class FtpServiceImpl implements FtpService {
             if (!ftpClient.changeWorkingDirectory(basePath)) {
                 // 如果目录不存在，则创建（包括所有不存在的父目录）
                 createDirectory(basePath);
-                ftpClient.changeWorkingDirectory(basePath);
+                boolean re = ftpClient.changeWorkingDirectory(basePath);
             }
 
             // 执行上传
@@ -184,7 +184,7 @@ public class FtpServiceImpl implements FtpService {
 
             // 执行上传
             boolean isUploaded = ftpClient.storeFile(fileName, inputStream);
-           if (isUploaded) {
+            if (isUploaded) {
                 log.info("文件上传成功: {} -> {}", localFileName, remoteFileName);
             } else {
                 String replyString = ftpClient.getReplyString();
@@ -422,7 +422,7 @@ public class FtpServiceImpl implements FtpService {
                 return ResponseEntity.notFound().build();
             }
             byte[] fileData = downloadFile(filePath);
-            
+
             // 根据文件类型设置Content-Type
             String contentType = getContentType(filePath);
             HttpHeaders headers = new HttpHeaders();
@@ -606,6 +606,55 @@ public class FtpServiceImpl implements FtpService {
             log.warn("文件名编码失败，使用原始文件名: {}", fileName, e);
             return fileName;
         }
+    }
+
+
+    /**
+     * 删除指定目录下的所有文件（但不删除子目录本身）
+     * @param directoryPath 要清空的目录路径
+     * @return 成功返回 true，失败返回 false
+     */
+    @Override
+    public boolean deleteAllFilesInDirectory(String directoryPath) throws Exception {
+
+        boolean success = true;
+        ensureConnected(ftpClient);
+
+        // 切换到目标目录
+        boolean changed = ftpClient.changeWorkingDirectory(directoryPath);
+        if (!changed) {
+            log.error("无法切换到目录: {}", directoryPath);
+            // 如果目录不存在，则创建（包括所有不存在的父目录）
+            createDirectory(directoryPath);
+            changed = ftpClient.changeWorkingDirectory(directoryPath);
+            return true;
+        }
+
+        // 列出目录下的所有文件和子目录
+        FTPFile[] files = ftpClient.listFiles();
+
+        if (files == null || files.length == 0) {
+            log.info("目录为空: {}", directoryPath);
+            return true;
+        }
+
+        // 遍历并删除所有文件
+        for (FTPFile file : files) {
+            if (file.isFile()) { // 只处理文件，不处理目录
+                String fileName = file.getName();
+                boolean deleted = ftpClient.deleteFile(fileName);
+                if (deleted) {
+                    success = true;
+                    log.info("文件删除成功: {}/{}", directoryPath, fileName);
+                } else {
+                    log.error("文件删除失败: {}/{}", directoryPath, fileName);
+                    success = false; // 记录有失败，但继续尝试删除其他文件
+                }
+            }
+        }
+        return success;
+
+
     }
 
 }
