@@ -22,6 +22,7 @@ public class ApplyReceiptOrderItemController {
     @PostMapping(value = "/inspection")
     public MessageResult inspection(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
         this.applyReceiptOrderItemService.inspection(files, applyReceiptOrderItemRequest);
+//        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
     }
 

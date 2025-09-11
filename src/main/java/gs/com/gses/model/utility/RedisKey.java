@@ -10,4 +10,7 @@ public class RedisKey {
 
     public static final String SHIP_ORDER_COMPLETE= "shipOrderComplete:";
 
+    public static final String CREATE_WORKING_DIRECTORY= "createWorkingDirectory:";
+
+
 }

@@ -31,4 +31,6 @@ public interface FtpService {
     void ftpDownloadFile(String filePath, HttpServletResponse response);
     boolean deleteAllFilesInDirectory(String directoryPath) throws Exception;
 
+
+    boolean createWorkingDirectory(String directoryPath) throws Exception;
 }

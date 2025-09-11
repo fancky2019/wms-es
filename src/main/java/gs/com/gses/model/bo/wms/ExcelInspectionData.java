@@ -18,4 +18,6 @@ public class ExcelInspectionData {
      */
     private Boolean unqualified;
 
+    private String errMsg;
+
 }

@@ -1,15 +1,10 @@
 package gs.com.gses.service.impl;
 
 import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.read.listener.ReadListener;
-import com.alibaba.excel.write.metadata.WriteSheet;
-import com.alibaba.excel.write.metadata.WriteTable;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.ftp.FtpConfig;
 import gs.com.gses.ftp.FtpService;
@@ -18,7 +13,6 @@ import gs.com.gses.model.bo.wms.InspectionData;
 import gs.com.gses.model.entity.ApplyReceiptOrderItem;
 import gs.com.gses.model.request.wms.ApplyReceiptOrderItemRequest;
 import gs.com.gses.model.request.wms.MaterialRequest;
-import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MaterialResponse;
 import gs.com.gses.service.ApplyReceiptOrderItemService;
@@ -31,17 +25,15 @@ import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.apache.commons.collections4.map.MultiKeyMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -51,6 +43,8 @@ import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -75,13 +69,20 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
     private FtpConfig ftpConfig;
 
 
+    @Autowired
+    private Executor threadPoolExecutor;
+
+
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void inspection(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
-//        List<String> fileNames = saveFiles(files);
+    public String inspection(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+        //        List<String> fileNames = saveFiles(files);
         //获取body中的参数
 //            String value = (String)request.getAttribute("paramName");
         String name = applyReceiptOrderItemRequest.getComments();
+        StopWatch stopWatch = new StopWatch("inspection");
+        stopWatch.start("AnalysisAndSave");
+
         if (files == null || files.length == 0) {
             throw new Exception("files is null");
         }
@@ -130,7 +131,9 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
                 throw e;
             }
         }
-
+        stopWatch.stop();
+        log.info("AnalysisAndSave: {}ms", stopWatch.getLastTaskTimeMillis());
+        stopWatch.start("FtpUpload");
         String rootPath = ftpConfig.getBasePath();
         String basePath = rootPath + buildDateBasedPath();
         for (ExcelInspectionData excelInspectionData : excelInspectionDataList) {
@@ -138,8 +141,13 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             this.ftpService.uploadFile(excelInspectionData.getOutputPath(), materialPath);
         }
         log.info("ftp upload complete");
-
+        stopWatch.stop();
+        log.info("FtpUpload: {}ms", stopWatch.getLastTaskTimeMillis());
+        stopWatch.start("UpdateInspectionQuantity");
         updateInspectionQuantity(excelInspectionDataList);
+        stopWatch.stop();
+        log.info("UpdateInspectionQuantity: {}ms", stopWatch.getLastTaskTimeMillis());
+        log.info("Inspection: {}ms", stopWatch.getTotalTimeMillis());
 //        List<String> filePathList = new ArrayList<>();
 //        String filePath = "";
 //        for (MultipartFile file : files) {
@@ -151,8 +159,107 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
         //保存到本地
 //        List<String> fileNames = saveFiles(files);
 
-
+        return "";
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String inspectionOptimization(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+//        List<String> fileNames = saveFiles(files);
+        //获取body中的参数
+//            String value = (String)request.getAttribute("paramName");
+        String name = applyReceiptOrderItemRequest.getComments();
+        if (files == null || files.length == 0) {
+            throw new Exception("files is null");
+        }
+        String currentWorkingDir = System.getProperty("user.dir");
+        String saveBasePath = MessageFormat.format("{0}/{1}/{2}", currentWorkingDir, "tmp", buildDateBasedPath());
+        List<ExcelInspectionData> excelInspectionDataList = new ArrayList<>();
+        List<CompletableFuture<ExcelInspectionData>> futuresList = new ArrayList<>();
+        for (MultipartFile file : files) {
+            CompletableFuture<ExcelInspectionData> future = CompletableFuture.supplyAsync(() -> {
+
+
+                ExcelInspectionData excelInspectionData = new ExcelInspectionData();
+                try (InputStream inputStream = file.getInputStream()) {
+//                    Integer.parseInt("123t");
+                    excelInspectionData = parseSpecificCell(inputStream);
+                    List<InspectionData> dataList = excelInspectionData.getInspectionDataList();
+                    HashMap<String, Object> inspectionResultMap = new HashMap<>();
+                    for (InspectionData data : dataList) {
+                        boolean number = NumberUtils.isCreatable(data.getStandardValue());
+                        String inspectionResult = "N";
+
+                        if (!number) {
+                            inspectionResult = data.getActualValue().equals(data.getStandardValue()) ? "Y" : "N";
+                        } else {
+                            BigDecimal actualValue = NumberUtils.createBigDecimal(data.getActualValue());
+                            BigDecimal standardValue = NumberUtils.createBigDecimal(data.getStandardValue());
+                            BigDecimal upperLimit = standardValue.add(NumberUtils.createBigDecimal(data.getUpperLimit()));
+                            BigDecimal lowerLimit = standardValue.add(NumberUtils.createBigDecimal(data.getLowerLimit()));
+
+                            inspectionResult = actualValue.compareTo(upperLimit) <= 0 &&
+                                    actualValue.compareTo(lowerLimit) >= 0 ? "Y" : "N";
+                        }
+                        data.setInspectionResult(inspectionResult);
+                        inspectionResultMap.put("D" + data.getRowIndex(), inspectionResult);
+                    }
+                    boolean unqualified = inspectionResultMap.values().stream().anyMatch("N"::equals);
+                    excelInspectionData.setUnqualified(unqualified);
+                    inspectionResultMap.put("L1", unqualified ? "N" : "Y");
+                    String materialPath = MessageFormat.format("{0}/{1}/", saveBasePath, excelInspectionData.getMaterialCode());
+                    Path path = Paths.get(materialPath);
+                    if (!Files.exists(path)) {
+                        Files.createDirectories(path);
+                    }
+                    String outputPath = MessageFormat.format("{0}/{1}", materialPath, file.getOriginalFilename());
+                    byte[] bytes = file.getBytes();
+                    ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
+                    ExcelUpdater.updateCells(byteArrayInputStream, outputPath, inspectionResultMap);
+                    excelInspectionData.setOutputPath(outputPath);
+                    excelInspectionData.setOriginalFilename(file.getOriginalFilename());
+//                    excelInspectionDataList.add(excelInspectionData);
+                } catch (Exception e) {
+                    log.error("", e);
+                    excelInspectionData.setErrMsg(e.getMessage());
+                }
+                return excelInspectionData;
+            }, threadPoolExecutor);
+
+
+            futuresList.add(future);
+        }
+        CompletableFuture<Void> allDone = CompletableFuture.allOf(
+                futuresList.toArray(new CompletableFuture[0])
+        );
+
+        CompletableFuture<List<ExcelInspectionData>> resultsFuture1 = allDone.thenApply(v -> {
+            // 这里的join()不会阻塞，因为所有任务都已经完成
+            return futuresList.stream()
+                    .map(CompletableFuture::join)  //get() join()  立即获取结果 // 从每个future中提取结果值
+                    .collect(Collectors.toList());
+        });
+        excelInspectionDataList = resultsFuture1.join();
+
+        if (CollectionUtils.isEmpty(excelInspectionDataList)) {
+            throw new RuntimeException("解析excel 异常");
+        }
+
+
+        String rootPath = ftpConfig.getBasePath();
+        String basePath = rootPath + buildDateBasedPath();
+
+        for (ExcelInspectionData excelInspectionData : excelInspectionDataList) {
+            String materialPath = MessageFormat.format("{0}{1}/{2}", basePath, excelInspectionData.getMaterialCode(), excelInspectionData.getOriginalFilename());
+            this.ftpService.uploadFile(excelInspectionData.getOutputPath(), materialPath);
+        }
+        log.info("ftp upload complete");
+
+        updateInspectionQuantity(excelInspectionDataList);
+
+        return "";
+    }
+
 
     /**
      * 解析指定单元格的值
@@ -399,7 +506,7 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             BigDecimal allNeed = item.getAllocatedNumber().add(item.getWaitAllocateNumber());
             if (totalQuantity.compareTo(allNeed) > 0) {
 
-                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} i exceed AllWaitAllocateNumber ", item.getId());
+                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0}  exceed AllWaitAllocateNumber ", item.getId());
                 throw new Exception(msg);
 
             }

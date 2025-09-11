@@ -1,12 +1,34 @@
 package gs.com.gses.ftp;
 
+import gs.com.gses.model.elasticsearch.InventoryInfo;
+import gs.com.gses.model.entity.Inventory;
+import gs.com.gses.model.entity.InventoryItem;
+import gs.com.gses.model.entity.Laneway;
+import gs.com.gses.model.entity.Location;
+import gs.com.gses.model.utility.RedisKey;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.document.Document;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.SourceFilter;
+import org.springframework.data.elasticsearch.core.query.UpdateQuery;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
@@ -20,6 +42,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +56,9 @@ public class FtpServiceImpl implements FtpService {
 
     @Autowired
     private FtpConfig ftpConfig;
+
+    @Autowired
+    private RedissonClient redissonClient;
 
 //    @Value("${ftp.base-path}")
 //    private String basePath;
@@ -656,5 +684,58 @@ public class FtpServiceImpl implements FtpService {
 
 
     }
+
+    @Override
+    public boolean createWorkingDirectory(String directoryPath) throws Exception {
+
+        String lockKey = RedisKey.CREATE_WORKING_DIRECTORY;
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+            lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                log.info("createWorkingDirectory - {} fail ,get lock fail", lockKey);
+                return false;
+            }
+            log.info("createWorkingDirectory - {} acquire lock  success ", lockKey);
+
+
+
+
+            ensureConnected(ftpClient);
+
+            // 切换到目标目录
+            boolean changed = ftpClient.changeWorkingDirectory(directoryPath);
+            if (!changed) {
+                log.info("无法切换到目录: {}", directoryPath);
+                // 如果目录不存在，则创建（包括所有不存在的父目录）
+                createDirectory(directoryPath);
+                changed = ftpClient.changeWorkingDirectory(directoryPath);
+                if(!changed){
+                    throw new Exception(ftpClient.getReplyString());
+                }
+            }
+            return changed;
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+
+            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+
+            log.info("InventoryInfo - {} release lock  success ", lockKey);
+
+        }
+
+
+
+
+
+    }
+
+
 
 }
