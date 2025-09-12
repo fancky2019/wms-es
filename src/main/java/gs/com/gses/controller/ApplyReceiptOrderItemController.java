@@ -1,6 +1,7 @@
 package gs.com.gses.controller;
 
 
+import gs.com.gses.ftp.FtpService;
 import gs.com.gses.model.request.wms.ApplyReceiptOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.service.ApplyReceiptOrderItemService;
@@ -19,9 +20,19 @@ public class ApplyReceiptOrderItemController {
     private ApplyReceiptOrderItemService applyReceiptOrderItemService;
 
 
+    @Autowired
+    private FtpService ftpService;
+
     @PostMapping(value = "/inspection")
     public MessageResult inspection(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
         this.applyReceiptOrderItemService.inspection(files, applyReceiptOrderItemRequest);
+//        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
+        return MessageResult.success();
+    }
+
+    @PostMapping(value = "/inspectionOptimization")
+    public MessageResult inspectionOptimization(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
 //        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
     }
@@ -32,4 +43,11 @@ public class ApplyReceiptOrderItemController {
         return MessageResult.success();
     }
 
+
+    @PostMapping(value = "/createWorkingDirectory")
+    public MessageResult createWorkingDirectory() throws Exception {
+        this.ftpService.createWorkingDirectory("wms/2025/09/11/P0002150747");
+//        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
+        return MessageResult.success();
+    }
 }

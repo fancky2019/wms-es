@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
+import org.apache.commons.net.ftp.FTPReply;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.redisson.api.RLock;
@@ -83,19 +84,76 @@ public class FtpServiceImpl implements FtpService {
     }
 
 
+//    private void connectAndLogin(FTPClient ftpClient) throws IOException {
+//        ftpClient.connect(ftpConfig.getHost(), ftpConfig.getPort());
+//        if (!ftpClient.login(ftpConfig.getUsername(), ftpConfig.getPassword())) {
+//            throw new IOException("FTP login failed.");
+//        }
+//        ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+//        if (ftpConfig.getPassiveMode()) {
+//            ftpClient.enterLocalPassiveMode();
+//        }
+//        ftpClient.setControlKeepAliveTimeout(60);
+//
+//
+//    }
+
+
     private void connectAndLogin(FTPClient ftpClient) throws IOException {
-        ftpClient.connect(ftpConfig.getHost(), ftpConfig.getPort());
-        if (!ftpClient.login(ftpConfig.getUsername(), ftpConfig.getPassword())) {
-            throw new IOException("FTP login failed.");
-        }
-        ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
-        if (ftpConfig.getPassiveMode()) {
-            ftpClient.enterLocalPassiveMode();
-        }
-        ftpClient.setControlKeepAliveTimeout(60);
+        try {
+            // 先检查是否已连接，避免重复连接
+            if (ftpClient.isConnected()) {
+                try {
+                    // 发送NOOP命令测试连接是否仍然有效
+                    ftpClient.sendNoOp();
+                    return; // 连接有效，直接返回
+                } catch (IOException e) {
+                    // NOOP失败，说明连接已断开，需要重新连接
+                    log.info("连接已断开，尝试重新连接...");
+                    disconnectQuietly(ftpClient);
+                }
+            }
 
+            // 设置连接超时和数据处理超时
+            ftpClient.setConnectTimeout(30000);
+            ftpClient.setDefaultTimeout(30000);
+            ftpClient.setDataTimeout(30000);
 
+            // 连接服务器
+            ftpClient.connect(ftpConfig.getHost(), ftpConfig.getPort());
+
+            // 检查连接响应
+            int replyCode = ftpClient.getReplyCode();
+            if (!FTPReply.isPositiveCompletion(replyCode)) {
+                throw new IOException("FTP连接失败，响应码: " + replyCode);
+            }
+
+            // 登录
+            if (!ftpClient.login(ftpConfig.getUsername(), ftpConfig.getPassword())) {
+                throw new IOException("FTP登录失败");
+            }
+
+            // 设置文件类型
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+
+            // 设置传输模式
+            if (ftpConfig.getPassiveMode()) {
+                ftpClient.enterLocalPassiveMode();
+            } else {
+                ftpClient.enterLocalActiveMode();
+            }
+
+            // 设置keep-alive（您原来的设置）
+            ftpClient.setControlKeepAliveTimeout(60);
+
+            System.out.println("FTP连接成功建立");
+
+        } catch (IOException e) {
+            disconnectQuietly(ftpClient);
+            throw new IOException("FTP连接失败: " + e.getMessage(), e);
+        }
     }
+
 
     // 工具方法：调用前检测连接是否可用，否则重连
     public FTPClient ensureConnected(FTPClient ftpClient) throws IOException {
@@ -111,14 +169,28 @@ public class FtpServiceImpl implements FtpService {
         return ftpClient;
     }
 
-    // 一个安静关闭连接的工具方法
+//    // 一个安静关闭连接的工具方法
+//    private void disconnectQuietly(FTPClient ftpClient) {
+//        if (ftpClient.isConnected()) {
+//            try {
+//                ftpClient.disconnect();
+//            } catch (IOException e) {
+//                // 忽略断开连接时出现的异常
+//            }
+//        }
+//    }
+
+
+    // 安全的断开连接方法
     private void disconnectQuietly(FTPClient ftpClient) {
-        if (ftpClient.isConnected()) {
-            try {
+        try {
+            if (ftpClient != null && ftpClient.isConnected()) {
+                ftpClient.logout();
                 ftpClient.disconnect();
-            } catch (IOException e) {
-                // 忽略断开连接时出现的异常
             }
+        } catch (IOException e) {
+            // 安静地处理断开连接异常
+            log.error("断开连接时发生错误: " + e.getMessage());
         }
     }
 
@@ -163,6 +235,7 @@ public class FtpServiceImpl implements FtpService {
 
             String basePath = extractDirectoryPath(filaPath);
             String fileName = extractFileName(filaPath);
+            boolean changedRoot = ftpClient.changeWorkingDirectory("/");
             // 确保基础路径存在
             if (!ftpClient.changeWorkingDirectory(basePath)) {
                 // 如果目录不存在，则创建（包括所有不存在的父目录）
@@ -201,7 +274,7 @@ public class FtpServiceImpl implements FtpService {
 
             String basePath = extractDirectoryPath(remoteFileName);
             String fileName = extractFileName(remoteFileName);
-
+            boolean changedRoot = ftpClient.changeWorkingDirectory("/");
             // 确保基础路径存在
             if (!ftpClient.changeWorkingDirectory(basePath)) {
                 // 如果目录不存在，则创建（包括所有不存在的父目录）
@@ -269,6 +342,7 @@ public class FtpServiceImpl implements FtpService {
             String fullPath = extractDirectoryPath(fileFullName);
             String fileName = extractFileName(fileFullName);
             // 切换到文件所在目录
+            boolean changedRoot = ftpClient.changeWorkingDirectory("/");
             if (!ftpClient.changeWorkingDirectory(fullPath)) {
                 throw new IOException("目录不存在: " + fullPath);
             }
@@ -649,6 +723,7 @@ public class FtpServiceImpl implements FtpService {
         ensureConnected(ftpClient);
 
         // 切换到目标目录
+        boolean changedRoot = ftpClient.changeWorkingDirectory("/");
         boolean changed = ftpClient.changeWorkingDirectory(directoryPath);
         if (!changed) {
             log.error("无法切换到目录: {}", directoryPath);
@@ -700,18 +775,18 @@ public class FtpServiceImpl implements FtpService {
             log.info("createWorkingDirectory - {} acquire lock  success ", lockKey);
 
 
-
-
             ensureConnected(ftpClient);
-
+            log.info("当前工作目录：" + ftpClient.printWorkingDirectory());
+            log.info("目标目录：" + directoryPath);
             // 切换到目标目录
+            boolean changedRoot = ftpClient.changeWorkingDirectory("/");
             boolean changed = ftpClient.changeWorkingDirectory(directoryPath);
             if (!changed) {
                 log.info("无法切换到目录: {}", directoryPath);
                 // 如果目录不存在，则创建（包括所有不存在的父目录）
                 createDirectory(directoryPath);
                 changed = ftpClient.changeWorkingDirectory(directoryPath);
-                if(!changed){
+                if (!changed) {
                     throw new Exception(ftpClient.getReplyString());
                 }
             }
@@ -731,11 +806,7 @@ public class FtpServiceImpl implements FtpService {
         }
 
 
-
-
-
     }
-
 
 
 }

@@ -179,7 +179,7 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
         for (MultipartFile file : files) {
             CompletableFuture<ExcelInspectionData> future = CompletableFuture.supplyAsync(() -> {
 
-
+                log.info("ThreadId - {}", Thread.currentThread().getId());
                 ExcelInspectionData excelInspectionData = new ExcelInspectionData();
                 try (InputStream inputStream = file.getInputStream()) {
 //                    Integer.parseInt("123t");
