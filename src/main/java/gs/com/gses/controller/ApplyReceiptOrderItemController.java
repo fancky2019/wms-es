@@ -1,6 +1,7 @@
 package gs.com.gses.controller;
 
 
+import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.ftp.FtpService;
 import gs.com.gses.model.request.wms.ApplyReceiptOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
@@ -23,6 +24,7 @@ public class ApplyReceiptOrderItemController {
     @Autowired
     private FtpService ftpService;
 
+    @DuplicateSubmission
     @PostMapping(value = "/inspection")
     public MessageResult inspection(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
         this.applyReceiptOrderItemService.inspection(files, applyReceiptOrderItemRequest);
@@ -30,6 +32,7 @@ public class ApplyReceiptOrderItemController {
         return MessageResult.success();
     }
 
+    @DuplicateSubmission
     @PostMapping(value = "/inspectionOptimization")
     public MessageResult inspectionOptimization(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
         this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
@@ -43,9 +46,10 @@ public class ApplyReceiptOrderItemController {
         return MessageResult.success();
     }
 
-
+    @DuplicateSubmission(timeOut = 0)
     @PostMapping(value = "/createWorkingDirectory")
     public MessageResult createWorkingDirectory() throws Exception {
+        int m=Integer.parseInt("m");
         this.ftpService.createWorkingDirectory("wms/2025/09/11/P0002150747");
 //        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();

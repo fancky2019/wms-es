@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -168,16 +169,17 @@ public class LogAspect {
         if (duplicateSubmission != null) {
             String submissionToken = "";
             BigInteger userId = new BigInteger("1");
-            String key = "repeat:" + userId + ":";
+            String keyWithOutToken = "repeat:" + userId + ":" + uri;
+            String tokenKey = "";
             if (duplicateSubmission.checkType().equals(DuplicateSubmissionCheckType.TOKEN)) {
                 String repeatToken = httpServletRequest.getHeader("repeat_token");
                 if (StringUtils.isEmpty(repeatToken)) {
                     // 抛出让ControllerAdvice全局异常处理
                     throw new Exception("can not find token!");
                 }
-                key = "repeat:" + userId + ":" + repeatToken;
+                tokenKey = keyWithOutToken + ":" + repeatToken;
                 //UtilityController getRepeatToken 时候向redis 插入一个token
-                Object tokenObj = valueOperations.get(key);
+                Object tokenObj = valueOperations.get(tokenKey);
                 if (tokenObj == null) {
                     return MessageResult.faile("token is not exist!");
                 }
@@ -189,30 +191,38 @@ public class LogAspect {
                 String fingerprintBase = method + ":" + uri + ":" + argsJson;
                 String requestFingerprint = DigestUtils.md5DigestAsHex(fingerprintBase.getBytes(StandardCharsets.UTF_8));
                 submissionToken = requestFingerprint;
-                key = "repeat:" + userId + ":" + uri + ":" + submissionToken;
-                //从redis 中获取请求指纹 key
-                Object tokenObj = valueOperations.get(key);
+                //repeat:1:/api/truckOrder/addTruckOrder:08790aeb73c7e8e46c8d68c373d9f6b1
+                tokenKey = keyWithOutToken + ":" + submissionToken;
+                //从redis 中获取请求指纹 keyWithOutToken
+                Object tokenObj = valueOperations.get(tokenKey);
                 //请求key 不存在就新增
                 if (tokenObj == null) {
 
-//                    boolean setSuccess = valueOperations.setIfAbsent(key, submissionToken, 3600, TimeUnit.SECONDS);
-                    Boolean setSuccess = valueOperations.setIfAbsent(key, submissionToken);
+                    //不会出现多线程并发问题：同时多个线程调用时，只有第一个成功，其他线程返回 false。
+//                    boolean setSuccess = valueOperations.setIfAbsent(keyWithOutToken, submissionToken, 3600, TimeUnit.SECONDS);
+                    Boolean setSuccess = valueOperations.setIfAbsent(tokenKey, submissionToken);
                     if (Boolean.TRUE.equals(setSuccess)) {
-                        log.info("DuplicateSubmissionSetKey {} success", key);
+                        log.info("DuplicateSubmissionSetKey {} success", keyWithOutToken);
                     } else {
-                        log.info("DuplicateSubmissionSetKey {} fail", key);
+                        //keyWithOutToken 存在，重复提交
+                        String msg = MessageFormat.format("DuplicateSubmission:DuplicateSubmissionSetKey {0} fail", keyWithOutToken);
+                        throw new Exception(msg);
                     }
                 }
             }
 
             //查看请求key 是否设置了过期时间，设置了就是请求过。超过60s 请求key 也不存在。
-            Long expireTime = redisTemplate.getExpire(key);
+            Long expireTime = redisTemplate.getExpire(tokenKey);
             //有过期时间
             if (expireTime != null && !expireTime.equals(-1L)) {
                 return MessageResult.faile("DuplicateSubmission!");
             }
-
-            String operationLockKey = key + RedisKeyConfigConst.KEY_LOCK_SUFFIX;
+            log.info("before monitor");
+            //执行业务
+            Object obj = monitor(jp, servletPath);
+            log.info("after monitor");
+            //业务执行完
+            String operationLockKey = keyWithOutToken + ":"+ RedisKeyConfigConst.KEY_LOCK_SUFFIX;
             //并发访问，加锁控制
             RLock lock = redissonClient.getLock(operationLockKey);
             boolean lockSuccessfully = false;
@@ -225,32 +235,34 @@ public class LogAspect {
                 long leaseTime = 600;
                 lockSuccessfully = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
                 if (lockSuccessfully) {
-                    Object obj = monitor(jp, servletPath);
+//                    Object obj = monitor(jp, servletPath);
                     int timeOut = duplicateSubmission.timeOut();
                     if (timeOut > 0) {
 
-                        Boolean re = redisTemplate.expire(key, timeOut, TimeUnit.SECONDS);
+                        //基于指纹的此处不用加锁，如果基于生成的token此处要加锁，因为获取token时候，此处可能设置完成 ，
+                        //存在并发 。project TokenService getRepeatToken
+                        Boolean re = redisTemplate.expire(tokenKey, timeOut, TimeUnit.SECONDS);
                         if (re) {
-                            log.info("DuplicateSubmissionSetKey {} expire success", key);
+                            log.info("DuplicateSubmissionSetKey {} expire success", tokenKey);
                         } else {
-                            log.info("DuplicateSubmissionSetKey {} expire fail", key);
+                            log.info("DuplicateSubmissionSetKey {} expire fail", tokenKey);
                         }
                     } else {
-                        Boolean re = redisTemplate.delete(key);
+                        Boolean re = redisTemplate.delete(tokenKey);
                         if (re) {
-                            log.info("DuplicateSubmissionSetKey {} delete success", key);
+                            log.info("DuplicateSubmissionSetKey {} delete success", tokenKey);
                         } else {
-                            log.info("DuplicateSubmissionSetKey {} delete fail", key);
+                            log.info("DuplicateSubmissionSetKey {} delete fail", tokenKey);
                         }
                     }
-
-
                     return obj;
                 } else {
-                    return MessageResult.faile("DuplicateSubmission:获取锁失败");
+                    //增加重试机制，没有获取到设置过期时间的锁
+                    String msg = MessageFormat.format("DuplicateSubmissionSetKey {0} expire fail", tokenKey);
+                    return MessageResult.faile(msg);
                 }
             } catch (Exception e) {
-                throw  e;
+                throw e;
                 //不要吞了异常，到不了全局异常
 //                return MessageResult.faile(e.getMessage());
             } finally {
