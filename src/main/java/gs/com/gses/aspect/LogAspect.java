@@ -170,15 +170,16 @@ public class LogAspect {
             String submissionToken = "";
             BigInteger userId = new BigInteger("1");
             String keyWithOutToken = "repeat:" + userId + ":" + uri;
-            String tokenKey = "";
+            String tokenKey = keyWithOutToken;
             if (duplicateSubmission.checkType().equals(DuplicateSubmissionCheckType.TOKEN)) {
                 String repeatToken = httpServletRequest.getHeader("repeat_token");
                 if (StringUtils.isEmpty(repeatToken)) {
                     // 抛出让ControllerAdvice全局异常处理
                     throw new Exception("can not find token!");
                 }
-                tokenKey = keyWithOutToken + ":" + repeatToken;
-                //UtilityController getRepeatToken 时候向redis 插入一个token
+//                tokenKey = keyWithOutToken + ":" + repeatToken;
+                //UtilityController getRepeatToken 时候向redis 插入一个token，上一个请求返回才能生成新token
+               //tokenKey=repeat:1:/api/applyReceiptOrderItem/createWorkingDirectory
                 Object tokenObj = valueOperations.get(tokenKey);
                 if (tokenObj == null) {
                     return MessageResult.faile("token is not exist!");
