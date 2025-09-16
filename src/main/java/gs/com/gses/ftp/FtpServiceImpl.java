@@ -52,6 +52,9 @@ import java.util.stream.Collectors;
 public class FtpServiceImpl implements FtpService {
 
 
+    /**
+     * 同一个 FTPClient 对象不能被多个线程同时使用.绝对不能多线程共享一个 FTPClient 实例；
+     */
     //    private static final Logger log = LoggerFactory.getLogger(FtpServiceImpl.class);
     private FTPClient ftpClient;
 
@@ -230,9 +233,7 @@ public class FtpServiceImpl implements FtpService {
     public boolean uploadFile(byte[] fileData, String filaPath) throws Exception {
         // 使用 try-with-resources 确保 InputStream 被关闭
         try (InputStream inputStream = new ByteArrayInputStream(fileData)) {
-
             ensureConnected(ftpClient);
-
             String basePath = extractDirectoryPath(filaPath);
             String fileName = extractFileName(filaPath);
             boolean changedRoot = ftpClient.changeWorkingDirectory("/");
@@ -293,7 +294,7 @@ public class FtpServiceImpl implements FtpService {
                 throw new Exception("文件上传失败. 响应码: " + replyCode + ", 响应信息: " + replyString);
 
             }
-            return isUploaded;
+            return true;
 
         } catch (Exception e) {
             log.error("文件上传异常: {}", localFileName, e);
@@ -310,16 +311,16 @@ public class FtpServiceImpl implements FtpService {
         StringBuilder currentPath = new StringBuilder();
 
         for (String dir : pathParts) {
-            if (dir.isEmpty()) continue;
+            if (dir.isEmpty()) {
+                continue;
+            }
             currentPath.append("/").append(dir);
             // 检查目录是否存在
             if (!ftpClient.changeWorkingDirectory(currentPath.toString())) {
                 // 如果不存在，则创建
                 if (ftpClient.makeDirectory(currentPath.toString())) {
-                    log.info("Created directory: " + currentPath);
+                    log.info("Created directory: {}", currentPath);
                 } else {
-//                    throw new IOException("Could not create directory: " + currentPath);
-
                     int replyCode = ftpClient.getReplyCode();
                     String replyString = ftpClient.getReplyString();
                     log.error("创建目录失败: {}", currentPath);
@@ -598,7 +599,8 @@ public class FtpServiceImpl implements FtpService {
             response.setHeader("Content-Disposition",
                     "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName);
             response.setContentLengthLong(fileInfo.getSize());
-            byte[] fileData = downloadFile(filePath);
+
+//            byte[] fileData = downloadFile(filePath);
 
 //            // 加载到内存下载
 //            try (OutputStream outputStream = response.getOutputStream()) {

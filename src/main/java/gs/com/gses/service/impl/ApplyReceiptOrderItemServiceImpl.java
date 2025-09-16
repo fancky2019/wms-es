@@ -6,17 +6,26 @@ import com.alibaba.excel.read.listener.ReadListener;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.ftp.FtpConfig;
 import gs.com.gses.ftp.FtpService;
 import gs.com.gses.model.bo.wms.ExcelInspectionData;
 import gs.com.gses.model.bo.wms.InspectionData;
+import gs.com.gses.model.entity.ApplyReceiptOrder;
 import gs.com.gses.model.entity.ApplyReceiptOrderItem;
+import gs.com.gses.model.entity.InspectionRecord;
+import gs.com.gses.model.entity.TruckOrder;
+import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.ApplyReceiptOrderItemRequest;
 import gs.com.gses.model.request.wms.MaterialRequest;
+import gs.com.gses.model.request.wms.TruckOrderItemRequest;
+import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MaterialResponse;
 import gs.com.gses.service.ApplyReceiptOrderItemService;
 import gs.com.gses.mapper.ApplyReceiptOrderItemMapper;
+import gs.com.gses.service.ApplyReceiptOrderService;
+import gs.com.gses.service.InspectionRecordService;
 import gs.com.gses.service.MaterialService;
 import gs.com.gses.utility.ExcelUpdater;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -41,6 +51,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -58,9 +69,16 @@ import java.util.stream.Stream;
 public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOrderItemMapper, ApplyReceiptOrderItem>
         implements ApplyReceiptOrderItemService {
 
+    @Autowired
+    private ApplyReceiptOrderService applyReceiptOrderService;
 
     @Autowired
     private MaterialService materialService;
+
+
+    @Autowired
+    private InspectionRecordService inspectionRecordService;
+
 
     @Autowired
     private FtpService ftpService;
@@ -139,26 +157,18 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
         for (ExcelInspectionData excelInspectionData : excelInspectionDataList) {
             String materialPath = MessageFormat.format("{0}{1}/{2}", basePath, excelInspectionData.getMaterialCode(), excelInspectionData.getOriginalFilename());
             this.ftpService.uploadFile(excelInspectionData.getOutputPath(), materialPath);
+            excelInspectionData.setFtpPath(materialPath);
+            log.info("uploadFile: {} success", materialPath);
         }
         log.info("ftp upload complete");
         stopWatch.stop();
         log.info("FtpUpload: {}ms", stopWatch.getLastTaskTimeMillis());
         stopWatch.start("UpdateInspectionQuantity");
         updateInspectionQuantity(excelInspectionDataList);
+        log.info("UpdateInspectionQuantity complete");
         stopWatch.stop();
         log.info("UpdateInspectionQuantity: {}ms", stopWatch.getLastTaskTimeMillis());
         log.info("Inspection: {}ms", stopWatch.getTotalTimeMillis());
-//        List<String> filePathList = new ArrayList<>();
-//        String filePath = "";
-//        for (MultipartFile file : files) {
-//            filePath = basePath + file.getOriginalFilename();
-//            Boolean success = ftpService.uploadFile(file.getBytes(), filePath);
-//            filePathList.add(filePath);
-//        }
-
-        //保存到本地
-//        List<String> fileNames = saveFiles(files);
-
         return "";
     }
 
@@ -322,7 +332,7 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             @Override
             public void doAfterAllAnalysed(AnalysisContext context) {
                 if (CollectionUtils.isEmpty(dataList)) {
-                    System.out.println("未找到指定单元格的值");
+                    log.info("未找到指定单元格的值");
                 }
             }
         };
@@ -344,19 +354,9 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
         return today.format(formatter);
     }
 
-    private BigDecimal initCellValue(Object value, int currentRowIndex, int targetColumn) {
-        String targetCellValue1 = value != null ? value.toString() : null;
-        log.info("parseSpecificCell [" + currentRowIndex + ", " + targetColumn + "] 的值: " + targetCellValue1);
-        if (StringUtils.isEmpty(targetCellValue1)) {
-            String msg = MessageFormat.format("Can't find cell[{0},{1}] value", currentRowIndex, targetColumn);
-            return null;
-        }
-        return new BigDecimal(targetCellValue1);
-    }
 
     /**
-     * 模板确定
-     * 模版写入 map
+     *根据模版填充excel
      * @param filePath
      * @param data1
      */
@@ -378,7 +378,7 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
                 .sheet()
                 .doFill(data);
 
-        System.out.println("模板填充完成：" + outputFileName);
+        log.info("模板填充完成：" + outputFileName);
     }
 
     @Override
@@ -399,6 +399,43 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
 
     }
 
+    //    @Async
+    public List<String> saveFiles(MultipartFile[] files) throws IOException {
+        List<String> tempFiles = new ArrayList<String>();
+        if (files != null && files.length > 0) {
+            //遍历文件
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    LocalDateTime localDateTime = LocalDateTime.now();
+                    String dateStr = localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    String rootPath = System.getProperty("user.dir");
+                    String directory = rootPath + "\\uploadfiles" + "\\" + dateStr + "\\";
+//                    String directory = "\\uploadfiles" + "\\" + dateStr + "\\";
+                    File destFile = new File(directory);
+                    //判断路径是否存在,和C#不一样。她判断路径和文件是否存在
+                    if (!destFile.exists()) {
+                        destFile.mkdirs();
+                    }
+
+                    //获取文件名称
+                    String sourceFileName = file.getOriginalFilename();
+                    //写入目的文件
+                    String fileFullName = directory + sourceFileName;
+                    File existFile = new File(fileFullName);
+                    if (existFile.exists()) {
+                        existFile.delete();
+                    }
+                    //用 file.transferTo 要指定盘符，不然报错找不到文件路径
+                    //引入commons-io 依赖，用下面方法不用指定盘符
+                    file.transferTo(existFile);
+//                    FileUtils.copyInputStreamToFile(file.getInputStream(), existFile);
+                    tempFiles.add(fileFullName);
+
+                }
+            }
+        }
+        return tempFiles;
+    }
 
     private void updateInspectionQuantity(List<ExcelInspectionData> excelInspectionDataList) throws Exception {
 
@@ -480,7 +517,7 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
 
             List<ExcelInspectionData> currentDataList = stream.collect(Collectors.toList());
             if (CollectionUtils.isEmpty(currentDataList)) {
-                throw new Exception("Can not find excel data by materialCode:" + materialCode + ",projectNo:" + projectNo + ",deviceNo:" + deviceNo);
+                throw new Exception("Can not find excel data by materialCode:" + materialCode + ",projectNo:" + projectNo + ",deviceNo:" + deviceNo + ",batchNo:" + batchNo);
             }
 
             //合格的
@@ -515,7 +552,7 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
         }
         if (CollectionUtils.isEmpty(updatedItemList)) {
             log.info("updatedItemList is empty");
-            return;
+            throw new Exception("updatedItemList is empty");
         }
 
         for (ApplyReceiptOrderItem item : updatedItemList) {
@@ -528,6 +565,69 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
                 throw new Exception("update inspectionItemQuantity fail");
             }
         }
+
+        List<Long> applyReceiptOrderIdList = itemList.stream().map(ApplyReceiptOrderItem::getApplyReceiptOrderId).collect(Collectors.toList());
+        List<ApplyReceiptOrder> applyReceiptOrderList = applyReceiptOrderService.listByIds(applyReceiptOrderIdList);
+        Map<Long, ApplyReceiptOrder> applyReceiptOrderMap = applyReceiptOrderList.stream().collect(Collectors.toMap(ApplyReceiptOrder::getId, p -> p));
+
+        List<InspectionRecord> inspectionRecordList = new ArrayList<>();
+        InspectionRecord inspectionRecord = null;
+
+        for (ExcelInspectionData data : excelInspectionDataList) {
+            MaterialResponse materialResponse = materialCodeMap.get(data.getMaterialCode());
+            Stream<ApplyReceiptOrderItem> stream = itemList.stream().filter(p -> p.getMaterialId().equals(materialResponse.getId()));
+            if (StringUtils.isNotEmpty(data.getProjectNo())) {
+                stream = stream.filter(p -> data.getProjectNo().equals(p.getM_Str7()));
+            }
+            if (StringUtils.isNotEmpty(data.getDeviceNo())) {
+                stream = stream.filter(p -> data.getDeviceNo().contains(p.getM_Str12()));
+            }
+//            if (StringUtils.isNotEmpty(data.getBatchNo())) {
+//                stream = stream.filter(p -> data.getBatchNo().equals(p.getBatchNo()));
+//            }
+            List<ApplyReceiptOrderItem> matchedItemList = stream.collect(Collectors.toList());
+
+            if (CollectionUtils.isEmpty(matchedItemList)) {
+                String msg = MessageFormat.format("Can not find ApplyReceiptOrderItem by excel data materialCode:{0} projectNo: {1} deviceNo: {2} BatchNo: {3}",
+                        materialResponse.getXCode(), data.getProjectNo(), data.getDeviceNo(), data.getBatchNo());
+                throw new Exception(msg);
+            }
+
+            if (matchedItemList.size() > 1) {
+                String msg = MessageFormat.format("Find multiple ApplyReceiptOrderItem by excel data materialCode:{0} projectNo: {1} deviceNo: {2} BatchNo: {3}",
+                        materialResponse.getXCode(), data.getProjectNo(), data.getDeviceNo(), data.getBatchNo());
+                throw new Exception(msg);
+            }
+
+            ApplyReceiptOrderItem applyReceiptOrderItem = matchedItemList.get(0);
+            ApplyReceiptOrder applyReceiptOrder = applyReceiptOrderMap.get(applyReceiptOrderItem.getApplyReceiptOrderId());
+            if (applyReceiptOrder == null) {
+                throw new Exception("Can not find applyReceiptOrder " + applyReceiptOrderItem.getApplyReceiptOrderId());
+            }
+
+
+            inspectionRecord = new InspectionRecord();
+            inspectionRecord.setApplyReceiptOrderId(applyReceiptOrder.getId());
+            inspectionRecord.setApplyReceiptOrderItemId(applyReceiptOrderItem.getId());
+            inspectionRecord.setApplyReceiptOrderCode(applyReceiptOrder.getXCode());
+            inspectionRecord.setApplyReceiptOrderItemRowNo(applyReceiptOrderItem.getRowNo());
+            inspectionRecord.setMaterialId(materialResponse.getId());
+            inspectionRecord.setMaterialCode(materialResponse.getXCode());
+            inspectionRecord.setProjectNo(data.getProjectNo());
+            inspectionRecord.setDeviceNo(data.getDeviceNo());
+            inspectionRecord.setBatchNo(data.getBatchNo());
+            inspectionRecord.setFilePath(data.getFtpPath());
+            String inspection = data.getUnqualified() ? "N" : "Y";
+            inspectionRecord.setInspectionResult(inspection);
+
+            LoginUserTokenDto user = UserInfoHolder.getUser();
+            inspectionRecord.setCreationTime(LocalDateTime.now());
+            inspectionRecord.setLastModificationTime(LocalDateTime.now());
+            inspectionRecord.setCreatorId(user.getId());
+            inspectionRecord.setCreatorName(user.getAccountName());
+            inspectionRecordList.add(inspectionRecord);
+        }
+        inspectionRecordService.addBatch(inspectionRecordList);
     }
 
 

@@ -14,20 +14,20 @@ import java.io.IOException;
 @ConfigurationProperties(prefix = "ftp")
 public class FtpConfig {
 
-//    @Value("${ftp.host}")
+    //    @Value("${ftp.host}")
     private String host;
 
-//    @Value("${ftp.port}")
+    //    @Value("${ftp.port}")
     private Integer port;
 
-//    @Value("${ftp.username}")
+    //    @Value("${ftp.username}")
     private String username;
 
-//    @Value("${ftp.password}")
+    //    @Value("${ftp.password}")
     private String password;
 
     private String basePath;
-//    @Value("${ftp.passive-mode}")
+    //    @Value("${ftp.passive-mode}")
     private Boolean passiveMode;
 
 //    @Bean
@@ -62,7 +62,13 @@ public class FtpConfig {
 //    }
 
 
-
+    /**
+     *
+     * 同一个 FTPClient 对象不能被多个线程同时使用.绝对不能多线程共享一个 FTPClient 实例；
+     *
+     * @return
+     * @throws IOException
+     */
     public FTPClient ftpClient() throws IOException {
         FTPClient ftpClient = new FTPClient();
         connectAndLogin(ftpClient);

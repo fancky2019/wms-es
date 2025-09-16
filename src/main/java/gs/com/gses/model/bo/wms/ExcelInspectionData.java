@@ -13,11 +13,15 @@ public class ExcelInspectionData {
     private List<InspectionData> inspectionDataList;
     private String originalFilename;
     private String outputPath;
+    private String ftpPath;
+
     /**
      * 不合格
      */
     private Boolean unqualified;
 
     private String errMsg;
+
+    private Long matchedApplyReceiptOrderItem;
 
 }

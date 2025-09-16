@@ -3,12 +3,14 @@ package gs.com.gses.utility;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.event.AnalysisEventListener;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellReference;
 
 import java.io.*;
 import java.util.*;
 
+@Slf4j
 public class ExcelUpdater {
     /**
      * 更新Excel文件中指定单元格的值
@@ -31,7 +33,7 @@ public class ExcelUpdater {
         out.close();
         workbook.close();
 
-        System.out.println("POI修改完成：" + outputFile);
+        log.info("updateCells修改完成：" + outputFile);
 
 
     }
@@ -51,7 +53,7 @@ public class ExcelUpdater {
         out.close();
         workbook.close();
 
-        System.out.println("POI修改完成：" + outputFile);
+       log.info("updateCells修改完成：" + outputFile);
 
     }
 

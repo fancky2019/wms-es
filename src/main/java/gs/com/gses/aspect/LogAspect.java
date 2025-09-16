@@ -214,6 +214,14 @@ public class LogAspect {
 
             //查看请求key 是否设置了过期时间，设置了就是请求过。超过60s 请求key 也不存在。
             Long expireTime = redisTemplate.getExpire(tokenKey);
+
+            /*
+             * getExpire 返回值含义
+             * null → Redis 里根本没有这个 key。
+             * -1 → key 存在，但没有设置过期时间。
+             * -2 → key 已经不存在（过期或被删）。
+             * >=0 → 剩余的秒数。
+             */
             //有过期时间
             if (expireTime != null && !expireTime.equals(-1L)) {
                 return MessageResult.faile("DuplicateSubmission!");
