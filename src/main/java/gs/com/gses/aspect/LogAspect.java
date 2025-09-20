@@ -179,7 +179,7 @@ public class LogAspect {
                 }
 //                tokenKey = keyWithOutToken + ":" + repeatToken;
                 //UtilityController getRepeatToken 时候向redis 插入一个token，上一个请求返回才能生成新token
-               //tokenKey=repeat:1:/api/applyReceiptOrderItem/createWorkingDirectory
+                //tokenKey=repeat:1:/api/applyReceiptOrderItem/createWorkingDirectory
                 Object tokenObj = valueOperations.get(tokenKey);
                 if (tokenObj == null) {
                     return MessageResult.faile("token is not exist!");
@@ -187,6 +187,7 @@ public class LogAspect {
                 if (!repeatToken.equals(tokenObj.toString())) {
                     return MessageResult.faile("token is incorrect!");
                 }
+                // 验证成功后立即删除，防止重复使用
 
             } else {
                 String fingerprintBase = method + ":" + uri + ":" + argsJson;
@@ -203,35 +204,18 @@ public class LogAspect {
 //                    boolean setSuccess = valueOperations.setIfAbsent(keyWithOutToken, submissionToken, 3600, TimeUnit.SECONDS);
                     Boolean setSuccess = valueOperations.setIfAbsent(tokenKey, submissionToken);
                     if (Boolean.TRUE.equals(setSuccess)) {
-                        log.info("DuplicateSubmissionSetKey {} success", keyWithOutToken);
+                        log.info("DuplicateSubmission Set tokenKey {} success", keyWithOutToken);
                     } else {
                         //keyWithOutToken 存在，重复提交
-                        String msg = MessageFormat.format("DuplicateSubmission:DuplicateSubmissionSetKey {0} fail", keyWithOutToken);
+                        String msg = MessageFormat.format("DuplicateSubmission:Set tokenKey {0} fail", keyWithOutToken);
                         throw new Exception(msg);
                     }
                 }
             }
 
-            //查看请求key 是否设置了过期时间，设置了就是请求过。超过60s 请求key 也不存在。
-            Long expireTime = redisTemplate.getExpire(tokenKey);
 
-            /*
-             * getExpire 返回值含义
-             * null → Redis 里根本没有这个 key。
-             * -1 → key 存在，但没有设置过期时间。
-             * -2 → key 已经不存在（过期或被删）。
-             * >=0 → 剩余的秒数。
-             */
-            //有过期时间
-            if (expireTime != null && !expireTime.equals(-1L)) {
-                return MessageResult.faile("DuplicateSubmission!");
-            }
-            log.info("before monitor");
-            //执行业务
-            Object obj = monitor(jp, servletPath);
-            log.info("after monitor");
             //业务执行完
-            String operationLockKey = keyWithOutToken + ":"+ RedisKeyConfigConst.KEY_LOCK_SUFFIX;
+            String operationLockKey = tokenKey + ":" + RedisKeyConfigConst.KEY_LOCK_SUFFIX;
             //并发访问，加锁控制
             RLock lock = redissonClient.getLock(operationLockKey);
             boolean lockSuccessfully = false;
@@ -243,31 +227,61 @@ public class LogAspect {
                 // 注意：锁超时自动释放，另外一个线程就会获取锁继续执行，代码版本号处理
                 long leaseTime = 600;
                 lockSuccessfully = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
+
                 if (lockSuccessfully) {
+
+                    //查看请求key 是否设置了过期时间，设置了就是请求过。超过60s 请求key 也不存在。
+                    Long expireTime = redisTemplate.getExpire(tokenKey);
+
+                    /*
+                     * getExpire 返回值含义
+                     * null → Redis 里根本没有这个 key。
+                     * -1 → key 存在，但没有设置过期时间。
+                     * -2 → key 已经不存在（过期或被删）。
+                     * >=0 → 剩余的秒数。
+                     */
+                    //有过期时间
+                    if (expireTime != null && !expireTime.equals(-1L)) {
+                        return MessageResult.faile("DuplicateSubmission!");
+                    }
+                    log.info("before monitor");
+                    //执行业务
+                    Object obj = monitor(jp, servletPath);
+                    log.info("after monitor");
+
 //                    Object obj = monitor(jp, servletPath);
                     int timeOut = duplicateSubmission.timeOut();
+                    boolean deleteOrExpire = false;
                     if (timeOut > 0) {
+                        //token 方式一次有效。请求就删除
+                        if (duplicateSubmission.checkType().equals(DuplicateSubmissionCheckType.TOKEN)) {
+                            deleteOrExpire = true;
+                        }
+                    } else {
+                        deleteOrExpire = true;
+                    }
 
+                    if (!deleteOrExpire) {
                         //基于指纹的此处不用加锁，如果基于生成的token此处要加锁，因为获取token时候，此处可能设置完成 ，
                         //存在并发 。project TokenService getRepeatToken
                         Boolean re = redisTemplate.expire(tokenKey, timeOut, TimeUnit.SECONDS);
                         if (re) {
-                            log.info("DuplicateSubmissionSetKey {} expire success", tokenKey);
+                            log.info("DuplicateSubmission Set Key {} expire success", tokenKey);
                         } else {
-                            log.info("DuplicateSubmissionSetKey {} expire fail", tokenKey);
+                            log.info("DuplicateSubmission Set Key {} expire fail", tokenKey);
                         }
                     } else {
                         Boolean re = redisTemplate.delete(tokenKey);
                         if (re) {
-                            log.info("DuplicateSubmissionSetKey {} delete success", tokenKey);
+                            log.info("DuplicateSubmission Set Key {} delete success", tokenKey);
                         } else {
-                            log.info("DuplicateSubmissionSetKey {} delete fail", tokenKey);
+                            log.info("DuplicateSubmission Set Key {} delete fail", tokenKey);
                         }
                     }
                     return obj;
                 } else {
                     //增加重试机制，没有获取到设置过期时间的锁
-                    String msg = MessageFormat.format("DuplicateSubmissionSetKey {0} expire fail", tokenKey);
+                    String msg = MessageFormat.format("Get lock {0}  fail", tokenKey);
                     return MessageResult.faile(msg);
                 }
             } catch (Exception e) {

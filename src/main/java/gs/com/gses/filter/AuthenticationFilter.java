@@ -81,7 +81,7 @@ public class AuthenticationFilter implements Filter {
                 WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
                 LoginUserTokenDto userInfo = null;
                 if (dto.getResult()) {
-                    log.info("Start checkPermission success");
+                    log.info("Complete checkPermission success");
                     Map<String, String> userInfoMap = (Map) dto.getData();
                     userInfo = new LoginUserTokenDto();
                     BeanWrapper wrapper = new BeanWrapperImpl(userInfo);

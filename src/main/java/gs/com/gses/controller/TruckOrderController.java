@@ -109,6 +109,7 @@ public class TruckOrderController {
      * @return
      * @throws Exception
      */
+//    @DuplicateSubmission(timeOut = 30)
     @Operation(summary = "TruckOrder 分页查询", description = "获取分页列表的详细说明")
     @PostMapping("/getTruckOrderPage")
     public MessageResult<PageData<TruckOrderResponse>> getTruckOrderPage(@RequestBody TruckOrderRequest request, @RequestHeader("Authorization") String token) throws Exception {

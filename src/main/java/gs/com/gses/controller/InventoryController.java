@@ -1,5 +1,6 @@
 package gs.com.gses.controller;
 
+import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.InventoryItemDetail;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
@@ -28,8 +29,10 @@ public class InventoryController {
      * @return
      * @throws Exception
      */
+    @DuplicateSubmission(timeOut = 5*60)
     @GetMapping("/initInventoryInfoFromDb")
     public MessageResult<Void> initInventoryInfoFromDb() throws Exception {
+//        Thread.sleep(10000);
         inventoryInfoService.initInventoryInfoFromDb();
         return MessageResult.success();
     }

@@ -461,6 +461,10 @@ public class FtpServiceImpl implements FtpService {
             FTPFile[] files = ftpClient.listFiles(remoteFilePath);
             return files.length > 0;
         } catch (IOException e) {
+            int replyCode = ftpClient.getReplyCode();
+            String replyString = ftpClient.getReplyString();
+            log.error("FTP响应码: {}, 响应信息: {}", replyCode, replyString);
+
             log.error("检查文件是否存在时发生错误: {}", remoteFilePath, e);
             return false;
         }

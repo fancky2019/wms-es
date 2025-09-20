@@ -142,7 +142,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Override
     public void initInventoryInfoFromDb() throws InterruptedException {
-
+        log.info("initInventoryInfoFromDb");
         String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
         RLock lock = redissonClient.getLock(lockKey);
@@ -153,6 +153,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            lock.lock(leaseTime, TimeUnit.SECONDS);
             //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
             lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            log.info("initInventoryInfoFromDb get lock {}",lockKey);
             INIT_INVENTORY_TIME = LocalDateTime.now();
             String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             redisTemplate.opsForValue().set("InitInventoryTime", initInventoryTimeStr);
@@ -164,27 +165,33 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             // 删除索引
             if (indexOperations.exists()) {
                 indexOperations.delete();
-
             }
-
+            log.info("createIndexAndMapping");
             createIndexAndMapping(InventoryInfo.class);
-
+            log.info("load locationMap");
             Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
+            log.info("load lanewayMap");
             Map<String, Laneway> lanewayMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.lanewayPrefix);
+            log.info("load zoneMap");
             Map<String, Zone> zoneMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.zonePrefix);
+            log.info("load warehouseMap");
             Map<String, Warehouse> warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.warehousePrefix);
+            log.info("load orgnizationMap");
             Map<String, Orgnization> orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.orgnizationPrefix);
-
+            log.info("load materialMap");
             Map<String, Material> materialMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.materialPrefix);
+            log.info("load packageUnitMap");
             Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
-
+            log.info("get inventoryItemDetail count");
             long count = this.inventoryItemDetailService.count();
+            log.info("get inventoryItemDetail count {}",count);
             int step = 1000;
             long times = count / step;
             long left = count % step;
             if (left > 0) {
                 times++;
             }
+            log.info("times {}",times);
             //current :pageIndex  ,size:pageSize
             Page<InventoryItemDetail> page = new Page<>(1, step);
             long pageIndex = 0L;
@@ -602,10 +609,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             return result;
         }
     }
-
-
-
-
 
 
     @Override

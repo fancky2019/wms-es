@@ -76,6 +76,11 @@ public class InspectionRecordServiceImpl extends ServiceImpl<InspectionRecordMap
         if (StringUtils.isNotEmpty(request.getBatchNo())) {
             inspectionRecordQueryWrapper.like(InspectionRecord::getBatchNo, request.getBatchNo());
         }
+
+        if (StringUtils.isNotEmpty(request.getInspectionResult())) {
+            inspectionRecordQueryWrapper.eq(InspectionRecord::getInspectionResult, request.getInspectionResult());
+        }
+
         if (StringUtils.isNotEmpty(request.getCreatorName())) {
             inspectionRecordQueryWrapper.like(InspectionRecord::getCreatorName, request.getCreatorName());
         }

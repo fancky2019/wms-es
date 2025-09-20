@@ -207,6 +207,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
                 List<Long> truckOrderIdList = truckOrderList.stream().map(TruckOrder::getId).distinct().collect(Collectors.toList());
                 truckOrderItemQueryWrapper.in(TruckOrderItem::getTruckOrderId, truckOrderIdList);
             }
+            else {
+                return  new PageData<>();
+            }
         }
 
         if (request.getTruckOrderId() != null && request.getTruckOrderId() > 0) {

@@ -1,5 +1,6 @@
 package gs.com.gses.controller;
 
+import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
@@ -35,6 +36,7 @@ public class TruckOrderItemController {
      * @return
      * @throws Exception
      */
+    @DuplicateSubmission(timeOut = 30)
     @PostMapping("/getTruckOrderItemPage")
     public MessageResult<PageData<TruckOrderItemResponse>> getTruckOrderItemPage(@RequestBody TruckOrderItemRequest request) throws Exception {
         PageData<TruckOrderItemResponse> page = truckOrderItemService.getTruckOrderItemPage(request);

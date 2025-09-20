@@ -293,10 +293,24 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
                 if (infoRow == currentRowIndex) {
                     if (data instanceof Map) {
                         Map dataMap = (Map) data;
-                        excelInspectionData.setMaterialCode(dataMap.get(4).toString());
-                        excelInspectionData.setProjectNo(dataMap.get(5).toString());
-                        excelInspectionData.setBatchNo(dataMap.get(6).toString());
-                        excelInspectionData.setDeviceNo(dataMap.get(7).toString());
+                        if (dataMap.get(4) == null) {
+                            throw new RuntimeException("物料编码为空");
+                        } else {
+                            excelInspectionData.setMaterialCode(dataMap.get(4).toString());
+                        }
+                        if (dataMap.get(5) == null) {
+                            throw new RuntimeException("项目信息为空");
+                        } else {
+                            excelInspectionData.setProjectNo(dataMap.get(5).toString());
+                        }
+                        if (dataMap.get(5) != null) {
+                            excelInspectionData.setBatchNo(dataMap.get(6).toString());
+                        }
+                        if (dataMap.get(5) != null) {
+                            excelInspectionData.setDeviceNo(dataMap.get(7).toString());
+                        }
+
+
                     }
                 }
                 // 检查是否是目标行（第二行，索引为1） 索引从0开始  A1
@@ -523,10 +537,14 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             //合格的
             currentDataList = currentDataList.stream().filter(p -> !p.getUnqualified()).collect(Collectors.toList());
             if (CollectionUtils.isEmpty(currentDataList)) {
-                log.info("not qualified excel data by materialCode:" + materialCode + ",projectNo:" + projectNo + ",deviceNo:" + deviceNo);
+                log.info("not qualified excel data by materialCode:{},projectNo:{},deviceNo:{}", materialCode, projectNo, deviceNo);
                 continue;
             }
+            //合格数量
             int qualifiedCount = currentDataList.size();
+            if (qualifiedCount == 0) {
+                continue;
+            }
             if ("N".equals(item.getM_Str20())) {
                 String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} is exempt from inspection ", item.getId());
                 throw new Exception(msg);
@@ -550,19 +568,20 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             item.setM_Str21(totalQuantity.toString());
             updatedItemList.add(item);
         }
-        if (CollectionUtils.isEmpty(updatedItemList)) {
-            log.info("updatedItemList is empty");
-            throw new Exception("updatedItemList is empty");
-        }
-
-        for (ApplyReceiptOrderItem item : updatedItemList) {
-            LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(ApplyReceiptOrderItem::getId, item.getId())
-                    .set(ApplyReceiptOrderItem::getM_Str21, item.getM_Str21())
-            ;
-            boolean result = this.update(null, updateWrapper);
-            if (!result) {
-                throw new Exception("update inspectionItemQuantity fail");
+//        if (CollectionUtils.isEmpty(updatedItemList)) {
+//            log.info("updatedItemList is empty");
+////            throw new Exception("updatedItemList is empty");
+//        }
+        log.info("updatedItemList size {}", updatedItemList.size());
+        if (CollectionUtils.isNotEmpty(updatedItemList)) {
+            for (ApplyReceiptOrderItem item : updatedItemList) {
+                LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(ApplyReceiptOrderItem::getId, item.getId())
+                        .set(ApplyReceiptOrderItem::getM_Str21, item.getM_Str21());
+                boolean result = this.update(null, updateWrapper);
+                if (!result) {
+                    throw new Exception("update inspectionItemQuantity fail");
+                }
             }
         }
 
