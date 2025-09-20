@@ -303,10 +303,10 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
                         } else {
                             excelInspectionData.setProjectNo(dataMap.get(5).toString());
                         }
-                        if (dataMap.get(5) != null) {
+                        if (dataMap.get(6) != null) {
                             excelInspectionData.setBatchNo(dataMap.get(6).toString());
                         }
-                        if (dataMap.get(5) != null) {
+                        if (dataMap.get(7) != null) {
                             excelInspectionData.setDeviceNo(dataMap.get(7).toString());
                         }
 
@@ -484,9 +484,11 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
 
             Long materialId = materialCodeMap.get(data.getMaterialCode()).getId();
             wrapper.or(w -> w
-                    .eq(StringUtils.isNotEmpty(data.getMaterialCode()), ApplyReceiptOrderItem::getMaterialId, materialId)
-                    .eq(StringUtils.isNotEmpty(data.getProjectNo()), ApplyReceiptOrderItem::getM_Str7, data.getProjectNo())
-                    .like(StringUtils.isNotEmpty(data.getDeviceNo()), ApplyReceiptOrderItem::getM_Str12, data.getDeviceNo())
+                            .eq(StringUtils.isNotEmpty(data.getMaterialCode()), ApplyReceiptOrderItem::getMaterialId, materialId)
+                            .eq(StringUtils.isNotEmpty(data.getProjectNo()), ApplyReceiptOrderItem::getM_Str7, data.getProjectNo())
+                            .like(StringUtils.isNotEmpty(data.getDeviceNo()), ApplyReceiptOrderItem::getM_Str12, data.getDeviceNo())
+//                    .like(StringUtils.isNotEmpty(data.getBatchNo()), ApplyReceiptOrderItem::getBatchNo, data.getBatchNo())
+
             );
         }
 
@@ -510,85 +512,10 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             }
         }
 
-        List<ApplyReceiptOrderItem> updatedItemList = new ArrayList<>();
-        for (ApplyReceiptOrderItem item : itemList) {
-            MaterialResponse materialResponse = materialMap.get(item.getMaterialId());
-            String materialCode = materialResponse.getXCode();
-            String projectNo = item.getM_Str7();
-            String deviceNo = item.getM_Str12();
-            String batchNo = item.getBatchNo();
-
-            Stream<ExcelInspectionData> stream = excelInspectionDataList.stream().filter(p -> p.getMaterialCode().equals(materialCode));
-            if (StringUtils.isNotEmpty(projectNo)) {
-                stream = stream.filter(p -> projectNo.equals(p.getProjectNo()));
-            }
-            if (StringUtils.isNotEmpty(deviceNo)) {
-                stream = stream.filter(p -> deviceNo.contains(p.getDeviceNo()));
-            }
-            if (StringUtils.isNotEmpty(batchNo)) {
-                stream = stream.filter(p -> batchNo.equals(p.getBatchNo()));
-            }
-
-            List<ExcelInspectionData> currentDataList = stream.collect(Collectors.toList());
-            if (CollectionUtils.isEmpty(currentDataList)) {
-                throw new Exception("Can not find excel data by materialCode:" + materialCode + ",projectNo:" + projectNo + ",deviceNo:" + deviceNo + ",batchNo:" + batchNo);
-            }
-
-            //合格的
-            currentDataList = currentDataList.stream().filter(p -> !p.getUnqualified()).collect(Collectors.toList());
-            if (CollectionUtils.isEmpty(currentDataList)) {
-                log.info("not qualified excel data by materialCode:{},projectNo:{},deviceNo:{}", materialCode, projectNo, deviceNo);
-                continue;
-            }
-            //合格数量
-            int qualifiedCount = currentDataList.size();
-            if (qualifiedCount == 0) {
-                continue;
-            }
-            if ("N".equals(item.getM_Str20())) {
-                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} is exempt from inspection ", item.getId());
-                throw new Exception(msg);
-
-            }
-            BigDecimal inspectionItemQuantity = BigDecimal.ZERO;
-            if (StringUtils.isNotEmpty(item.getM_Str21())) {
-                boolean number = NumberUtils.isCreatable(item.getM_Str21());
-                if (number) {
-                    inspectionItemQuantity = NumberUtils.createBigDecimal(item.getM_Str21());
-                }
-            }
-            BigDecimal totalQuantity = inspectionItemQuantity.add(BigDecimal.valueOf(qualifiedCount));
-            BigDecimal allNeed = item.getAllocatedNumber().add(item.getWaitAllocateNumber());
-            if (totalQuantity.compareTo(allNeed) > 0) {
-
-                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0}  exceed AllWaitAllocateNumber ", item.getId());
-                throw new Exception(msg);
-
-            }
-            item.setM_Str21(totalQuantity.toString());
-            updatedItemList.add(item);
-        }
-//        if (CollectionUtils.isEmpty(updatedItemList)) {
-//            log.info("updatedItemList is empty");
-////            throw new Exception("updatedItemList is empty");
-//        }
-        log.info("updatedItemList size {}", updatedItemList.size());
-        if (CollectionUtils.isNotEmpty(updatedItemList)) {
-            for (ApplyReceiptOrderItem item : updatedItemList) {
-                LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
-                updateWrapper.eq(ApplyReceiptOrderItem::getId, item.getId())
-                        .set(ApplyReceiptOrderItem::getM_Str21, item.getM_Str21());
-                boolean result = this.update(null, updateWrapper);
-                if (!result) {
-                    throw new Exception("update inspectionItemQuantity fail");
-                }
-            }
-        }
-
         List<Long> applyReceiptOrderIdList = itemList.stream().map(ApplyReceiptOrderItem::getApplyReceiptOrderId).collect(Collectors.toList());
         List<ApplyReceiptOrder> applyReceiptOrderList = applyReceiptOrderService.listByIds(applyReceiptOrderIdList);
         Map<Long, ApplyReceiptOrder> applyReceiptOrderMap = applyReceiptOrderList.stream().collect(Collectors.toMap(ApplyReceiptOrder::getId, p -> p));
-
+        Map<Long, ApplyReceiptOrderItem> updatedItemListMap = new HashMap<>();
         List<InspectionRecord> inspectionRecordList = new ArrayList<>();
         InspectionRecord inspectionRecord = null;
 
@@ -599,11 +526,11 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
                 stream = stream.filter(p -> data.getProjectNo().equals(p.getM_Str7()));
             }
             if (StringUtils.isNotEmpty(data.getDeviceNo())) {
-                stream = stream.filter(p -> data.getDeviceNo().contains(p.getM_Str12()));
+                stream = stream.filter(p -> p.getM_Str12() != null && data.getDeviceNo().contains(p.getM_Str12()));
             }
-//            if (StringUtils.isNotEmpty(data.getBatchNo())) {
-//                stream = stream.filter(p -> data.getBatchNo().equals(p.getBatchNo()));
-//            }
+            if (StringUtils.isNotEmpty(data.getBatchNo())) {
+                stream = stream.filter(p -> data.getBatchNo().equals(p.getBatchNo()));
+            }
             List<ApplyReceiptOrderItem> matchedItemList = stream.collect(Collectors.toList());
 
             if (CollectionUtils.isEmpty(matchedItemList)) {
@@ -622,6 +549,35 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             ApplyReceiptOrder applyReceiptOrder = applyReceiptOrderMap.get(applyReceiptOrderItem.getApplyReceiptOrderId());
             if (applyReceiptOrder == null) {
                 throw new Exception("Can not find applyReceiptOrder " + applyReceiptOrderItem.getApplyReceiptOrderId());
+            }
+
+
+            if ("N".equals(applyReceiptOrderItem.getM_Str20())) {
+                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} is exempt from inspection ", applyReceiptOrderItem.getId());
+//                throw new Exception(msg);
+                log.info(msg);
+            } else {
+                //合格数量
+                int qualifiedCount = !data.getUnqualified() ? 1 : 0;
+                if (qualifiedCount != 0) {
+                    BigDecimal inspectionItemQuantity = BigDecimal.ZERO;
+                    if (StringUtils.isNotEmpty(applyReceiptOrderItem.getM_Str21())) {
+                        boolean number = NumberUtils.isCreatable(applyReceiptOrderItem.getM_Str21());
+                        if (number) {
+                            inspectionItemQuantity = NumberUtils.createBigDecimal(applyReceiptOrderItem.getM_Str21());
+                        }
+                    }
+                    BigDecimal totalQuantity = inspectionItemQuantity.add(BigDecimal.valueOf(qualifiedCount));
+                    BigDecimal allNeed = applyReceiptOrderItem.getAllocatedNumber().add(applyReceiptOrderItem.getWaitAllocateNumber());
+                    if (totalQuantity.compareTo(allNeed) > 0) {
+
+                        String msg = MessageFormat.format("ApplyReceiptOrderItem - {0}  exceed AllWaitAllocateNumber ", applyReceiptOrderItem.getId());
+                        throw new Exception(msg);
+
+                    }
+                    applyReceiptOrderItem.setM_Str21(totalQuantity.toString());
+                    updatedItemListMap.put(applyReceiptOrderItem.getId(), applyReceiptOrderItem);
+                }
             }
 
 
@@ -646,6 +602,27 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             inspectionRecord.setCreatorName(user.getAccountName());
             inspectionRecordList.add(inspectionRecord);
         }
+
+        log.info("updatedItemListMap size {}", updatedItemListMap.size());
+        if (!updatedItemListMap.isEmpty()) {
+//            // 遍历键值对（最常用）
+//            for (Map.Entry<Long, ApplyReceiptOrderItem> entry : updatedItemListMap.entrySet()) {
+//                Long key = entry.getKey();
+//                ApplyReceiptOrderItem value = entry.getValue();
+//            }
+
+            for (ApplyReceiptOrderItem item : updatedItemListMap.values()) {
+
+                LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(ApplyReceiptOrderItem::getId, item.getId())
+                        .set(ApplyReceiptOrderItem::getM_Str21, item.getM_Str21());
+                boolean result = this.update(null, updateWrapper);
+                if (!result) {
+                    throw new Exception("update inspectionItemQuantity fail");
+                }
+            }
+        }
+
         inspectionRecordService.addBatch(inspectionRecordList);
     }
 
