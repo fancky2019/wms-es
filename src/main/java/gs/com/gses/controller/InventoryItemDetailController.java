@@ -4,6 +4,7 @@ package gs.com.gses.controller;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
 import gs.com.gses.model.entity.InventoryItemDetail;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
+import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
@@ -19,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/inventoryItemDetail")
@@ -77,7 +79,13 @@ public class InventoryItemDetailController {
 
     @PostMapping("/checkDetailExist")
     public MessageResult<Boolean> checkDetailExist(@RequestBody InventoryItemDetailRequest request) throws Exception {
-        Boolean re = inventoryItemDetailService.checkDetailExist(request,null,null);
+        Boolean re = inventoryItemDetailService.checkDetailExist(request, null, null);
         return MessageResult.success(re);
+    }
+
+    @GetMapping("/trunkBarCodePreview/{id}")
+    public MessageResult<List<Map<String, String>>> trunkBarCodePreview(@PathVariable Long id) throws Exception {
+        List<Map<String, String>> result = inventoryItemDetailService.trunkBarCodePreview(id);
+        return MessageResult.success(result);
     }
 }

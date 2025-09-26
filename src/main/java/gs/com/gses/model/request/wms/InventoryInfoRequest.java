@@ -42,7 +42,7 @@ public class InventoryInfoRequest extends RequestPage {
     //endregion
 
     //region laneway
-
+    private List<Long> lanewaysIdList;
     private Long lanewayId;
     private Integer lanewayCode;
     /**

@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author lirui
@@ -29,9 +30,11 @@ public interface InventoryItemDetailService extends IService<InventoryItemDetail
 
     void downloadErrorData(HttpServletResponse response) throws IOException;
 
-     List<AllocateModel> allocate(List<ShipOrderItemResponse> shipOrderItemList,
-                                         List<InventoryItemDetailResponse> detailList) throws Exception;
+    List<AllocateModel> allocate(List<ShipOrderItemResponse> shipOrderItemList,
+                                 List<InventoryItemDetailResponse> detailList) throws Exception;
 
+
+    List<Map<String, String>> trunkBarCodePreview(long id) throws Exception;
 }
 
 

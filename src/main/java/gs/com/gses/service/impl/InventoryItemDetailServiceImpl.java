@@ -31,6 +31,7 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.*;
+import gs.com.gses.utility.BarcodeUtil;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -235,6 +236,36 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             }
         }
         return allocateModelList;
+    }
+
+    @Override
+    public List<Map<String, String>> trunkBarCodePreview(long id) throws Exception {
+        InventoryItemDetail detail = this.getById(id);
+        if (detail == null) {
+            throw new Exception("InventoryItemDetail " + id + " doesn't exist");
+        }
+        if (StringUtils.isEmpty(detail.getM_Str7())) {
+            throw new Exception("InventoryItemDetail " + id + " projectNo is empty");
+        }
+        if (StringUtils.isEmpty(detail.getM_Str12())) {
+            throw new Exception("InventoryItemDetail " + id + " deviceNo is empty");
+        }
+        Material material = this.materialService.getById(detail.getMaterialId());
+        if (material == null) {
+            throw new Exception("Material " + detail.getMaterialId() + " doesn't exist");
+        }
+        List<String> barCodeList = new ArrayList<>();
+
+        String[] projectNoArray = detail.getM_Str12().split(",");
+        for (String projectNo : projectNoArray) {
+            //XM0801,DYH001,P0002043508
+            String barCode = "";
+            barCode = MessageFormat.format("{0},{1},{2}", detail.getM_Str7(), projectNo, material.getXCode());
+            barCodeList.add(barCode);
+        }
+        List<Map<String, String>> result = BarcodeUtil.getMultipleBarcodes(barCodeList, 0, 0, null);
+//        return Collections.emptyList();
+        return result;
     }
 
 
@@ -617,12 +648,10 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             queryWrapper.eq(InventoryItemDetail::getM_Str7, request.getM_Str7());
         }
 
-        if(!request.getIgnoreDeviceNo())
-        {
+        if (!request.getIgnoreDeviceNo()) {
             if (StringUtils.isNotEmpty(request.getM_Str12())) {
                 queryWrapper.like(InventoryItemDetail::getM_Str12, request.getM_Str12());
-            }
-            else {
+            } else {
                 //空过滤  AND (M_Str12 IS NULL OR M_Str12 = ?)
                 queryWrapper.and(wrapper -> wrapper
                         .isNull(InventoryItemDetail::getM_Str12)

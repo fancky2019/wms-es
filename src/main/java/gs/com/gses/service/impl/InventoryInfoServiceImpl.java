@@ -1,20 +1,27 @@
 package gs.com.gses.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.elasticsearch.ShipOrderInfoRepository;
 import gs.com.gses.flink.DataChangeInfo;
+import gs.com.gses.mapper.ConveyorLanewayMapper;
+import gs.com.gses.mapper.ConveyorMapper;
+import gs.com.gses.mapper.LanewayMapper;
+import gs.com.gses.mapper.LocationMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.ShipOrderRequest;
+import gs.com.gses.model.request.wms.ShipPickOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
+import gs.com.gses.model.response.wms.ShipPickOrderItemResponse;
 import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
@@ -74,6 +81,21 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Autowired
     private ShipOrderItemService shipOrderItemService;
+
+    @Autowired
+    private ShipPickOrderItemService shipPickOrderItemService;
+
+    @Autowired
+    private LocationMapper locationMapper;
+
+    @Autowired
+    private ConveyorMapper conveyorMapper;
+
+    @Autowired
+    private LanewayMapper lanewayMapper;
+
+    @Autowired
+    private ConveyorLanewayMapper conveyorLanewayMapper;
 
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
@@ -153,7 +175,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            lock.lock(leaseTime, TimeUnit.SECONDS);
             //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
             lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
-            log.info("initInventoryInfoFromDb get lock {}",lockKey);
+            log.info("initInventoryInfoFromDb get lock {}", lockKey);
             INIT_INVENTORY_TIME = LocalDateTime.now();
             String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             redisTemplate.opsForValue().set("InitInventoryTime", initInventoryTimeStr);
@@ -184,14 +206,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.packageUnitPrefix);
             log.info("get inventoryItemDetail count");
             long count = this.inventoryItemDetailService.count();
-            log.info("get inventoryItemDetail count {}",count);
+            log.info("get inventoryItemDetail count {}", count);
             int step = 1000;
             long times = count / step;
             long left = count % step;
             if (left > 0) {
                 times++;
             }
-            log.info("times {}",times);
+            log.info("times {}", times);
             //current :pageIndex  ,size:pageSize
             Page<InventoryItemDetail> page = new Page<>(1, step);
             long pageIndex = 0L;
@@ -779,6 +801,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (request.getInventoryId() != null && request.getInventoryId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("inventoryId", request.getInventoryId()));
         }
+
+        if (CollectionUtils.isNotEmpty(request.getLanewaysIdList())) {
+            boolQueryBuilder.must(QueryBuilders.termsQuery("lanewayId", request.getLanewaysIdList()));
+        }
+
         if (request.getLanewayId() != null && request.getLanewayId() > 0) {
             boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", request.getLanewayId()));
         }
@@ -2372,7 +2399,47 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     return "没有备货的库存";
                 }
             }
+            String toLocationCode = "";
+            ShipPickOrderItemRequest shipPickOrderItemRequest = new ShipPickOrderItemRequest();
+            shipPickOrderItemRequest.setShipOrderItemId(shipOrderItemResponse.getId());
+            shipOrderItemRequest.setSearchCount(false);
+            PageData<ShipPickOrderItemResponse> shipPickOrderItemResponsePageData = this.shipPickOrderItemService.getShipPickOrderItemPage(shipPickOrderItemRequest);
+            if (CollectionUtils.isNotEmpty(shipPickOrderItemResponsePageData.getData())) {
+                ShipPickOrderItemResponse shipPickOrderItemResponse = shipPickOrderItemResponsePageData.getData().get(0);
+                toLocationCode = shipPickOrderItemResponse.getToLocCode();
+            } else {
+                toLocationCode = shipOrderItemResponse.getToLocCode();
+            }
 
+
+            LambdaQueryWrapper<Location> locationWrapper = new LambdaQueryWrapper<>();
+            locationWrapper.eq(Location::getXCode, toLocationCode)
+                    .or()
+                    .eq(Location::getXName, toLocationCode);
+            Location todock = locationMapper.selectOne(locationWrapper);
+
+            if (todock != null) {
+                LambdaQueryWrapper<Conveyor> conveyorWrapper = new LambdaQueryWrapper<>();
+                conveyorWrapper.eq(Conveyor::getXCode, todock.getXCode())
+                        .or()
+                        .eq(Conveyor::getXName, todock.getXName());
+                Conveyor conveyor = conveyorMapper.selectOne(conveyorWrapper);
+
+                if (conveyor != null && conveyor.getConveyorLanewayType() != 1) {
+                    LambdaQueryWrapper<ConveyorLaneway> conveyorLanewayWrapper = new LambdaQueryWrapper<>();
+                    conveyorLanewayWrapper.eq(ConveyorLaneway::getConveyorsId, conveyor.getId());
+                    List<ConveyorLaneway> conveyorLanewayList = this.conveyorLanewayMapper.selectList(conveyorLanewayWrapper);
+//                    输送线可达性。LocationCode ==Conveyor Xcode
+                    if (CollectionUtils.isNotEmpty(conveyorLanewayList)) {
+                        List<Long> lanewaysIdList = conveyorLanewayList.stream().map(p -> p.getLanewaysId()).collect(Collectors.toList());
+                        request.setLanewaysIdList(lanewaysIdList);
+                        pageData = getInventoryInfoPage(request);
+                        if (pageData.getCount() == 0) {
+                            return "指定月台 - "+toLocationCode+" 关联的巷道没有库存";
+                        }
+                    }
+                }
+            }
         }
 
         request.setApplyOrOrderCodeEmpty(true);

@@ -1,5 +1,10 @@
 package gs.com.gses.utility;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+
 /**
  * Twitter_Snowflake
  * SnowFlake的结构如下(每部分用-分开):
@@ -123,5 +128,23 @@ public class SnowFlake {
     protected long timeGen() {
         return System.currentTimeMillis();
     }
+
+    public void analyze(long id) {
+// 提取各部分
+        long sequence = id & 0xFFF; // 低12位
+        long workerId = (id >> 12) & 0x1F; // 接下来的5位
+        long datacenterId = (id >> 17) & 0x1F; // 再接下来的5位
+        long timestamp = (id >> 22) + twepoch; // 高41位 + 起始时间戳
+
+        System.out.println("序列号: " + sequence);
+        System.out.println("机器ID: " + workerId);
+        System.out.println("数据中心ID: " + datacenterId);
+        System.out.println("时间戳: " + timestamp);
+        //  ZoneId.systemDefault() ZoneOffset.of("+8")
+        LocalDateTime localDateTime= LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.of("+8"));
+        System.out.println("生成时间: " + localDateTime);
+    }
+
+
 }
 
