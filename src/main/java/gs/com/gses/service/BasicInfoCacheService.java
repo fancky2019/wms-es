@@ -18,6 +18,8 @@ public interface BasicInfoCacheService {
     void initOrgnization();
 
     void initPackageUnit();
+    void initConveyor();
+    void initConveyorLaneway();
 
     Location loadFromDbLocation(Long locationId) throws InterruptedException;
 

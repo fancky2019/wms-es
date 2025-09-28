@@ -838,6 +838,17 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsSealed", request.getInventoryItemIsSealed()));
         }
 
+        if (StringUtils.isNotEmpty(request.getBatchNo())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("batchNo", request.getBatchNo()));
+        }
+        if (StringUtils.isNotEmpty(request.getBatchNo2())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("batchNo2", request.getBatchNo2()));
+        }
+
+        if (StringUtils.isNotEmpty(request.getBatchNo3())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("batchNo3", request.getBatchNo3()));
+        }
+
         if (request.getPackageQuantityGtZero() != null && request.getPackageQuantityGtZero()) {
             boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
         }
@@ -2399,7 +2410,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     return "没有备货的库存";
                 }
             }
+
+            //月台关联的巷道的库位库存过滤
             String toLocationCode = "";
+            Long toLocationId = 0l;
             ShipPickOrderItemRequest shipPickOrderItemRequest = new ShipPickOrderItemRequest();
             shipPickOrderItemRequest.setShipOrderItemId(shipOrderItemResponse.getId());
             shipOrderItemRequest.setSearchCount(false);
@@ -2407,39 +2421,96 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             if (CollectionUtils.isNotEmpty(shipPickOrderItemResponsePageData.getData())) {
                 ShipPickOrderItemResponse shipPickOrderItemResponse = shipPickOrderItemResponsePageData.getData().get(0);
                 toLocationCode = shipPickOrderItemResponse.getToLocCode();
+                toLocationId = shipPickOrderItemResponse.getToLocId();
             } else {
                 toLocationCode = shipOrderItemResponse.getToLocCode();
+                toLocationId = shipOrderItemResponse.getToLocId();
+            }
+
+            if (StringUtils.isNotEmpty(toLocationCode) && toLocationId == null) {
+                throw new Exception("toLocationId is null");
             }
 
 
-            LambdaQueryWrapper<Location> locationWrapper = new LambdaQueryWrapper<>();
-            locationWrapper.eq(Location::getXCode, toLocationCode)
-                    .or()
-                    .eq(Location::getXName, toLocationCode);
-            Location todock = locationMapper.selectOne(locationWrapper);
+//            LambdaQueryWrapper<Location> locationWrapper = new LambdaQueryWrapper<>();
+//            locationWrapper.eq(Location::getXCode, toLocationCode)
+//                    .or()
+//                    .eq(Location::getXName, toLocationCode);
+//            Location todock = locationMapper.selectOne(locationWrapper);
+//
+//            if (todock != null) {
+//                LambdaQueryWrapper<Conveyor> conveyorWrapper = new LambdaQueryWrapper<>();
+//                conveyorWrapper.eq(Conveyor::getXCode, todock.getXCode())
+//                        .or()
+//                        .eq(Conveyor::getXName, todock.getXName());
+//                Conveyor conveyor = conveyorMapper.selectOne(conveyorWrapper);
+//
+//                if (conveyor != null && conveyor.getConveyorLanewayType() != 1) {
+//                    LambdaQueryWrapper<ConveyorLaneway> conveyorLanewayWrapper = new LambdaQueryWrapper<>();
+//                    conveyorLanewayWrapper.eq(ConveyorLaneway::getConveyorsId, conveyor.getId());
+//                    List<ConveyorLaneway> conveyorLanewayList = this.conveyorLanewayMapper.selectList(conveyorLanewayWrapper);
+////                    输送线可达性。LocationCode ==Conveyor Xcode
+//                    if (CollectionUtils.isNotEmpty(conveyorLanewayList)) {
+//                        List<Long> lanewaysIdList = conveyorLanewayList.stream().map(p -> p.getLanewaysId()).collect(Collectors.toList());
+//                        request.setLanewaysIdList(lanewaysIdList);
+//                        pageData = getInventoryInfoPage(request);
+//                        if (pageData.getCount() == 0) {
+//                            return "指定月台 - "+toLocationCode+" 关联的巷道没有库存";
+//                        }
+//                    }
+//                }
+//            }
 
-            if (todock != null) {
-                LambdaQueryWrapper<Conveyor> conveyorWrapper = new LambdaQueryWrapper<>();
-                conveyorWrapper.eq(Conveyor::getXCode, todock.getXCode())
-                        .or()
-                        .eq(Conveyor::getXName, todock.getXName());
-                Conveyor conveyor = conveyorMapper.selectOne(conveyorWrapper);
+            Location toDock = (Location) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.locationPrefix, toLocationId.toString());
+            if (toDock == null) {
+                toDock = this.basicInfoCacheService.loadFromDbLocation(toLocationId);
+            }
+            if (toDock == null) {
+                throw new Exception("LocationId " + toLocationId + " doesn't exist");
+            }
 
-                if (conveyor != null && conveyor.getConveyorLanewayType() != 1) {
-                    LambdaQueryWrapper<ConveyorLaneway> conveyorLanewayWrapper = new LambdaQueryWrapper<>();
-                    conveyorLanewayWrapper.eq(ConveyorLaneway::getConveyorsId, conveyor.getId());
-                    List<ConveyorLaneway> conveyorLanewayList = this.conveyorLanewayMapper.selectList(conveyorLanewayWrapper);
-//                    输送线可达性。LocationCode ==Conveyor Xcode
-                    if (CollectionUtils.isNotEmpty(conveyorLanewayList)) {
-                        List<Long> lanewaysIdList = conveyorLanewayList.stream().map(p -> p.getLanewaysId()).collect(Collectors.toList());
-                        request.setLanewaysIdList(lanewaysIdList);
-                        pageData = getInventoryInfoPage(request);
-                        if (pageData.getCount() == 0) {
-                            return "指定月台 - "+toLocationCode+" 关联的巷道没有库存";
-                        }
+            Conveyor conveyor = (Conveyor) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.conveyorPrefix, toDock.getXCode());
+            if (conveyor != null && !Integer.valueOf(1).equals(conveyor.getConveyorLanewayType())) {
+                List<Long> conveyorLanewayIdList = (List<Long>) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.conveyorLanewayPrefix, conveyor.getId().toString());
+                //                    输送线可达性。LocationCode ==Conveyor Xcode
+                if (CollectionUtils.isNotEmpty(conveyorLanewayIdList)) {
+                    //  List<Long> lanewaysIdList = conveyorLanewayList.stream().map(p -> p.getLanewaysId()).collect(Collectors.toList());
+                    request.setLanewaysIdList(conveyorLanewayIdList);
+                    pageData = getInventoryInfoPage(request);
+                    if (pageData.getCount() == 0) {
+                        return "指定月台 - " + toLocationCode + " 关联的巷道没有库存";
                     }
                 }
             }
+
+
+            //批次号
+            if (StringUtils.isNotEmpty(shipOrderItemResponse.getBatchNo())) {
+                request.setBatchNo(shipOrderItemResponse.getBatchNo());
+                pageData = getInventoryInfoPage(request);
+                if (pageData.getCount() == 0) {
+                    return "没有 " + shipOrderItemResponse.getBatchNo() + " 批次的库存";
+                }
+            }
+
+            //批次号2
+            if (StringUtils.isNotEmpty(shipOrderItemResponse.getBatchNo2())) {
+                request.setBatchNo2(shipOrderItemResponse.getBatchNo2());
+                pageData = getInventoryInfoPage(request);
+                if (pageData.getCount() == 0) {
+                    return "没有 " + shipOrderItemResponse.getBatchNo2() + " 批次的库存";
+                }
+            }
+
+            //批次号3
+            if (StringUtils.isNotEmpty(shipOrderItemResponse.getBatchNo3())) {
+                request.setBatchNo3(shipOrderItemResponse.getBatchNo3());
+                pageData = getInventoryInfoPage(request);
+                if (pageData.getCount() == 0) {
+                    return "没有 " + shipOrderItemResponse.getBatchNo3() + " 批次的库存";
+                }
+            }
+
         }
 
         request.setApplyOrOrderCodeEmpty(true);

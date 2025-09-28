@@ -52,6 +52,12 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     private PackageUnitService packageUnitService;
 
     @Autowired
+    private ConveyorService conveyorService;
+
+    @Autowired
+    private ConveyorLanewayService conveyorLanewayService;
+
+    @Autowired
     private RedisTemplate redisTemplate;
 
     @Autowired
@@ -67,7 +73,14 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     public static final String warehousePrefix = "Warehouse";
     public static final String orgnizationPrefix = "Orgnization";
     public static final String packageUnitPrefix = "PackageUnit";
+    public static final String conveyorPrefix = "Conveyor";
+    public static final String conveyorLanewayPrefix = "ConveyorLaneway";
+
+
     public static final String DEMO_PRODUCT_PREFIX = "DemoProduct:";
+
+
+
     //__NULL__
     public static final String EMPTY_VALUE = "-1@.EmptyValue";
 
@@ -156,6 +169,39 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         Map<String, PackageUnit> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(packageUnitPrefix, map);
         log.info("init PackageUnit complete");
+    }
+
+    @Async("threadPoolExecutor")
+    @Override
+    public void initConveyor() {
+
+        log.info("start init Conveyor");
+        List<Conveyor> list = this.conveyorService.list();
+        Map<String, Conveyor> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
+        redisTemplate.opsForHash().putAll(conveyorPrefix, map);
+
+        Map<String, Conveyor> codeMap = list.stream().collect(Collectors.toMap(p -> p.getXCode(), p -> p));
+        redisTemplate.opsForHash().putAll(conveyorPrefix, codeMap);
+
+        log.info("init Conveyor complete");
+    }
+
+    @Async("threadPoolExecutor")
+    @Override
+    public void initConveyorLaneway() {
+        log.info("start init ConveyorLaneway");
+        List<ConveyorLaneway> list = this.conveyorLanewayService.list();
+        Map<String, List<Long>> conveyorGroupMap = list.stream()
+                .collect(Collectors.groupingBy(
+                        p -> p.getConveyorsId().toString(),
+                        Collectors.mapping(
+                                p -> p.getLanewaysId(),
+                                Collectors.toList()
+                        )
+                ));
+        redisTemplate.opsForHash().putAll(conveyorLanewayPrefix, conveyorGroupMap);
+
+        log.info("init ConveyorLaneway complete");
     }
 
     @Override
@@ -424,6 +470,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         return packageUnit;
     }
 
+
     @Override
     public void updateLocation(Location location) throws InterruptedException {
         HashOperations<String, String, Location> hashOps = redisTemplate.opsForHash();
@@ -472,6 +519,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
     @Override
     public void initBasicInfoCache() {
+        /**
+         * Hash/String 的 put/set 操作会覆盖
+         *
+         * List/Set 的 push/add 操作不会覆盖，而是追加
+         */
         log.info("start initBasicInfoCache");
         Object proxyObj = AopContext.currentProxy();
         BasicInfoCacheService basicInfoCacheService = null;
@@ -489,6 +541,9 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         basicInfoCacheService.initWarehouse();
         basicInfoCacheService.initOrgnization();
         basicInfoCacheService.initPackageUnit();
+
+        basicInfoCacheService.initConveyor();
+        basicInfoCacheService.initConveyorLaneway();
         log.info("initBasicInfoCache complete");
     }
 
