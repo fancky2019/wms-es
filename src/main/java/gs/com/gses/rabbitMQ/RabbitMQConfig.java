@@ -2,6 +2,9 @@ package gs.com.gses.rabbitMQ;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rabbitmq.client.Return;
+import feign.RequestInterceptor;
+import feign.RequestTemplate;
 import gs.com.gses.model.entity.MqMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -15,6 +18,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.RabbitListenerContainerFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -36,6 +40,12 @@ import java.util.Map;
 @Configuration
 @Slf4j
 public class RabbitMQConfig {
+
+    @Value("${spring.rabbitmq.username:guest}")
+    private String username;
+
+    @Value("${spring.rabbitmq.password:guest}")
+    private String password;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -157,6 +167,14 @@ public class RabbitMQConfig {
         return rabbitTemplate;
     }
 
+    public String getToken() {
+        // 将用户名和密码进行Base64编码，并添加到Authorization头中
+        String auth = username + ":" + password;
+        String encodedAuth = java.util.Base64.getEncoder().encodeToString(auth.getBytes());
+       //   template.header("Authorization", "Basic " + encodedAuth);
+        return "Basic " + encodedAuth;
+    }
+
 
     //json 序列化，默认SimpleMessageConverter jdk 序列化
     //配置RabbitTemplate和RabbitListenerContainerFactory
@@ -171,10 +189,10 @@ public class RabbitMQConfig {
     }
 
 
-    /*
-    多线程消费:涉及到消费顺序行要将一个大队列根据业务消息id分成多个小队列
-    配置文件为默认的SimpleRabbitListenerContainerFactory 配置
-    该配置为具体的listener 指定SimpleRabbitListenerContainerFactory
+    /**
+     多线程消费:涉及到消费顺序行要将一个大队列根据业务消息id分成多个小队列
+     配置文件为默认的SimpleRabbitListenerContainerFactory 配置
+     该配置为具体的listener 指定SimpleRabbitListenerContainerFactory
      */
     @Bean("multiplyThreadContainerFactory")
     public SimpleRabbitListenerContainerFactory containerFactory(ConnectionFactory connectionFactory) {
@@ -208,7 +226,8 @@ public class RabbitMQConfig {
 //    private  AsyncRabbitTemplate asyncRabbitTemplate;
 
     @Bean("batchQueueRabbitListenerContainerFactory")
-    public SimpleRabbitListenerContainerFactory batchQueueRabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
+    public SimpleRabbitListenerContainerFactory batchQueueRabbitListenerContainerFactory(ConnectionFactory
+                                                                                                 connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         //设置批量

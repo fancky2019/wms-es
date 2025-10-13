@@ -24,7 +24,7 @@ spring:
   datasource:
     #    # sqlserver  装车单 liku  GensongWms3DB 质检 wms_liku
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=GensongWms3DB;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -62,7 +62,7 @@ spring:
     database: 0
 
     #    单机
-    # 远程服务器地址 127.0.0.1 10.100.200.43
+    # 远程服务器地址 127.0.0.1 10.100.200.43  10.100.202.113
     host: 127.0.0.1
     # 远程服务器端口
     port: 6379
@@ -108,13 +108,14 @@ spring:
     #springboot 配置未成功，参见代码的配置
     redisson:
       file: classpath:redisson-config.yml
-
+      # 修改这里，使用file:前缀指定外部文件
+#      config: file:./redisson-config.yml
 
 
   rabbitmq:
     ##集群配置 ip:port,ip:port 。多个配置之间用逗号隔开
     # addresses: 127.0.0.1:5673,127.0.0.1:5674,127.0.0.1:5675 #指定client连接到的server的地址，多个以逗号分隔(优先取addresses，然后再取host)
-
+    #10.100.200.43  guest  dev  test 添加用户要设置administrator  tag .
     host: 127.0.0.1
     port: 5672
     username: guest
@@ -216,7 +217,7 @@ sbp:
   authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
   hostAndPort: 10.100.200.43:9200
 #  hostAndPort: 10.100.202.113:9200
-  checkpermission: true
+  checkpermission: false
   initCache: false
   logMq: false
 #  enableCopyShipOrder: false
@@ -281,7 +282,7 @@ logging:
 #          dao: DEBUG
 
 
-
+#注意密码过期，用户组了设置
 ftp:
   host: 10.100.201.8
   port: 21

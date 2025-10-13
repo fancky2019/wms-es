@@ -66,6 +66,8 @@ public interface WmsService {
     /**
      * 参数前要加 @RequestParam 或post @RequestBody
      *
+     * RequestTemplate template
+     *   template.header("Authorization", "Bearer " + tokenService.getServiceToken());
      * @param
      * @return
      */

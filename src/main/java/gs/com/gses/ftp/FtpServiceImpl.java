@@ -153,7 +153,7 @@ public class FtpServiceImpl implements FtpService {
 
         } catch (IOException e) {
             disconnectQuietly(ftpClient);
-            throw new IOException("FTP连接失败: " + e.getMessage(), e);
+            throw new IOException("FTP连接失败: " + e.getMessage()+ "，响应信息: " + ftpClient.getReplyString(), e);
         }
     }
 
