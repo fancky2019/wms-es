@@ -17,7 +17,6 @@ import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
 import gs.com.gses.model.bo.wms.AllocateModel;
-import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
@@ -25,16 +24,16 @@ import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
-import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
 import gs.com.gses.model.response.wms.*;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
-import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.ShipPickOrderService;
 import gs.com.gses.service.TruckOrderItemService;
 import gs.com.gses.service.TruckOrderService;
 import gs.com.gses.mapper.TruckOrderMapper;
 import gs.com.gses.service.api.WmsService;
+import gs.com.gses.utility.FileUtil;
 import gs.com.gses.utility.LambdaFunctionHelper;
+import gs.com.gses.utility.PathUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.keyvalue.MultiKey;
@@ -43,10 +42,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.bus.BusProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
@@ -68,8 +69,12 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOrder>
-        implements TruckOrderService {
+public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOrder> implements TruckOrderService {
+
+    @Value("${sbp.upload.directory}")
+    private String uploadDirectory;
+    @Value("${sbp.upload.wms-front-server}")
+    private String wmsFrontServer;
 
     @Autowired
     private TruckOrderItemService truckOrderItemService;
@@ -136,10 +141,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             List<AllocateModel> allocateModelList = new ArrayList<>();
             Boolean result = truckOrderItemService.checkAvailable(itemRequest, matchedShipOrderItemResponseList, allocateModelList);
             if (!result) {
-                String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.",
-                        itemRequest.getProjectNo()
-                        , itemRequest.getDeviceNo()
-                        , itemRequest.getMaterialCode());
+                String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.", itemRequest.getProjectNo(), itemRequest.getDeviceNo(), itemRequest.getMaterialCode());
                 throw new Exception(str);
             }
             List<String> shipOrderCodeList = matchedShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
@@ -161,8 +163,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
 
-            List<ShipOrderItemResponse> currentShipOrderItemResponseList = allMatchedShipOrderItemResponseList.stream().filter(p -> p.getM_Str7().equals(truckOrderItemRequest.getProjectNo()) &&
-                    p.getMaterialId().equals(truckOrderItemRequest.getMaterialId())).collect(Collectors.toList());
+            List<ShipOrderItemResponse> currentShipOrderItemResponseList = allMatchedShipOrderItemResponseList.stream().filter(p -> p.getM_Str7().equals(truckOrderItemRequest.getProjectNo()) && p.getMaterialId().equals(truckOrderItemRequest.getMaterialId())).collect(Collectors.toList());
 
             if (StringUtils.isNotEmpty(truckOrderItemRequest.getDeviceNo())) {
                 currentShipOrderItemResponseList = currentShipOrderItemResponseList.stream().filter(p -> p.getM_Str12().equals(truckOrderItemRequest.getDeviceNo())).collect(Collectors.toList());
@@ -173,8 +174,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             for (String shipOrderCode : currentShipOrderCodeList) {
 
                 //当前装车明细对应发货单的明细
-                List<ShipOrderItemResponse> orderItemList = currentShipOrderItemResponseList.stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode))
-                        .distinct().collect(Collectors.toList());
+                List<ShipOrderItemResponse> orderItemList = currentShipOrderItemResponseList.stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).distinct().collect(Collectors.toList());
                 //发货单明细的分配
                 List<Long> orderItemIdList = orderItemList.stream().map(p -> p.getId()).collect(Collectors.toList());
                 List<AllocateModel> shipOrderAllocateModelList = allAllocateModelList.stream().filter(p -> orderItemIdList.contains(p.getShipOrderItemId())).collect(Collectors.toList());
@@ -203,10 +203,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 List<String> itemAllocatedPalletList = shipOrderAllocateModelList.stream().map(AllocateModel::getPallet).distinct().collect(Collectors.toList());
                 //根据托盘拆分
                 for (String pallet : itemAllocatedPalletList) {
-                    BigDecimal currentPalletQuantity = shipOrderAllocateModelList.stream()
-                            .filter(p -> p.getPallet().equals(pallet))
-                            .map(AllocateModel::getAllocateQuantity)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal currentPalletQuantity = shipOrderAllocateModelList.stream().filter(p -> p.getPallet().equals(pallet)).map(AllocateModel::getAllocateQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
                     List<ShipOrderPalletRequest> added = shipOrderPalletRequestList.stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).collect(Collectors.toList());
 
                     if (CollectionUtils.isNotEmpty(added)) {
@@ -418,7 +415,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     }
 
     @Override
-    public void updateTruckOrder(TruckOrderRequest request) throws Exception {
+    public void updateTruckOrder(MultipartFile[] files, TruckOrderRequest request) throws Exception {
         if (request.getId() == null) {
             throw new Exception("id is null");
         }
@@ -430,6 +427,14 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             String msg = MessageFormat.format("truckOrder id - {0} is deleted", request.getId());
             throw new Exception(msg);
         }
+        String filePath = "";
+        if (files != null && files.length > 0) {
+            String directory = uploadDirectory + "\\" + truckOrder.getTruckOrderCode() + "\\";
+            List<String> filePahList = FileUtil.saveFiles(files, directory);
+            filePahList = filePahList.stream().map(p -> wmsFrontServer + PathUtils.removeDriveLetterAndNormalize(p)).collect(Collectors.toList());
+            filePath = String.join(",", filePahList);
+        }
+//        http://localhost:8030/upload/20251009144517372/cat.png
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         if (userTokenDto != null) {
             request.setLastModifierId(userTokenDto.getId());
@@ -445,6 +450,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         updateWrapper.set(TruckOrder::getTrunkType, request.getTrunkType());
         updateWrapper.set(TruckOrder::getDriverPhone, request.getDriverPhone());
         updateWrapper.set(TruckOrder::getTrunkNo, request.getTrunkNo());
+        updateWrapper.set(TruckOrder::getFilePath, filePath);
         updateWrapper.set(TruckOrder::getLastModificationTime, LocalDateTime.now());
         updateWrapper.set(TruckOrder::getVersion, truckOrder.getVersion() + 1);
         updateWrapper.eq(TruckOrder::getId, request.getId());
@@ -457,6 +463,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             throw new Exception(msg);
         }
     }
+
 
     @Override
     public PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request) {
@@ -604,17 +611,13 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         /* 4) 直接把 EasyExcel 写到浏览器输出流 */
         try (ServletOutputStream out = httpServletResponse.getOutputStream()) {
 
-            ExcelWriter writer = EasyExcel.write(out)
-                    .autoCloseStream(true)       // 写完顺带关流
-                    .withTemplate(templatePath)
-                    .build();
+            ExcelWriter writer = EasyExcel.write(out).autoCloseStream(true)       // 写完顺带关流
+                    .withTemplate(templatePath).build();
             WriteSheet sheet = EasyExcel.writerSheet().build();
             // ① 填充单值
             writer.fill(map, sheet);
             // ② 填充列表
-            writer.fill(new FillWrapper("items", itemList),
-                    FillConfig.builder().forceNewRow(true).build(),
-                    sheet);
+            writer.fill(new FillWrapper("items", itemList), FillConfig.builder().forceNewRow(true).build(), sheet);
             writer.finish();  // !!! 必须调用，否则文件只写了一半
         }
 
@@ -642,8 +645,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     public Boolean deleteByIds(List<Long> idList) {
         LambdaUpdateWrapper<TruckOrder> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList)
-                .set(TruckOrder::getDeleted, 1);
+        truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList).set(TruckOrder::getDeleted, 1);
 
         boolean re = this.update(null, truckOrderLambdaUpdateWrapper);
         return re;

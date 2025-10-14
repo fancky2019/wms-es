@@ -75,7 +75,11 @@ public class TruckOrder implements Serializable {
      */
     @TableField(value = "TrunkNo")
     private String trunkNo;
-
+    /**
+     *
+     */
+    @TableField(value = "FilePath")
+    private String filePath;
     /**
      * 
      */

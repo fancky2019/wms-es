@@ -6,10 +6,7 @@ import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
-import gs.com.gses.model.request.wms.AddTruckOrderRequest;
-import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
-import gs.com.gses.model.request.wms.TruckOrderItemRequest;
-import gs.com.gses.model.request.wms.TruckOrderRequest;
+import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
@@ -19,6 +16,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -88,16 +86,24 @@ public class TruckOrderController {
         return MessageResult.success();
     }
 
-    /**
-     * updateTruckOrder
-     * @param request
-     * @return
-     * @throws Exception
-     */
+//    /**
+//     * updateTruckOrder
+//     * @param request
+//     * @return
+//     * @throws Exception
+//     */
+//    @DuplicateSubmission
+//    @PostMapping("/updateTruckOrder")
+//    public MessageResult<Void> updateTruckOrder(@RequestBody TruckOrderRequest request) throws Exception {
+//        truckOrderService.updateTruckOrder(request);
+//        return MessageResult.success();
+//    }
+
+
     @DuplicateSubmission
     @PostMapping("/updateTruckOrder")
-    public MessageResult<Void> updateTruckOrder(@RequestBody TruckOrderRequest request) throws Exception {
-        truckOrderService.updateTruckOrder(request);
+    public MessageResult<Void> updateTruckOrder(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("request") TruckOrderRequest request) throws Exception {
+        truckOrderService.updateTruckOrder(files, request);
         return MessageResult.success();
     }
 
@@ -137,8 +143,8 @@ public class TruckOrderController {
      * @throws Exception
      */
     @GetMapping(value = "/exportTrunkOrderExcel/{id}")
-    public void exportTrunkOrderExcel(@PathVariable("id") Long id,HttpServletResponse httpServletResponse) throws Exception {
-        this.truckOrderService.exportTrunkOrderExcel(id,httpServletResponse);
+    public void exportTrunkOrderExcel(@PathVariable("id") Long id, HttpServletResponse httpServletResponse) throws Exception {
+        this.truckOrderService.exportTrunkOrderExcel(id, httpServletResponse);
     }
 
 }

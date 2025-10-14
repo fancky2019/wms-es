@@ -7,6 +7,7 @@ import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.wms.TruckOrderResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileNotFoundException;
@@ -23,7 +24,7 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
     void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable;
 
-    void updateTruckOrder(TruckOrderRequest request) throws Exception;
+    void updateTruckOrder(MultipartFile[] files, TruckOrderRequest request) throws Exception;
 
     TruckOrder add(TruckOrderRequest truckOrderRequest);
 

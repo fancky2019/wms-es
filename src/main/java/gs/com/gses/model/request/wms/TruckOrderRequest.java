@@ -65,7 +65,7 @@ public class TruckOrderRequest extends RequestPage {
      *
      */
     private String trunkNo;
-
+    private String filePath;
     /**
      *
      */

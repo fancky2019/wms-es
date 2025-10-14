@@ -62,7 +62,7 @@ public class TruckOrderResponse implements Serializable {
      *
      */
     private String trunkNo;
-
+    private String filePath;
     /**
      *
      */

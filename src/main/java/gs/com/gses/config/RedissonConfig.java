@@ -1,12 +1,15 @@
 package gs.com.gses.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.codec.JsonJacksonCodec;
 import org.redisson.config.Config;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import org.springframework.core.io.Resource;
+import java.io.File;
 import java.io.IOException;
 
 /*
@@ -17,8 +20,14 @@ import java.io.IOException;
 /*
 排除redisson的自动配置，采用此配置。
  */
+@Slf4j
 @Configuration
 public class RedissonConfig {
+
+    // 从命令行参数或配置文件中读取 redisson 配置路径
+    @Value("${spring.redis.redisson.config:classpath:redisson-config.yml}")
+    private Resource redissonConfigResource;
+
     @Bean(destroyMethod = "shutdown")
     public RedissonClient redisson() throws IOException {
         //1、创建配置
@@ -53,11 +62,26 @@ public class RedissonConfig {
 //        RedissonClient redisson = Redisson.create(config);
 
 
-//        Config  config = Config.fromYAML(new File("redisson-config.yml"));
-        Config  config = Config.fromYAML(RedissonConfig.class.getClassLoader().getResource("redisson-config.yml"));
-//        // 使用 Jackson 序列化
-//        config.setCodec(new JsonJacksonCodec());
 
+
+
+
+        //指定配置文件
+//        // 从外部文件加载配置
+//        File file = new File("./redisson-config.yml");
+//        Config config = Config.fromYAML(file);
+
+
+        //jar
+////        Config  config = Config.fromYAML(new File("redisson-config.yml"));
+//        Config  config = Config.fromYAML(RedissonConfig.class.getClassLoader().getResource("redisson-config.yml"));
+////        // 使用 Jackson 序列化
+////        config.setCodec(new JsonJacksonCodec());
+
+
+
+        // 自动识别 file:/ 或 classpath:/ 前缀
+        Config config = Config.fromYAML(redissonConfigResource.getInputStream());
         return Redisson.create(config);
     }
 }
