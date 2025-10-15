@@ -122,7 +122,7 @@ public class BaseRabbitMqHandler {
                     log.error("ConsumerFailAckSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
 
                 } catch (Exception ex) {
-                    log.error("AckFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+                    log.error("ConsumerFailAckFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
                 }
             } else {
                 try {

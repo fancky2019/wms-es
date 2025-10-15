@@ -1373,11 +1373,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         if (changedInventoryItemDetail.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
-            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME) && !dataChangeInfo.getEventType().equals("DELETE")) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String modificationTimeStr = modificationTime.format(formatter);
                 String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
-                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
+                log.info("{} {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1435,11 +1435,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         if (changedInventoryItem.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItem.getLastModificationTime()), ZoneOffset.of("+8"));
-            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME) && !dataChangeInfo.getEventType().equals("DELETE")) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String modificationTimeStr = modificationTime.format(formatter);
                 String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
-                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
+                log.info("{} {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1487,11 +1487,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (changedInventory.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventory.getLastModificationTime()), ZoneOffset.of("+8"));
 
-            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME) && !dataChangeInfo.getEventType().equals("DELETE")) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String modificationTimeStr = modificationTime.format(formatter);
                 String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
-                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
+                log.info("{} {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1536,11 +1536,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         if (changedLocation.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedLocation.getLastModificationTime()), ZoneOffset.of("+8"));
-            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME) && !dataChangeInfo.getEventType().equals("DELETE")) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String modificationTimeStr = modificationTime.format(formatter);
                 String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
-                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
+                log.info("{} {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -1590,11 +1590,11 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         if (changedILaneway.getLastModificationTime() != null) {
             LocalDateTime modificationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedILaneway.getLastModificationTime()), ZoneOffset.of("+8"));
 
-            if (modificationTime.isBefore(INIT_INVENTORY_TIME)) {
+            if (modificationTime.isBefore(INIT_INVENTORY_TIME) && !dataChangeInfo.getEventType().equals("DELETE")) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String modificationTimeStr = modificationTime.format(formatter);
                 String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
-                log.info("{} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), modificationTimeStr, initInventoryTimeStr);
+                log.info("{} {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(), modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -2691,7 +2691,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         WriteSheet sheet = EasyExcel.writerSheet(0, "InventoryInfo" + sheetIndex).build();
         for (int i = 1; i <= loopCount; i++) {
 
-            request.setPageIndex(i);
+            request.setPageIndex(i - 1);
             request.setPageSize(stepCount);
             //getPage 会执行获取count脚本
 //            List<ProductTest> list = getPageData(request);
