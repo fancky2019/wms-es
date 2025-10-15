@@ -1,10 +1,20 @@
 package gs.com.gses.service.impl;
 
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelWriter;
+import com.alibaba.excel.annotation.ExcelIgnore;
+import com.alibaba.excel.support.ExcelTypeEnum;
+import com.alibaba.excel.write.builder.ExcelWriterBuilder;
+import com.alibaba.excel.write.metadata.WriteSheet;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.easyecel.DropDownSetField;
+import gs.com.gses.easyecel.ResoveDropAnnotationUtil;
+import gs.com.gses.easyecel.handler.DropDownCellWriteHandler;
 import gs.com.gses.elasticsearch.ShipOrderInfoRepository;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.mapper.ConveyorLanewayMapper;
@@ -13,6 +23,7 @@ import gs.com.gses.mapper.LanewayMapper;
 import gs.com.gses.mapper.LocationMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
+import gs.com.gses.model.request.EsRequestPage;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
@@ -24,6 +35,7 @@ import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.model.response.wms.ShipPickOrderItemResponse;
 import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.service.*;
+import gs.com.gses.utility.ExcelUtils;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -60,6 +72,12 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.net.URLEncoder;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -664,7 +682,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         sourceFieldList.add("packageQuantity");
         sourceFieldList.add("allocatedPackageQuantity");
         sourceFieldList.add("pallet");
-        request.setSourceFieldList(sourceFieldList);
+        request.setFieldMap(EsRequestPage.setFieldMapByField(sourceFieldList));
 
 
         request.setPageIndex(0);
@@ -711,7 +729,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         sourceFieldList.add("packageQuantity");
         sourceFieldList.add("allocatedPackageQuantity");
         sourceFieldList.add("pallet");
-        request.setSourceFieldList(sourceFieldList);
+        request.setFieldMap(EsRequestPage.setFieldMapByField(sourceFieldList));
 
 
         request.setPageIndex(0);
@@ -2257,9 +2275,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         Material material = this.materialService.getByCode(shipOrderItemRequest.getMaterialCode());
         long materialId = material.getId();
         InventoryInfoRequest request = new InventoryInfoRequest();
-        List<String> sourceFieldList = new ArrayList<>();
-        sourceFieldList.add("inventoryItemDetailId");
-        request.setSourceFieldList(sourceFieldList);
+        request.setFieldMap(EsRequestPage.setFieldMapByField(Arrays.asList("inventoryItemDetailId")));
         request.setPageIndex(0);
         request.setPageSize(1);
         request.setDeleted(0);
@@ -2523,5 +2539,181 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     }
 
+    /**
+     * 将文件输出到浏览器(导出)
+     */
+    private void prepareResponds(String fileName, HttpServletResponse response) throws IOException {
+        response.setContentType("application/vnd.ms-excel");
+        response.setCharacterEncoding("utf-8");
+        fileName = URLEncoder.encode(fileName, "UTF-8");
+        response.setHeader("Content-disposition", "attachment;filename*=utf-8'zh_cn'" + fileName + ExcelTypeEnum.XLSX.getValue());
+
+//        fileName = URLEncoder.encode(fileName, "UTF-8");
+//        // 这里注意 有同学反应使用swagger 会导致各种问题，请直接用浏览器或者用postman
+//        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+//        response.setCharacterEncoding("utf-8");
+//        // 这里URLEncoder.encode可以防止中文乱码 当然和easyexcel没有关系
+//        response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
+
+
+    }
+
+    public void exportByPage(HttpServletResponse response, InventoryInfoRequest request) throws Exception {
+
+        String fileName = "InventoryInfo_" + System.currentTimeMillis();
+        prepareResponds(fileName, response);
+        // 这里 需要指定写用哪个class去写
+        int stepCount = 10000;
+
+
+//        request.setPageIndex(1);
+//        request.setPageSize(stepCount);
+//        List<ProductTest> list = getPageData(request);
+//        EasyExcel.write(response.getOutputStream(), ProductTest.class).sheet("表名称").doWrite(list);
+
+
+        //细化设置
+        ServletOutputStream outputStream = response.getOutputStream();
+        // 获取改类声明的所有字段
+        java.lang.reflect.Field[] fields = InventoryInfo.class.getDeclaredFields();
+
+        // 响应字段对应的下拉集合
+        Map<Integer, String[]> map = new HashMap<>();
+        java.lang.reflect.Field field = null;
+        List<Field> fieldList = new ArrayList<>();
+        // 过滤掉ExcelIgnore的列
+        for (int i = 0; i < fields.length; i++) {
+            field = fields[i];
+            int modifiers = field.getModifiers();
+            if (!Modifier.isFinal(modifiers) && !Modifier.isStatic(modifiers)) {
+                // 解析注解信息
+                ExcelIgnore excelIgnore = field.getAnnotation(ExcelIgnore.class);
+                if (null == excelIgnore) {
+                    fieldList.add(field);
+                }
+            }
+
+        }
+
+        // 循环判断哪些字段有下拉数据集，并获取
+        for (int i = 0; i < fieldList.size(); i++) {
+            field = fieldList.get(i);
+            // 解析注解信息
+            DropDownSetField dropDownSetField = field.getAnnotation(DropDownSetField.class);
+            if (null != dropDownSetField) {
+                String[] sources = ResoveDropAnnotationUtil.resove(dropDownSetField);
+                if (null != sources && sources.length > 0) {
+                    map.put(i, sources);
+                }
+            }
+        }
+
+
+        //多个sheet页写入
+        ExcelWriterBuilder builder = new ExcelWriterBuilder();
+        builder.autoCloseStream(true);
+        //实体的表头
+//        builder.head(ProductTest.class);
+//        builder.head()
+
+//        //动态列
+//        if (CollectionUtils.isNotEmpty(request.getExportFieldList())) {
+//            builder.includeColumnFieldNames(request.getExportFieldList());
+//            //        builder.excludeColumnFieldNames()
+//        }
+
+        //动态列和列名
+        LinkedList<String> includeColumnFieldList = new LinkedList();
+        LinkedList<List<String>> includeColumnPropertyList = new LinkedList();
+        if (request.getFieldMap() != null && request.getFieldMap().size() > 0) {
+            for (String key : request.getFieldMap().keySet()) {
+                includeColumnFieldList.add(key);
+                List<String> list = new ArrayList<>();
+                String columnProperty = request.getFieldMap().get(key);
+                if (StringUtils.isEmpty(columnProperty)) {
+                    columnProperty = key;
+                }
+                list.add(columnProperty);
+                includeColumnPropertyList.add(list);
+
+            }
+            builder.includeColumnFieldNames(includeColumnFieldList);
+            //序号和实体对象导出的序号不同
+//            builder.head(includeColumnPropertyList);
+            builder.head(ExcelUtils.getClassNew(new InventoryInfo(), request.getFieldMap()));
+
+        } else {
+            builder.head(InventoryInfo.class);
+        }
+
+//        builder.registerWriteHandler(new ExcelStyleConfig(Lists.newArrayList(7), null, null));
+////        if (flag == 0 || flag == 2) {
+//        builder.registerWriteHandler(new ExcelStyleConfig(Lists.newArrayList(20), null, null));
+//        builder.head(ProductTest.class);
+////        } else {
+////            builder.registerWriteHandler(new ExcelStyleConfig(null,null,null));
+////            builder.head(GXDetailListLogVO.class);
+////        }
+
+        ArrayList<String> includeColumnFieldNames = new ArrayList<>();
+        //下拉框
+        builder.registerWriteHandler(new DropDownCellWriteHandler(map));
+//        builder.includeColumnFieldNames(includeColumnFieldNames)
+        builder.file(outputStream);
+
+        //不能重命名，重命名就没有XLSX格式后缀
+        builder.excelType(ExcelTypeEnum.XLSX);
+        ExcelWriter writer = builder.build();
+
+//        InventoryInfoRequest request = new InventoryInfoRequest();
+//        request.setFieldMap(EsRequestPage.setFieldMapByField(Arrays.asList("inventoryItemDetailId")));
+        request.setPageIndex(0);
+        request.setPageSize(1);
+
+        PageData<InventoryInfo> pageData = getInventoryInfoPage(request);
+
+        long count = pageData.getCount();
+//        count = 999;
+        long loopCount = count / stepCount;
+        long remainder = count % stepCount;
+        if (remainder > 1) {
+            loopCount++;
+        }
+
+        long sheetSize = 1000000;
+        long sheetLoopCount = count / sheetSize;
+        long sheetRemainder = count % sheetSize;
+        if (sheetRemainder > 1) {
+            sheetRemainder++;
+        }
+        int sheetIndex = 0;
+        int maxId = 0;
+        WriteSheet sheet = EasyExcel.writerSheet(0, "InventoryInfo" + sheetIndex).build();
+        for (int i = 1; i <= loopCount; i++) {
+
+            request.setPageIndex(i);
+            request.setPageSize(stepCount);
+            //getPage 会执行获取count脚本
+//            List<ProductTest> list = getPageData(request);
+            //超过200W 查询要5s
+//            List<ProductTest> list =  this.productTestMapper.getPageData(request);
+            //采用最大ID，可0.5s查询到结果
+            PageData<InventoryInfo> currentPageData = getInventoryInfoPage(request);
+            int total = i * stepCount;
+            writer.write(currentPageData.getData(), sheet);
+            if (total % sheetSize == 0) {
+                sheetIndex += 1;
+                sheet = EasyExcel.writerSheet(sheetIndex, "InventoryInfo" + sheetIndex).build();
+//                WriteSheet writeSheet = EasyExcel.writerSheet(i, "模板" + i).build();
+            }
+            //   maxId = list.stream().map(p -> p.getId().intValue()).max(Comparator.comparing(Integer::intValue)).orElse(0);
+
+        }
+
+
+        writer.finish();
+
+
+    }
 
 }

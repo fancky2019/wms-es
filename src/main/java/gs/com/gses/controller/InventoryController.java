@@ -3,6 +3,7 @@ package gs.com.gses.controller;
 import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.InventoryItemDetail;
+import gs.com.gses.model.request.DemoProductRequest;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
@@ -11,6 +12,7 @@ import gs.com.gses.service.InventoryInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +31,7 @@ public class InventoryController {
      * @return
      * @throws Exception
      */
-    @DuplicateSubmission(timeOut = 5*60)
+    @DuplicateSubmission(timeOut = 5 * 60)
     @GetMapping("/initInventoryInfoFromDb")
     public MessageResult<Void> initInventoryInfoFromDb() throws Exception {
 //        Thread.sleep(10000);
@@ -144,6 +146,16 @@ public class InventoryController {
     public MessageResult<Void> addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception {
         inventoryInfoService.updateByInventoryDb(inventoryItemDetailId);
         return MessageResult.success();
+    }
+
+    /**
+     *easyexcel 分页导出
+     * exportByPage 批量导出
+     *importExcel 批量导出
+     */
+    @PostMapping(value = "/exportByPage")
+    public void exportByPage(@RequestBody InventoryInfoRequest request, HttpServletResponse httpServletResponse) throws Exception {
+        this.inventoryInfoService.exportByPage(httpServletResponse, request);
     }
 
 }

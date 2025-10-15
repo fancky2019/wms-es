@@ -23,6 +23,7 @@ import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.mapper.InventoryItemDetailMapper;
+import gs.com.gses.model.request.EsRequestPage;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
@@ -284,7 +285,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         List<String> sourceFieldList = new ArrayList<>();
         sourceFieldList.add("pallet");
         sourceFieldList.add("inventoryItemDetailId");
-        inventoryInfoRequest.setSourceFieldList(sourceFieldList);
+        inventoryInfoRequest.setFieldMap(EsRequestPage.setFieldMapByField(sourceFieldList));
         inventoryInfoRequest.setPageIndex(0);
         inventoryInfoRequest.setPageSize(10000);
         inventoryInfoRequest.setDeleted(0);

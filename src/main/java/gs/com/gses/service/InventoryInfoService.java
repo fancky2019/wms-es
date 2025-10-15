@@ -2,10 +2,13 @@ package gs.com.gses.service;
 
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
+import gs.com.gses.model.request.DemoProductRequest;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -42,4 +45,8 @@ public interface InventoryInfoService {
     String allocatedReason(ShipOrderItemRequest request) throws Exception;
 
     void addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception;
+    void exportByPage(HttpServletResponse response, InventoryInfoRequest request) throws Exception;
+
+
+
 }
