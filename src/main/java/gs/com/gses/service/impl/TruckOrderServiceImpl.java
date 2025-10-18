@@ -17,7 +17,9 @@ import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
 import gs.com.gses.model.bo.wms.AllocateModel;
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrder;
+import gs.com.gses.model.enums.MqMessageStatus;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
@@ -25,7 +27,11 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.wms.*;
+import gs.com.gses.rabbitMQ.BaseRabbitMqHandler;
+import gs.com.gses.rabbitMQ.RabbitMQConfig;
+import gs.com.gses.rabbitMQ.RabbitMqMessage;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
+import gs.com.gses.service.MqMessageService;
 import gs.com.gses.service.ShipPickOrderService;
 import gs.com.gses.service.TruckOrderItemService;
 import gs.com.gses.service.TruckOrderService;
@@ -39,6 +45,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.apache.commons.collections4.map.MultiKeyMap;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.MDC;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -47,16 +54,20 @@ import org.springframework.cloud.bus.BusProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -96,6 +107,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
     @Autowired
     private BusProperties busProperties;
+
+
+    @Autowired
+    private MqMessageService mqMessageService;
+
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -415,6 +431,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateTruckOrder(MultipartFile[] files, TruckOrderRequest request) throws Exception {
         if (request.getId() == null) {
             throw new Exception("id is null");
@@ -427,14 +444,22 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             String msg = MessageFormat.format("truckOrder id - {0} is deleted", request.getId());
             throw new Exception(msg);
         }
-        String filePath = "";
+        List<String> allFilePahList = new ArrayList<>();
+        if (StringUtils.isNotEmpty(request.getFilePath())) {
+            List<String> previousFilePahList = Arrays.asList(request.getFilePath().split(","));
+            allFilePahList.addAll(previousFilePahList);
+        }
+//        http://localhost:8030/upload/20251009144517372/cat.png
+        String filePath = request.getFilePath();
         if (files != null && files.length > 0) {
             String directory = uploadDirectory + "\\" + truckOrder.getTruckOrderCode() + "\\";
             List<String> filePahList = FileUtil.saveFiles(files, directory);
             filePahList = filePahList.stream().map(p -> wmsFrontServer + PathUtils.removeDriveLetterAndNormalize(p)).collect(Collectors.toList());
-            filePath = String.join(",", filePahList);
+            allFilePahList.addAll(filePahList);
+            allFilePahList = allFilePahList.stream().distinct().collect(Collectors.toList());
+            filePath = String.join(",", allFilePahList);
         }
-//        http://localhost:8030/upload/20251009144517372/cat.png
+
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         if (userTokenDto != null) {
             request.setLastModifierId(userTokenDto.getId());
@@ -462,8 +487,47 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             String msg = MessageFormat.format("Update truckOrder id - {0} fail", request.getId());
             throw new Exception(msg);
         }
+
+
+//        RabbitMqMessage rabbitMqMessage = new RabbitMqMessage();
+
+        String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+        String content = objectMapper.writeValueAsString(truckOrder.getId());
+        MqMessage mqMessage = new MqMessage();
+        mqMessage.setMsgId(msgId);
+        mqMessage.setBusinessId(truckOrder.getId());
+        mqMessage.setBusinessKey(truckOrder.getTruckOrderCode());
+        mqMessage.setMsgContent(content);
+        mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
+        mqMessage.setRouteKey(RabbitMQConfig.DIRECT_MQ_MESSAGE_KEY);
+        mqMessage.setQueue(RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME);
+        mqMessage.setRetry(true);
+        mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
+        mqMessage.setTraceId(MDC.get("traceId"));
+//        mqMessage.setRetryCount(0);
+//        //BaseRabbitMqHandler.TOTAL_RETRY_COUNT =4
+//        mqMessage.setMaxRetryCount(BaseRabbitMqHandler.TOTAL_RETRY_COUNT);
+        mqMessage.setDeleted(0);
+        mqMessage.setVersion(1);
+        //13位  毫秒时间戳，不是秒9位  转时间戳
+        long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+//        LocalDateTime lNow=  LocalDateTime.ofInstant(
+//                Instant.ofEpochMilli(localDateTimeMillis),
+//                ZoneId.systemDefault()
+//        );
+        mqMessage.setCreationTime(localDateTimeMillis);
+        mqMessage.setLastModificationTime(localDateTimeMillis);
+        mqMessageService.save(mqMessage);
+
+
     }
 
+    @Override
+    public void expungeStaleAttachment(long id) {
+        log.info("expungeStaleAttachment - {}", id);
+        Integer.parseInt("m");
+
+    }
 
     @Override
     public PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request) {

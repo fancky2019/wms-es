@@ -53,8 +53,26 @@
     </appenders>
 
     <loggers>
-<!--        过滤框架的debug-->
+<!--        <root> / <AsyncRoot> 的 level 这是全局的默认日志级别。  如果某个包或类没有单独定义 <logger>，它就会继承 root 的级别。-->
+
+<!--        <logger> 的 level <logger> 针对特定包或类名（name="org.mybatis"）设置级别。-->
+<!--        它会覆盖继承来的 root 级别。-->
+<!--        比如：root=ALL，logger=INFO，那么 org.mybatis 下的日志只打印 INFO 及以上。-->
+<!--        日志继承链-->
+<!--        包名层级会逐层查找。-->
+<!--        例如：-->
+<!--        gs.com.gses.mapper.MqMessageMapper-->
+<!--        会按以下顺序查找：-->
+<!--        logger: gs.com.gses.mapper.MqMessageMapper-->
+<!--        logger: gs.com.gses.mapper-->
+<!--        logger: gs.com.gses-->
+<!--        logger: gs.com-->
+<!--        logger: gs-->
+<!--        最后继承 root 的级别。-->
+
+        <!--        过滤框架的  DEBUG  INFO-->
         <logger name="org.springframework" level="INFO"/>
+        <logger name="gs.com.gses" level="INFO"/>
         <logger name="org.mybatis" level="INFO"/>
         <logger name="org.thymeleaf" level="INFO"/>
         <logger name="org.redisson" level="INFO"/>
@@ -69,7 +87,7 @@
 <!--            <AppenderRef ref="Console"/>-->
         </Logger>
 
-        <!--     all  info  异步-->
+        <!--   debug  all  info  异步-->
 <!--        <AsyncRoot level="info">-->
         <AsyncRoot level="info">
             <appender-ref ref="Console"/>

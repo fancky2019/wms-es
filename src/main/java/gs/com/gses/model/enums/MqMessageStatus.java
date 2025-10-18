@@ -3,18 +3,19 @@ package gs.com.gses.model.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum OutboundOrderXStatus
-{
+/**
+ *  0:未生产 1：已生产 2：已消费 3:消费失败
+ */
+public enum MqMessageStatus {
 
     /**
      *
      */
-    NEW(1, "open新建"),
-    ENABLED(2, "生效"),
-    EXECUTING(3, "执行中"),
-    COMPLETED(4, "已完成"),
-    SHIPED(5, "已发运"),
-    CANCEL(-1, "作废");
+    NOT_PRODUCED(0, "未生产"),
+    PRODUCE(1, "已生产"),
+    CONSUMED(2, "已消费"),
+    CONSUME_FAIL(3, "消费失败");
+
 
     private  int value;
     private  String description;
@@ -33,7 +34,7 @@ public enum OutboundOrderXStatus
     }
 
 
-    private OutboundOrderXStatus(int value, String description) {
+    private MqMessageStatus(int value, String description) {
         this.value = value;
         this.description = description;
     }
@@ -43,10 +44,10 @@ public enum OutboundOrderXStatus
      * @param str
      * @return
      */
-    public static OutboundOrderXStatus fromString(String str) {
+    public static MqMessageStatus fromString(String str) {
         try {
             //名称要对应  如：Zhi
-            return OutboundOrderXStatus.valueOf(str);
+            return MqMessageStatus.valueOf(str);
         }
         catch (Exception ex)
         {
@@ -57,8 +58,8 @@ public enum OutboundOrderXStatus
     }
 
     public static String getDescription(int value) {
-        OutboundOrderXStatus[] values = values();
-        for (OutboundOrderXStatus unitEnum : values) {
+        MqMessageStatus[] values = values();
+        for (MqMessageStatus unitEnum : values) {
             if (unitEnum.value ==value) {
                 return unitEnum.description;
             }
@@ -82,9 +83,9 @@ public enum OutboundOrderXStatus
      * @return
      */
     @JsonCreator
-    public static OutboundOrderXStatus getOutboundOrderXStatusEnum(int value) {
+    public static MqMessageStatus getMqMessageStatusEnum(int value) {
         //values= MessageType.values()
-        for (OutboundOrderXStatus item : OutboundOrderXStatus.values()) {
+        for (MqMessageStatus item : MqMessageStatus.values()) {
             if (item.getValue() == value) {
                 return item;
             }

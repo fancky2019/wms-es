@@ -265,6 +265,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             log.error("", ex);
             throw ex;
         } finally {
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
             if (lockSuccessfully) {
                 try {
                     if (lock.isHeldByCurrentThread()) {
@@ -2015,6 +2018,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             // 清除中断状态，保存中断信息
             boolean wasInterrupted = Thread.interrupted();
             try {
+//                if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                    lock.unlock();
+//                }
                 if (lockSuccessfully) {
                     try {
                         if (lock.isHeldByCurrentThread()) {

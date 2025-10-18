@@ -2,13 +2,10 @@ package gs.com.gses.flink;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.rabbitMQ.RabbitMqMessage;
 import gs.com.gses.rabbitMQ.producer.DirectExchangeProducer;
 import gs.com.gses.service.InventoryInfoService;
-import gs.com.gses.service.impl.InventoryInfoServiceImpl;
-import gs.com.gses.service.impl.MqMessageServiceImpl;
 import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -16,13 +13,9 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.slf4j.MDC;
 import org.springframework.amqp.core.MessageProperties;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Component
@@ -60,6 +53,7 @@ public class DataChangeSink extends RichSinkFunction<DataChangeInfo> {
             mqMessage.setRouteKey(RabbitMQConfig.DIRECT_ROUTING_KEY);
             mqMessage.setQueue(RabbitMQConfig.DIRECT_QUEUE_NAME);
             mqMessage.setTraceId(dataChangeInfo.getTraceId());
+            mqMessage.setRetry(false);
             directExchangeProducer.produce(mqMessage,messageProperties);
         } catch (Exception ex) {
             log.error("", ex);

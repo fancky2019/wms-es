@@ -117,13 +117,13 @@ public class TruckOrder implements Serializable {
     private String lastModifierName;
 
     /**
-     * 
+     * 代码赋值，没有走MetaObjectHandlerImp
      */
     @TableField(value = "CreationTime")
     private LocalDateTime creationTime;
 
     /**
-     * 
+     * 代码赋值，没有走MetaObjectHandlerImp
      */
     @TableField(value = "LastModificationTime")
     private LocalDateTime lastModificationTime;

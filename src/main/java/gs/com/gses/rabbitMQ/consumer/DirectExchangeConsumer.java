@@ -1,7 +1,6 @@
 package gs.com.gses.rabbitMQ.consumer;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import gs.com.gses.flink.DataChangeInfo;
@@ -10,21 +9,15 @@ import gs.com.gses.rabbitMQ.BaseRabbitMqHandler;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.service.InventoryInfoService;
 import gs.com.gses.service.ShipOrderService;
+import gs.com.gses.service.TruckOrderService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Component
@@ -39,6 +32,9 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
     @Autowired
     private ShipOrderService shipOrderService;
 
+    @Autowired
+    private TruckOrderService truckOrderService;
+
 //    private static Logger logger = LogManager.getLogger(DirectExchangeConsumer.class);
 
 
@@ -49,7 +45,7 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
     //多个方法绑定同一个队列MQ会轮训发送给各个方法消费
     //string 接收
     @RabbitHandler
-    @RabbitListener(queues = RabbitMQConfig.DIRECT_QUEUE_NAME)//参数为队列名称
+    @RabbitListener(queues = RabbitMQConfig.DIRECT_QUEUE_NAME)
     public void receivedMsg(Message message, Channel channel,
                             @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
                             @Header(AmqpHeaders.CONSUMER_QUEUE) String queueName) throws Exception {
@@ -110,5 +106,17 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
 
     }
 
+    @RabbitHandler
+    @RabbitListener(queues = RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME)
+    public void mqMessage(Message message, Channel channel,
+                            @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
+                            @Header(AmqpHeaders.CONSUMER_QUEUE) String queueName)  {
+
+
+        super.onMessage(Long.class, message, channel, (msg) -> {
+            truckOrderService.expungeStaleAttachment(msg);
+        });
+
+    }
 
 }

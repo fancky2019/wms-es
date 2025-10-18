@@ -26,6 +26,8 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
     void updateTruckOrder(MultipartFile[] files, TruckOrderRequest request) throws Exception;
 
+    public void expungeStaleAttachment(long id);
+
     TruckOrder add(TruckOrderRequest truckOrderRequest);
 
     PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request);

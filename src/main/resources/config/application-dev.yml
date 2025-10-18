@@ -20,7 +20,11 @@ spring:
     allow-circular-references: true
   application:
     name: springBootProject
-
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB       # Spring特定配置  -1 #不做限制
+      max-request-size: 100MB
   datasource:
     #    # sqlserver  装车单 liku  GensongWms3DB 质检 wms_liku
     #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true

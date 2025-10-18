@@ -1,17 +1,13 @@
 package gs.com.gses.rabbitMQ;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-
-import gs.com.gses.model.entity.MqMessage;
+import gs.com.gses.model.enums.MqMessageStatus;
 import gs.com.gses.service.MqMessageService;
-import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -21,7 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 
-/**
+/*
  * 1、确认模式（confirm）：可以监听消息是否从生产者成功传递到交换。
  * 2、退回模式（return）：可以监听消息是否从交换机成功传递到队列。
  * 3、消费者消息确认（Ack）：可以监听消费者是否成功处理消息。
@@ -30,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 确保发送到交换机，不确定路由到队列
+ *
+ * 生产者 → Exchange → (路由匹配) → Queue → 消费者
  */
 @Component
 @Slf4j
@@ -44,8 +42,8 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
     private RedisTemplate redisTemplate;
 
     //无法注入 通过容器获取
-//    @Autowired
-//    IMqMessageService mqMessageService;
+    @Autowired
+    MqMessageService mqMessageService;
 
 
 //    @Autowired
@@ -101,6 +99,7 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
                     log.error("", ex);
                 }
 
+                mqMessageService.updateByMsgId(msgId, MqMessageStatus.PRODUCE.getValue());
 
             } else {
 //                log.info("消息 - {} 发送到交换机失败！ ", msgId);
@@ -109,7 +108,7 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
             }
         } catch (Exception e) {
             log.error("", e);
-            throw e;
+//            throw e;
         } finally {
             MDC.remove("traceId");
 

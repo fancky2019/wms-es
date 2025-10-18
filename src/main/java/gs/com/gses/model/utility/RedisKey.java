@@ -13,4 +13,9 @@ public class RedisKey {
     public static final String CREATE_WORKING_DIRECTORY= "createWorkingDirectory:";
 
 
+    //region 表锁
+    public static final String UPDATE_MQ_MESSAGE_INFO = "redisson:updateMqMessage";
+
+    //endregion
+
 }

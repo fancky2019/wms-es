@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import gs.com.gses.flink.DataChangeInfo;
+import gs.com.gses.model.enums.MqMessageStatus;
+import gs.com.gses.service.MqMessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,7 @@ public class BaseRabbitMqHandler {
 
     private static final String RABBIT_MQ_MESSAGE_ID_PREFIX = "RabbitMQ:messageId:";
     //
-    private static final int TOTAL_RETRY_COUNT = 4;
+    public static final int TOTAL_RETRY_COUNT = 4;
     /**
      * 一天
      */
@@ -45,6 +47,9 @@ public class BaseRabbitMqHandler {
 
 //    @Autowired
 //    IMqFailLogService mqFailLogService;
+
+    @Autowired
+    MqMessageService mqMessageService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -110,9 +115,9 @@ public class BaseRabbitMqHandler {
 
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
             log.info("AckSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
-
+            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUMED.getValue());
         } catch (Exception e) {
-            log.error("ConsumerFail msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+            log.error("ConsumerFail msgId - {},businessKey - {} ,businessId - {} retry - {}", msgId, businessKey, businessId,retry);
             log.error("", e);
             if (!retry) {
                 try {
@@ -133,21 +138,19 @@ public class BaseRabbitMqHandler {
                      */
                     //channel.basicNack(deliveryTag, false, true);
                     this.retry(channel, message, retryCount, e.getMessage());
-                } catch (IOException | InterruptedException ex) {
+                } catch (Exception ex) {
                     log.info("retryException", ex);
                 }
             }
         } finally {
-
-
             try {
                 String queueName = message.getMessageProperties().getConsumerQueue();
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm");
                 String nowStr = LocalDateTime.now().format(formatter);
-                String key="RabbitMQ:Consume:"+queueName+":"+nowStr;
+                String key = "RabbitMQ:Consume:" + queueName + ":" + nowStr;
                 Long newValue = redisTemplate.opsForValue().increment(key);
                 if (newValue == 1) {
-                    redisTemplate.expire(key, 24*12*60, TimeUnit.SECONDS);
+                    redisTemplate.expire(key, 24 * 12 * 60, TimeUnit.SECONDS);
                 }
             } catch (Exception ex) {
                 log.error("", ex);
@@ -162,7 +165,7 @@ public class BaseRabbitMqHandler {
 
     }
 
-    private void retry(Channel channel, Message message, int retryCount, String exceptionMsg) throws IOException, InterruptedException {
+    private void retry(Channel channel, Message message, int retryCount, String exceptionMsg) throws Exception {
         //   String redisCountKey = "retry:" + RabbitMqConstants.TB_CUST_LIST_ERROR_QUEUE + t.getMessageId();
 
         String messageId = message.getMessageProperties().getMessageId();
@@ -173,22 +176,40 @@ public class BaseRabbitMqHandler {
         if (requeue) {
             channel.basicNack(deliveryTag, false, false);
             valueOperations.set(mqMsgIdKey, retryCount);
-            log.info(" {} 开始第{}次回归到队列：", deliveryTag, retryCount);
+            log.info("messageId {} requeue: deliveryTag {}  retryCount {}",messageId, deliveryTag, retryCount);
         } else {
             //ack 掉消息，把该消息插入数据库，批处理
             if (redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS)) {
                 channel.basicAck(deliveryTag, false);
             }
+
             String msgContent = new String(message.getBody());
-            HashMap<String, String> map = objectMapper.readValue(msgContent, new TypeReference<HashMap<String, String>>() {
-            });
-            String id = "";
-            for (Map.Entry<String, String> entry : map.entrySet()) {
-                if (entry.getKey().equalsIgnoreCase("id")) {
-                    id = entry.getValue();
-                    break;
-                }
-            }
+
+//            HashMap<String, String> map = objectMapper.readValue(msgContent, new TypeReference<HashMap<String, String>>() {});
+//            String id = "";
+//            for (Map.Entry<String, String> entry : map.entrySet()) {
+//                if (entry.getKey().equalsIgnoreCase("id")) {
+//                    id = entry.getValue();
+//                    break;
+//                }
+//            }
+
+//            // 尝试解析为JSON
+//            if (isValidJson(msgContent)) {
+//                HashMap<String, String> map =objectMapper.readValue(msgContent,
+//                        new TypeReference<HashMap<String, String>>() {});
+//            } else {
+//                // 如果是纯字符串，创建包含该字符串的Map
+//                Map<String, String> map = new HashMap<>();
+//                map.put("content", msgContent); // 使用固定key
+//                // 或者 map.put("value", msgContent);
+//                // 或者 map.put("message", msgContent);
+//
+//            }
+
+
+            MessageProperties messageProperties = message.getMessageProperties();
+            String msgId = messageProperties.getMessageId();
 
             String routingKey = message.getMessageProperties().getReceivedRoutingKey();
             String exchange = message.getMessageProperties().getReceivedExchange();
@@ -205,7 +226,22 @@ public class BaseRabbitMqHandler {
 //            mqFailLog.setMessage(msgContent);
 //            mqFailLog.setCause(exceptionMsg);
 //            mqFailLogService.save(mqFailLog);
+
+            //region update mqMessage
+            //重试仍然没有成功，标记为消费失败。走定时任务补偿
+            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUME_FAIL.getValue());
+            //endregion
         }
 
+    }
+
+    // JSON验证方法
+    private boolean isValidJson(String json) {
+        try {
+            objectMapper.readTree(json);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

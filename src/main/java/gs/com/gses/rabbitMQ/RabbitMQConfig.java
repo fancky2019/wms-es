@@ -2,10 +2,8 @@ package gs.com.gses.rabbitMQ;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.Return;
-import feign.RequestInterceptor;
-import feign.RequestTemplate;
-import gs.com.gses.model.entity.MqMessage;
+import gs.com.gses.model.enums.MqMessageStatus;
+import gs.com.gses.service.MqMessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.amqp.core.*;
@@ -51,16 +49,35 @@ public class RabbitMQConfig {
     ObjectMapper objectMapper;
     @Autowired
     PushConfirmCallback pushConfirmCallback;
+
+    @Autowired
+    MqMessageService mqMessageService;
+
+
     //region 常量参数
     public static final int RETRY_INTERVAL = 100000;
 
     public static final String DIRECT_EXCHANGE = "DirectExchangeES";
+
     //region DIRECT
 
-
+    //region cdc
     // 路由键支持模糊匹配，符号“#”匹配一个或多个词，符号“*”匹配不多不少一个词
     public static final String DIRECT_ROUTING_KEY = "DirectExchangeRoutingKeyES";
     public static final String DIRECT_QUEUE_NAME = "DirectExchangeQueueSpringBootES";
+    //endregion
+
+    //region mqMessage
+    //x-message-ttl 参数的单位是毫秒。
+    public static final int MQ_MESSAGE_RETRY_INTERVAL =10000;// 5 * 60 * 1000;
+    // 路由键支持模糊匹配，符号“#”匹配一个或多个词，符号“*”匹配不多不少一个词
+    public static final String DIRECT_MQ_MESSAGE_KEY = "directMqMessageKey";
+    public static final String DIRECT_MQ_MESSAGE_NAME = "directMqMessageName";
+
+    public static final String DIRECT_MQ_MESSAGE_KEY_DLX = "directMqMessageKeyDlx";
+    public static final String DIRECT_MQ_MESSAGE_QUEUE_DLX = "directMqMessageQueueDlx";
+    //endregion
+
     //endregion
 
 
@@ -128,6 +145,9 @@ public class RabbitMQConfig {
                 String failedMessage = new String(returnedMessage.getMessage().getBody());
 //                rabbitMqMessage = objectMapper.readValue(failedMessage, RabbitMqMessage.class);
 //                messageId = rabbitMqMessage.getMessageId();
+
+                mqMessageService.updateByMsgId(messageId, MqMessageStatus.NOT_PRODUCED.getValue());
+                //MQ_MESSAGE
             } catch (Exception e) {
                 log.info("", e);
             } finally {
@@ -171,7 +191,7 @@ public class RabbitMQConfig {
         // 将用户名和密码进行Base64编码，并添加到Authorization头中
         String auth = username + ":" + password;
         String encodedAuth = java.util.Base64.getEncoder().encodeToString(auth.getBytes());
-       //   template.header("Authorization", "Basic " + encodedAuth);
+        //   template.header("Authorization", "Basic " + encodedAuth);
         return "Basic " + encodedAuth;
     }
 
@@ -314,5 +334,80 @@ public class RabbitMQConfig {
     }
     //endregion
 
+
+    //region mqMessage
+//    @Bean
+//    public DirectExchange mqMessageDirectExchange() {
+//        //  this(name, true, false);(String name, boolean durable, boolean autoDelete)
+//        //交换机默认持久化true
+//        DirectExchange directExchange = new DirectExchange(DIRECT_EXCHANGE);
+//        return directExchange;
+//    }
+
+    @Bean
+    public Queue mqMessageDirectQueue() {
+
+        //设置死信队列的参数（交换机、路由key）
+        // Queue(String name, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments)
+        HashMap<String, Object> args = new HashMap<>();
+        //设置队列最大优先级[0,9]，发送消息时候指定优先级
+        args.put("x-max-priority", 10);
+//        args.put("x-message-ttl", 30000);
+        // 设置该Queue的死信的队列
+        args.put("x-dead-letter-exchange", DIRECT_EXCHANGE);
+        // 设置死信routingKey
+        args.put("x-dead-letter-routing-key", DIRECT_MQ_MESSAGE_KEY_DLX);
+        //rabbitmq 默认发送给所有消费中的一个，尽管集群也只会发给一个服务中的一个消费者
+        args.put("x-single-active-consumer", true);
+
+        //队列默认持久化：true
+        return new Queue(DIRECT_MQ_MESSAGE_NAME, true, false, false, args);
+
+
+    }
+
+    /**
+     * 绑定队列、交换机、路由Key
+     */
+    @Bean
+    public Binding bindingMqMessageDirect() {
+        Binding binding = BindingBuilder.bind(mqMessageDirectQueue()).to(directExchange()).with(DIRECT_MQ_MESSAGE_KEY);
+        return binding;
+    }
+
+    //region MqMessageDead
+
+    @Bean("mqMessageDeadDirectQueue")
+    public Queue mqMessageDeadDirectQueue() {
+
+
+        /*
+        exclusive
+        只对首次声明它的连接（Connection）可见
+        会在其连接断开的时候自动删除。
+         */
+        /*
+        (String name, boolean durable, boolean exclusive, boolean autoDelete)
+           this(name, true, false, false);
+         */
+        Map<String, Object> map = new HashMap<>();
+        map.put("x-message-ttl", MQ_MESSAGE_RETRY_INTERVAL);
+        map.put("x-dead-letter-exchange", DIRECT_EXCHANGE);
+        map.put("x-dead-letter-routing-key", DIRECT_MQ_MESSAGE_KEY);
+        return new Queue(DIRECT_MQ_MESSAGE_QUEUE_DLX, true, false, false, map);
+
+    }
+
+    /**
+     * 绑定队列、交换机、路由Key
+     */
+    @Bean("bindingMqMessageDeadDirect")
+    public Binding bindingMqMessageDeadDirect() {
+        Binding binding = BindingBuilder.bind(mqMessageDeadDirectQueue()).to(directExchange()).with(DIRECT_MQ_MESSAGE_KEY_DLX);
+        return binding;
+    }
+    //endregion
+
+    //endregion
 
 }
