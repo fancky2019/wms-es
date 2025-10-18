@@ -106,6 +106,10 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
             //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
             lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
             log.info("update get lock {}", lockKey);
 
             Integer oldVersion = mqMessage.getVersion();
@@ -149,7 +153,10 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
             //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
             lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
-
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
             log.info("updateByMsgId get lock {}", lockKey);
             LambdaQueryWrapper<MqMessage> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(MqMessage::getMsgId, msgId);

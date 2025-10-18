@@ -107,6 +107,12 @@ public class TruckOrderController {
         return MessageResult.success();
     }
 
+    @PostMapping("/expungeStaleAttachment/{id}")
+    public MessageResult<Void> expungeStaleAttachment(@PathVariable("id") Integer id) throws Exception {
+        truckOrderService.expungeStaleAttachment(id);
+        return MessageResult.success();
+    }
+
 
     /**
      * getTruckOrderPage

@@ -19,7 +19,7 @@ public interface InventoryInfoService {
 
     PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
 
-    void initInventoryInfoFromDb() throws InterruptedException;
+    void initInventoryInfoFromDb() throws Exception;
 
     HashMap<Long, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 

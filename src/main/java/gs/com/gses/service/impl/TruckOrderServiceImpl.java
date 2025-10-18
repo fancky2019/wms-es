@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.xml.internal.ws.api.message.Attachment;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
@@ -27,6 +28,7 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.wms.*;
+import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.rabbitMQ.BaseRabbitMqHandler;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.rabbitMQ.RabbitMqMessage;
@@ -40,11 +42,14 @@ import gs.com.gses.service.api.WmsService;
 import gs.com.gses.utility.FileUtil;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import gs.com.gses.utility.PathUtils;
+import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.apache.commons.collections4.map.MultiKeyMap;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.MDC;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +57,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.bus.BusProperties;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BindingResult;
@@ -64,6 +70,9 @@ import javax.validation.Valid;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -71,6 +80,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -108,9 +118,15 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Autowired
     private BusProperties busProperties;
 
-
     @Autowired
     private MqMessageService mqMessageService;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private RedissonClient redissonClient;
+    @Autowired
+    private RedisUtil redisUtil;
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -436,98 +452,211 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         if (request.getId() == null) {
             throw new Exception("id is null");
         }
-        TruckOrder truckOrder = this.getById(request.getId());
-        if (truckOrder == null) {
-            throw new Exception("Can not get truckOrder by id - " + request.getId());
-        }
-        if (truckOrder.getDeleted() == 1) {
-            String msg = MessageFormat.format("truckOrder id - {0} is deleted", request.getId());
-            throw new Exception(msg);
-        }
-        List<String> allFilePahList = new ArrayList<>();
-        if (StringUtils.isNotEmpty(request.getFilePath())) {
-            List<String> previousFilePahList = Arrays.asList(request.getFilePath().split(","));
-            allFilePahList.addAll(previousFilePahList);
-        }
+
+        String lockKey = RedisKey.UPDATE_TRUCK_ORDER_INFO + ":" + request.getId();
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+
+//            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
+            log.info("updateTruckOrder get lock {}", lockKey);
+
+
+            TruckOrder truckOrder = this.getById(request.getId());
+            if (truckOrder == null) {
+                throw new Exception("Can not get truckOrder by id - " + request.getId());
+            }
+            if (truckOrder.getDeleted() == 1) {
+                String msg = MessageFormat.format("truckOrder id - {0} is deleted", request.getId());
+                throw new Exception(msg);
+            }
+            List<String> allFilePahList = new ArrayList<>();
+            if (StringUtils.isNotEmpty(request.getFilePath())) {
+                List<String> previousFilePahList = Arrays.asList(request.getFilePath().split(","));
+                allFilePahList.addAll(previousFilePahList);
+            }
 //        http://localhost:8030/upload/20251009144517372/cat.png
-        String filePath = request.getFilePath();
-        if (files != null && files.length > 0) {
-            String directory = uploadDirectory + "\\" + truckOrder.getTruckOrderCode() + "\\";
-            List<String> filePahList = FileUtil.saveFiles(files, directory);
-            filePahList = filePahList.stream().map(p -> wmsFrontServer + PathUtils.removeDriveLetterAndNormalize(p)).collect(Collectors.toList());
-            allFilePahList.addAll(filePahList);
-            allFilePahList = allFilePahList.stream().distinct().collect(Collectors.toList());
-            filePath = String.join(",", allFilePahList);
-        }
+            String filePath = request.getFilePath();
+            if (files != null && files.length > 0) {
+                String directory = uploadDirectory + "\\" + truckOrder.getTruckOrderCode() + "\\";
+//            String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+//            String directory = uploadDirectory + "\\" + dateStr + "\\" + truckOrder.getTruckOrderCode() + "\\";
 
-        LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
-        if (userTokenDto != null) {
-            request.setLastModifierId(userTokenDto.getId());
-            request.setLastModifierName(userTokenDto.getUserName());
-        }
+                List<String> filePahList = FileUtil.saveFiles(files, directory);
+                filePahList = filePahList.stream().map(p -> wmsFrontServer + PathUtils.removeDriveLetterAndNormalize(p)).collect(Collectors.toList());
+                allFilePahList.addAll(filePahList);
+                allFilePahList = allFilePahList.stream().distinct().collect(Collectors.toList());
+                filePath = String.join(",", allFilePahList);
+            }
 
-        LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.set(TruckOrder::getSenderAddress, request.getSenderAddress());
-        updateWrapper.set(TruckOrder::getReceiverAddress, request.getReceiverAddress());
-        updateWrapper.set(TruckOrder::getSenderPhone, request.getSenderPhone());
-        updateWrapper.set(TruckOrder::getReceiverPhone, request.getReceiverPhone());
-        updateWrapper.set(request.getSendTime() != null, TruckOrder::getSendTime, request.getSendTime());
-        updateWrapper.set(TruckOrder::getTrunkType, request.getTrunkType());
-        updateWrapper.set(TruckOrder::getDriverPhone, request.getDriverPhone());
-        updateWrapper.set(TruckOrder::getTrunkNo, request.getTrunkNo());
-        updateWrapper.set(TruckOrder::getFilePath, filePath);
-        updateWrapper.set(TruckOrder::getLastModificationTime, LocalDateTime.now());
-        updateWrapper.set(TruckOrder::getVersion, truckOrder.getVersion() + 1);
-        updateWrapper.eq(TruckOrder::getId, request.getId());
-        updateWrapper.eq(TruckOrder::getDeleted, 0);
-        updateWrapper.eq(TruckOrder::getVersion, truckOrder.getVersion());
+            LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
+            if (userTokenDto != null) {
+                request.setLastModifierId(userTokenDto.getId());
+                request.setLastModifierName(userTokenDto.getUserName());
+            }
 
-        boolean re = this.update(updateWrapper);
-        if (!re) {
-            String msg = MessageFormat.format("Update truckOrder id - {0} fail", request.getId());
-            throw new Exception(msg);
-        }
+            LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.set(TruckOrder::getSenderAddress, request.getSenderAddress());
+            updateWrapper.set(TruckOrder::getReceiverAddress, request.getReceiverAddress());
+            updateWrapper.set(TruckOrder::getSenderPhone, request.getSenderPhone());
+            updateWrapper.set(TruckOrder::getReceiverPhone, request.getReceiverPhone());
+            updateWrapper.set(request.getSendTime() != null, TruckOrder::getSendTime, request.getSendTime());
+            updateWrapper.set(TruckOrder::getTrunkType, request.getTrunkType());
+            updateWrapper.set(TruckOrder::getDriverPhone, request.getDriverPhone());
+            updateWrapper.set(TruckOrder::getTrunkNo, request.getTrunkNo());
+            updateWrapper.set(TruckOrder::getFilePath, filePath);
+            updateWrapper.set(TruckOrder::getLastModificationTime, LocalDateTime.now());
+            updateWrapper.set(TruckOrder::getVersion, truckOrder.getVersion() + 1);
+            updateWrapper.eq(TruckOrder::getId, request.getId());
+            updateWrapper.eq(TruckOrder::getDeleted, 0);
+            updateWrapper.eq(TruckOrder::getVersion, truckOrder.getVersion());
+
+            boolean re = this.update(updateWrapper);
+            if (!re) {
+                String msg = MessageFormat.format("Update truckOrder id - {0} fail", request.getId());
+                throw new Exception(msg);
+            }
 
 
 //        RabbitMqMessage rabbitMqMessage = new RabbitMqMessage();
 
-        String msgId = UUID.randomUUID().toString().replaceAll("-", "");
-        String content = objectMapper.writeValueAsString(truckOrder.getId());
-        MqMessage mqMessage = new MqMessage();
-        mqMessage.setMsgId(msgId);
-        mqMessage.setBusinessId(truckOrder.getId());
-        mqMessage.setBusinessKey(truckOrder.getTruckOrderCode());
-        mqMessage.setMsgContent(content);
-        mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
-        mqMessage.setRouteKey(RabbitMQConfig.DIRECT_MQ_MESSAGE_KEY);
-        mqMessage.setQueue(RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME);
-        mqMessage.setRetry(true);
-        mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
-        mqMessage.setTraceId(MDC.get("traceId"));
+            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+            String content = objectMapper.writeValueAsString(truckOrder.getId());
+            MqMessage mqMessage = new MqMessage();
+            mqMessage.setMsgId(msgId);
+            mqMessage.setBusinessId(truckOrder.getId());
+            mqMessage.setBusinessKey(truckOrder.getTruckOrderCode());
+            mqMessage.setMsgContent(content);
+            mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
+            mqMessage.setRouteKey(RabbitMQConfig.DIRECT_MQ_MESSAGE_KEY);
+            mqMessage.setQueue(RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME);
+            mqMessage.setRetry(true);
+            mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
+            mqMessage.setTraceId(MDC.get("traceId"));
 //        mqMessage.setRetryCount(0);
 //        //BaseRabbitMqHandler.TOTAL_RETRY_COUNT =4
 //        mqMessage.setMaxRetryCount(BaseRabbitMqHandler.TOTAL_RETRY_COUNT);
-        mqMessage.setDeleted(0);
-        mqMessage.setVersion(1);
-        //13位  毫秒时间戳，不是秒9位  转时间戳
-        long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            mqMessage.setDeleted(0);
+            mqMessage.setVersion(1);
+            //13位  毫秒时间戳，不是秒9位  转时间戳
+            long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 //        LocalDateTime lNow=  LocalDateTime.ofInstant(
 //                Instant.ofEpochMilli(localDateTimeMillis),
 //                ZoneId.systemDefault()
 //        );
-        mqMessage.setCreationTime(localDateTimeMillis);
-        mqMessage.setLastModificationTime(localDateTimeMillis);
-        mqMessageService.save(mqMessage);
+            mqMessage.setCreationTime(localDateTimeMillis);
+            mqMessage.setLastModificationTime(localDateTimeMillis);
+            mqMessageService.save(mqMessage);
 
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            //非事务操作在此释放
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+        }
 
     }
 
     @Override
-    public void expungeStaleAttachment(long id) {
+    @Transactional(rollbackFor = Exception.class)
+    public void expungeStaleAttachment(long id) throws Exception {
         log.info("expungeStaleAttachment - {}", id);
-        Integer.parseInt("m");
 
+        String lockKey = RedisKey.UPDATE_TRUCK_ORDER_INFO + ":" + id;
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+
+//            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
+            log.info("expungeStaleAttachment get lock {}", lockKey);
+
+            TruckOrder truckOrder = this.getById(id);
+            if (truckOrder == null) {
+                throw new Exception("Can not get TruckOrder by id " + id);
+            }
+            String directory = uploadDirectory + "\\" + truckOrder.getTruckOrderCode() + "\\";
+
+            Path startPath = Paths.get(directory);
+
+            // 获取所有文件（包括子目录）
+            List<Path> allFiles = Files.walk(startPath)
+                    .filter(Files::isRegularFile)
+                    .collect(Collectors.toList());
+            List<String> truckOrderAttachmentList = new ArrayList<>();
+            if (StringUtils.isNotEmpty(truckOrder.getFilePath())) {
+                truckOrderAttachmentList = Arrays.asList(truckOrder.getFilePath().split(","));
+            }
+            truckOrderAttachmentList = truckOrderAttachmentList.stream().map(p -> p.replace(wmsFrontServer, "")).collect(Collectors.toList());
+            //删除磁盘多余文件
+            for (Path path : allFiles) {
+                // 输出: C:\workspace\project\example.txt (Windows)
+                // 输出: /home/user/workspace/project/example.txt (Linux)
+                String filePath = path.toAbsolutePath().toString();
+                String newFilePath = PathUtils.removeDriveLetterAndNormalize(filePath);
+                if (!truckOrderAttachmentList.contains(newFilePath)) {
+                    Files.delete(path);
+                    log.info("Disk expungeStaleAttachment {}", filePath);
+                }
+            }
+
+            //删除不在磁盘的文件路径
+            List<String> diskFilePath = allFiles.stream().map(p -> PathUtils.removeDriveLetterAndNormalize(p.toAbsolutePath().toString())).collect(Collectors.toList());
+            List<String> existFilePathList = new ArrayList<>();
+            for (String filePath : truckOrderAttachmentList) {
+                if (diskFilePath.contains(filePath)) {
+                    existFilePathList.add(filePath);
+                } else {
+                    log.info("TruckOrder expungeStaleAttachment {}", filePath);
+                }
+            }
+
+            List<String> newPathList = existFilePathList.stream().map(p -> wmsFrontServer + PathUtils.removeDriveLetterAndNormalize(p)).collect(Collectors.toList());
+            String newFilePath = String.join(",", newPathList);
+
+            LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.set(TruckOrder::getFilePath, newFilePath);
+            updateWrapper.set(TruckOrder::getLastModificationTime, LocalDateTime.now());
+            updateWrapper.set(TruckOrder::getVersion, truckOrder.getVersion() + 1);
+            updateWrapper.eq(TruckOrder::getId, truckOrder.getId());
+            updateWrapper.eq(TruckOrder::getDeleted, 0);
+            updateWrapper.eq(TruckOrder::getVersion, truckOrder.getVersion());
+
+            boolean re = this.update(updateWrapper);
+            if (!re) {
+                String msg = MessageFormat.format("Update truckOrder id - {0} fail", truckOrder.getId());
+                throw new Exception(msg);
+            }
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            //非事务操作在此释放
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+        }
     }
+
 
     @Override
     public PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request) {

@@ -114,7 +114,11 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
 
 
         super.onMessage(Long.class, message, channel, (msg) -> {
-            truckOrderService.expungeStaleAttachment(msg);
+            try {
+                truckOrderService.expungeStaleAttachment(msg);
+            } catch (Exception e) {
+                throw new RuntimeException("expungeStaleAttachment: " + msg, e);
+            }
         });
 
     }

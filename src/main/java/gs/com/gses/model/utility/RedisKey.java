@@ -1,5 +1,7 @@
 package gs.com.gses.model.utility;
 
+import gs.com.gses.model.entity.TruckOrder;
+
 public class RedisKey {
     public static final String UPDATE_INVENTORY_INFO = "redisson:updateInventoryInfo";
 
@@ -15,6 +17,7 @@ public class RedisKey {
 
     //region 表锁
     public static final String UPDATE_MQ_MESSAGE_INFO = "redisson:updateMqMessage";
+    public static final String UPDATE_TRUCK_ORDER_INFO = "redisson:updateTruckOrder";
 
     //endregion
 

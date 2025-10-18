@@ -78,6 +78,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.URLEncoder;
+import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -181,7 +182,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
     @Override
-    public void initInventoryInfoFromDb() throws InterruptedException {
+    public void initInventoryInfoFromDb() throws Exception {
         log.info("initInventoryInfoFromDb");
         String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
@@ -193,6 +194,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            lock.lock(leaseTime, TimeUnit.SECONDS);
             //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
             lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
             log.info("initInventoryInfoFromDb get lock {}", lockKey);
             INIT_INVENTORY_TIME = LocalDateTime.now();
             String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -1284,6 +1289,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         try {
             //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
             lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
             long startChangeTime = dataChangeInfo.getChangeTime();
             log.info("start sink - {}", dataChangeInfo.getId());
             if (StringUtils.isEmpty(dataChangeInfo.getAfterData()) || "READ".equals(dataChangeInfo.getEventType())) {
