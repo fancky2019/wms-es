@@ -8,6 +8,7 @@ import gs.com.gses.rabbitMQ.RabbitMqMessage;
 import gs.com.gses.rabbitMQ.monitor.QueueStats;
 import gs.com.gses.rabbitMQ.monitor.RabbitMqMonitorService;
 import gs.com.gses.rabbitMQ.producer.DirectExchangeProducer;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -85,6 +86,12 @@ public class RabbitMqMonitorController {
         mqMessage.setRouteKey(RabbitMQConfig.DIRECT_ROUTING_KEY);
         mqMessage.setRetry(false);
         directExchangeProducer.produce(mqMessage);
+        return MessageResult.success();
+    }
+
+    @PostMapping("/deleteQueueAndExchange")
+    public  MessageResult<Void> deleteQueueAndExchange() {
+        this.rabbitMqMonitorService.deleteQueueAndExchange();
         return MessageResult.success();
     }
 

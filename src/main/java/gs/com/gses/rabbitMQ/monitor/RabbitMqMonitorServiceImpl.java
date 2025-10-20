@@ -3,9 +3,20 @@ package gs.com.gses.rabbitMQ.monitor;
 import com.rabbitmq.client.AMQP;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -15,6 +26,9 @@ public class RabbitMqMonitorServiceImpl implements RabbitMqMonitorService {
     private RabbitTemplate rabbitTemplate;
     @Autowired
     private RabbitMQConfig rabbitMQConfig;
+    @Autowired
+    private AmqpAdmin amqpAdmin;
+
 
     @Autowired
     private RabbitMQManagementClientApiService rabbitMQManagementClientApiService;
@@ -79,6 +93,7 @@ public class RabbitMqMonitorServiceImpl implements RabbitMqMonitorService {
         });
     }
 
+
     //    @Scheduled(fixedRate = 5000)
     public void checkQueueAndControl() {
         int messageCount = getQueueMessageCount("order.queue");
@@ -109,4 +124,50 @@ public class RabbitMqMonitorServiceImpl implements RabbitMqMonitorService {
 //        private int messageCount;
 //        private int unacknowledgedCount;
 //    }
+
+
+    @Override
+    public void deleteQueueAndExchange() {
+//        // 删除队列
+//        boolean queueDeleted = amqpAdmin.deleteQueue("myQueue");
+//        System.out.println("Queue deleted: " + queueDeleted);
+//
+//        // 删除交换机
+//        boolean exchangeDeleted = amqpAdmin.deleteExchange("myExchange");
+//        System.out.println("Exchange deleted: " + exchangeDeleted);
+
+        //使用中的队列交换机删除不掉
+        List<String> queues = getQueues();
+        List<String> exchanges = getExchanges();
+
+        for (String name : queues) {
+            boolean deleted = amqpAdmin.deleteQueue(name);
+            int m=0;
+        }
+        for (String name : exchanges) {
+            //系统自带的删不掉
+            boolean deleted = amqpAdmin.deleteExchange(name);
+            int m=0;
+        }
+        int m = 0;
+    }
+
+    public List<String> getQueues() {
+        List<Map<String, Object>> queues = rabbitMQManagementClientApiService.getQueues(rabbitMQConfig.getToken());
+        List<String> queueNameList = queues.stream().map(q -> (String) q.get("name"))
+                .collect(Collectors.toList());
+        return queueNameList;
+    }
+
+    public List<String> getExchanges() {
+        List<Map<String, Object>> exchanges = rabbitMQManagementClientApiService.getExchanges(rabbitMQConfig.getToken());
+
+        List<String> exchangeNames = exchanges.stream()
+                .map(ex -> (String) ex.get("name"))
+                .filter(name -> name != null && !name.isEmpty())
+                .collect(Collectors.toList());
+        return exchangeNames;
+    }
+
+
 }

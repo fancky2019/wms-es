@@ -160,6 +160,10 @@ spring:
     #        acknowledge-mode: manual
     #        #默认是1
     #        prefetch: 1
+    management: #操作rabbitmq 使用
+#      base-url: http://127.0.0.1:15672/api
+      port: 15672
+      base-url: http://${spring.rabbitmq.host}:${spring.rabbitmq.management.port}/api
 
   # MQTT配置信息
   mqtt:

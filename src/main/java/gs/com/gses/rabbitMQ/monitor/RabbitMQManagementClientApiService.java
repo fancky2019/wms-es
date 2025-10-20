@@ -7,10 +7,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 //@FeignClient(name = "rabbitmq-management-client", url = "http://localhost:15672", configuration = FeignClientConfig.class)
 
-@FeignClient(name = "RabbitMQManagementClientApiService", url = "http://localhost:15672")
+//@FeignClient(name = "RabbitMQManagementClientApiService", url = "http://localhost:15672/api")
+@FeignClient(name = "RabbitMQManagementClientApiService", url = "${spring.rabbitmq.management.base-url}") // 从配置文件读取
 public interface RabbitMQManagementClientApiService {
 
 //    /**
@@ -35,9 +38,13 @@ public interface RabbitMQManagementClientApiService {
      * @param queueName 队列名称
      * @return 包含队列各种状态（如消息数量、消费者数量等）的响应实体
      */
-    @GetMapping("/api/queues/%2F/{queueName}")
+    @GetMapping("/queues/%2F/{queueName}")
     QueueStats getQueueStats(@PathVariable("queueName") String queueName, @RequestHeader("Authorization") String token);
 
+    @GetMapping("/queues/%2F")
+    List<Map<String, Object>> getQueues(@RequestHeader("Authorization") String token);
 
+    @GetMapping("/exchanges/%2F")
+    List<Map<String, Object>> getExchanges(@RequestHeader("Authorization") String token);
 
 }
