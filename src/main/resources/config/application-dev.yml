@@ -132,7 +132,7 @@ spring:
     template:
       #设置为 true 后 消费者在消息没有被路由到合适队列情况下会被return监听，而不会自动删除
       mandatory: true
-    virtual-host: /
+    virtual-host: /  # wms_es_dev  #rabbit 管理界面要在admin中添加次虚拟机并设置用户有这个Vhost的权限
     #开启手动Axk,手动无法自动加入死信队列，可以重试指定次数。
     #设置成默认的自动Ack,springboot会加入死信队列，一定设置死信队列。
     #    listener.simple.acknowledge-mode: manual
@@ -230,7 +230,7 @@ sbp:
   logMq: false
 #  enableCopyShipOrder: false
   flink:
-    enable: false
+    enable: true
     databaseList:
       - liku
     tableList:

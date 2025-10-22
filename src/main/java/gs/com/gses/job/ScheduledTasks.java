@@ -47,7 +47,7 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0 3 * * ?")
     public void initInventoryInfoFromDb() throws InterruptedException {
         try {
-           log.info("ScheduledTasks initInventoryInfoFromDb - ");
+           log.info("ScheduledTasks initInventoryInfoFromDb");
             inventoryInfoService.initInventoryInfoFromDb();
         } catch (Exception ex) {
             log.error("", ex);
@@ -62,7 +62,7 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0 2 * * ?")
     public void initBasicInfoCache() throws InterruptedException {
         try {
-            log.info("ScheduledTasks initBasicInfoCache - ");
+            log.info("ScheduledTasks initBasicInfoCache");
             basicInfoCacheService.initBasicInfoCache();
         } catch (Exception ex) {
             log.error("", ex);
@@ -74,12 +74,12 @@ public class ScheduledTasks {
      * 5分钟一次
      * @throws Exception
      */
-    @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
-//    @Scheduled(cron = "0 */5 * * * ?") 5min 一次
+//    @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
+    @Scheduled(cron = "0 */5 * * * ?") //5min 一次
     public void beanMethodJobHandler() throws Exception {
 
         try {
-            log.info("ScheduledTasks mqOperation - ");
+            log.info("ScheduledTasks mqOperation");
             mqMessageService.mqOperation();
         } catch (Exception ex) {
             log.error("", ex);

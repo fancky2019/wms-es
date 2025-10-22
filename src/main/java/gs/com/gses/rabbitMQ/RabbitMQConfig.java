@@ -137,6 +137,7 @@ public class RabbitMQConfig {
                 String msgId = messageProperties.getMessageId();
                 String traceId = messageProperties.getHeader("traceId");
                 Boolean retry = messageProperties.getHeader("retry");
+                String queueName = messageProperties.getConsumerQueue();
 
                 MDC.put("traceId", traceId);
                 log.info("ReturnsCallback msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
@@ -146,7 +147,7 @@ public class RabbitMQConfig {
 //                rabbitMqMessage = objectMapper.readValue(failedMessage, RabbitMqMessage.class);
 //                messageId = rabbitMqMessage.getMessageId();
 
-                mqMessageService.updateByMsgId(messageId, MqMessageStatus.NOT_PRODUCED.getValue());
+                mqMessageService.updateByMsgId(messageId, MqMessageStatus.NOT_PRODUCED.getValue(),queueName);
                 //MQ_MESSAGE
             } catch (Exception e) {
                 log.info("", e);

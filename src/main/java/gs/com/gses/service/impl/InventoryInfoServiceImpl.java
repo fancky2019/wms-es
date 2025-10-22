@@ -1322,7 +1322,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             long sinkCostTime = sinkCompletedTime - startChangeTime;
             log.info("Sink {} completed sinkCostTime {}", dataChangeInfo.getId(), sinkCostTime);
         } catch (Exception ex) {
-            log.error("Sink {} exception ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
+            log.error("SinkException {} ,dataChangeInfo.getEventType - {}, BeforeData {},AfterData {}", dataChangeInfo.getId(), dataChangeInfo.getEventType(), dataChangeInfo.getBeforeData(), dataChangeInfo.getAfterData());
             //待优化处理
             log.error("", ex);
             throw ex;

@@ -62,6 +62,8 @@ public class BaseRabbitMqHandler {
         String msgId = messageProperties.getMessageId();
         String traceId = messageProperties.getHeader("traceId");
         Boolean retry = messageProperties.getHeader("retry");
+        String queue = messageProperties.getConsumerQueue();
+
 
         int retryCount = 0;
         String msgContent = null;
@@ -115,9 +117,9 @@ public class BaseRabbitMqHandler {
 
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
             log.info("AckSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
-            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUMED.getValue());
+            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUMED.getValue(),queue);
         } catch (Exception e) {
-            log.error("ConsumerFail msgId - {},businessKey - {} ,businessId - {} retry - {}", msgId, businessKey, businessId,retry);
+            log.error("ConsumerFail msgId - {},businessKey - {} ,businessId - {} retry - {}", msgId, businessKey, businessId, retry);
             log.error("", e);
             if (!retry) {
                 try {
@@ -176,7 +178,7 @@ public class BaseRabbitMqHandler {
         if (requeue) {
             channel.basicNack(deliveryTag, false, false);
             valueOperations.set(mqMsgIdKey, retryCount);
-            log.info("messageId {} requeue: deliveryTag {}  retryCount {}",messageId, deliveryTag, retryCount);
+            log.info("messageId {} requeue: deliveryTag {}  retryCount {}", messageId, deliveryTag, retryCount);
         } else {
             //ack 掉消息，把该消息插入数据库，批处理
             if (redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS)) {
@@ -229,7 +231,7 @@ public class BaseRabbitMqHandler {
 
             //region update mqMessage
             //重试仍然没有成功，标记为消费失败。走定时任务补偿
-            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUME_FAIL.getValue());
+            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUME_FAIL.getValue(),queueName);
             //endregion
         }
 

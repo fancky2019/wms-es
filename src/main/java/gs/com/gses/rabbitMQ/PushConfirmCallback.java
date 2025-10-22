@@ -99,7 +99,7 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
                     log.error("", ex);
                 }
 
-                mqMessageService.updateByMsgId(msgId, MqMessageStatus.PRODUCE.getValue());
+                mqMessageService.updateByMsgId(msgId, MqMessageStatus.PRODUCE.getValue(),queueName);
 
             } else {
 //                log.info("消息 - {} 发送到交换机失败！ ", msgId);

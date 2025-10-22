@@ -26,6 +26,13 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.TimeZone;
 
+/**
+ *  @JsonIgnore  //jackson 不序列化 反序列化
+ *   @JsonProperty("XCode") 字段映射
+ *
+ *       @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  // 用于 Spring 接收前端传入的字符串日期
+ *     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")  // 用于返回给前端时格式化 JSON 输出
+ */
 @Configuration
 public class JacksonConfig {
 

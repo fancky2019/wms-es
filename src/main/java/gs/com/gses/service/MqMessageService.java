@@ -21,6 +21,8 @@ public interface MqMessageService extends IService<MqMessage> {
 
     void update(MqMessage mqMessage) throws Exception;
     void updateByMsgId(String  msgId,int status) throws Exception;
+    void updateByMsgId(String  msgId,int status,String queue) throws Exception;
+
     PageData<MqMessageResponse> list(MqMessageRequest mqMessage) throws JsonProcessingException;
 
     void page(MqMessageRequest mqMessage);

@@ -194,6 +194,22 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateByMsgId(String msgId, int status, String queue) throws Exception {
+        if (queue.equals(RabbitMQConfig.DIRECT_QUEUE_NAME)) {
+            log.info("updateByMsgId {} queue {} return", msgId, queue);
+            return;
+        }
+        log.info("updateByMsgId {} queue {} ", msgId, queue);
+        Object proxyObj = AopContext.currentProxy();
+        MqMessageService mqMessageService = null;
+        if (proxyObj instanceof MqMessageService) {
+            mqMessageService = (MqMessageService) proxyObj;
+            mqMessageService.updateByMsgId(msgId, status);
+        }
+
+    }
 
     @Override
     public PageData<MqMessageResponse> list(MqMessageRequest request) throws JsonProcessingException {
@@ -339,7 +355,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
                 if (startQueryTime != null) {
                     long startQueryMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                    queryWrapper.gt(MqMessage::getLastModificationTime, startQueryMillis);
+                    queryWrapper.ge(MqMessage::getLastModificationTime, startQueryMillis);
                 }
 //                queryWrapper.ne(MqMessage::getStatus, 2);
                 queryWrapper.and(p -> p.isNull(MqMessage::getStatus).or(m -> m.ne(MqMessage::getStatus, 2)));
@@ -410,6 +426,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         log.info("start executing publish");
         try {
             for (MqMessage message : mqMessageList) {
+                log.info("rePublish MqMessage id {} msgId {}",message.getId(),message.getMsgId());
                 mqSendUtil.send(message);
             }
         } catch (Exception ex) {
@@ -439,6 +456,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //            mqMessageService.consume(message);
             if ((message.getMaxRetryCount() != null && message.getMaxRetryCount() > message.getRetryCount()) ||
                     message.getMaxRetryCount() == 0) {
+                log.info("reConsume MqMessage id {} msgId {}",message.getId(),message.getMsgId());
                 consume(message);
             } else {
                 log.info("exceed  max retry count {}", message.getId());
