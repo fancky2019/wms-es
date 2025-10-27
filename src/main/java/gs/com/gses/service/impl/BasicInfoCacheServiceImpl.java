@@ -66,19 +66,15 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    public static final String locationPrefix = "Location";
-    public static final String lanewayPrefix = "Laneway";
-    public static final String zonePrefix = "Zone";
-    public static final String materialPrefix = "Material";
-    public static final String warehousePrefix = "Warehouse";
-    public static final String orgnizationPrefix = "Orgnization";
-    public static final String packageUnitPrefix = "PackageUnit";
-    public static final String conveyorPrefix = "Conveyor";
-    public static final String conveyorLanewayPrefix = "ConveyorLaneway";
-
-
-    public static final String DEMO_PRODUCT_PREFIX = "DemoProduct:";
-
+    public static final String locationPrefix = "BasicInfo:Location";
+    public static final String lanewayPrefix = "BasicInfo:Laneway";
+    public static final String zonePrefix = "BasicInfo:Zone";
+    public static final String materialPrefix = "BasicInfo:Material";
+    public static final String warehousePrefix = "BasicInfo:Warehouse";
+    public static final String orgnizationPrefix = "BasicInfo:Orgnization";
+    public static final String packageUnitPrefix = "BasicInfo:PackageUnit";
+    public static final String conveyorPrefix = "BasicInfo:Conveyor";
+    public static final String conveyorLanewayPrefix = "BasicInfo:ConveyorLaneway";
 
 
     //__NULL__
@@ -519,7 +515,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
     @Override
     public void initBasicInfoCache() {
-        /**
+        /*
          * Hash/String 的 put/set 操作会覆盖
          *
          * List/Set 的 push/add 操作不会覆盖，而是追加

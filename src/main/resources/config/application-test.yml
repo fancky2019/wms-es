@@ -2,6 +2,12 @@
 
 server:
   port: 8088
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+      location: D:/upload  # Windows temp directory
   shutdown: GRACEFUL # GRACEFUL/IMMEDIATE (默认:IMMEDIATE)
 #开发配
 spring:
@@ -10,13 +16,19 @@ spring:
   #      matching-strategy: ant_path_matcher
   #  main:
   #    allow-bean-definition-overriding: true #当遇到相同名字的时候，是否允许覆盖注册 bean
+  main:
+    allow-circular-references: true
   application:
     name: springBootProject
-
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB       # Spring特定配置  -1 #不做限制
+      max-request-size: 100MB
   datasource:
-    #    # sqlserver
-    #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB_test05;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=liku;trustServerCertificate=true
+    #    # sqlserver  装车单 liku  GensongWms3DB 质检 wms_liku
+    #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
+    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
     #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
     username: sa
@@ -54,13 +66,13 @@ spring:
     database: 0
 
     #    单机
-    # 远程服务器地址 127.0.0.1 10.100.200.43
-    host: 127.0.0.1
+    # 远程服务器地址 127.0.0.1 10.100.200.43  10.100.202.113
+    host: 10.100.200.43
     # 远程服务器端口
     port: 6379
 
     # 集群配置也用此处写正确的密码
-    password: fancky123456
+#    password: fancky123456
     # 链接超时时间（毫秒）
     timeout: 300000
 
@@ -100,17 +112,18 @@ spring:
     #springboot 配置未成功，参见代码的配置
     redisson:
       file: classpath:redisson-config.yml
-
+      # 修改这里，使用file:前缀指定外部文件
+  #      config: file:./redisson-config.yml
 
 
   rabbitmq:
     ##集群配置 ip:port,ip:port 。多个配置之间用逗号隔开
     # addresses: 127.0.0.1:5673,127.0.0.1:5674,127.0.0.1:5675 #指定client连接到的server的地址，多个以逗号分隔(优先取addresses，然后再取host)
-
-    host: 127.0.0.1
+    #10.100.200.43  guest  dev  test 添加用户要设置administrator  tag .
+    host: 10.100.200.43
     port: 5672
-    username: guest
-    password: guest
+    username: test
+    password: test
     #发布确认 publisher-confirms已经修改为publisher-confirm-type，
     #publisher-confirms: true
     publisher-confirm-type: CORRELATED
@@ -119,7 +132,7 @@ spring:
     template:
       #设置为 true 后 消费者在消息没有被路由到合适队列情况下会被return监听，而不会自动删除
       mandatory: true
-    virtual-host: /
+    virtual-host: /  # wms_es_dev  #rabbit 管理界面要在admin中添加次虚拟机并设置用户有这个Vhost的权限
     #开启手动Axk,手动无法自动加入死信队列，可以重试指定次数。
     #设置成默认的自动Ack,springboot会加入死信队列，一定设置死信队列。
     #    listener.simple.acknowledge-mode: manual
@@ -147,46 +160,97 @@ spring:
     #        acknowledge-mode: manual
     #        #默认是1
     #        prefetch: 1
+    management: #操作rabbitmq 使用
+      #      base-url: http://127.0.0.1:15672/api
+      port: 15672
+      base-url: http://${spring.rabbitmq.host}:${spring.rabbitmq.management.port}/api
 
   # MQTT配置信息
   mqtt:
     # MQTT服务地址，端口号默认11883，如果有多个，用逗号隔开
     url: tcp://10.100.200.43:1883
     # 用户名
-    username: test1
+    username: ""
     # 密码
-    password: Admin123
+    password: ""
+    consumerid: id_dev_consumerid
     # 客户端id(不能重复)
     client:
-      id: provider-id1
+      id: id_dev
     # MQTT默认的消息推送主题，实际可在调用接口是指定
     default:
       topic: topic
 
+feign:
+  # 明确关闭 Hystrix
+
+  #  #携带token,未验证
+  #  oauth2:
+  #    # 开启Oauth支持，这样就会在请求头中携带Token了
+  #    enabled: true
+  #    # 同时开启负载均衡支持
+  #    load-balanced: true
+  #  默认超时值
+  #  connectTimeout：10 秒（10,000 毫秒）
+  #  readTimeout：60 秒（60,000 毫秒）
+  # 设置 feign 超时时间:超时异常
+  client:
+    config:
+      # default、service-provider-two，指定服务名称可以设置单个服务的超时时间
+      default:
+        connectTimeout: 600000  #单位ms
+        readTimeout: 600000
+  httpclient:
+    connection-timeout: 600000  #单位ms,默认2000
+    max-connections: 200 #线程池最大连接数
+    enabled: false
+  okhttp: #用okhttp 代替默认的Client，JDK 原生的 URLConnection 发送HTTP请求，没有连接池
+    enabled: true
 
 
 sbp:
   #  true  false
   #  ordermigratedbtoolurl: http://localhost:8101
   #  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
+  wmsurl: http://127.0.0.1:9000/api/app
+  allowedoriginpatterns:
+    - "http://10.84.4.173:8081/"
+    - "http://10.100.200.43:8088"
+    - "http://10.100.200.43:8188"
+    - "http://10.100.200.32:8889"
+    - "http://10.100.200.32:8882"
+    - "http://10.100.200.32:8088"
+    - "http://localhost:[*]"
+    - "http://127.0.0.1:[*]"
+  authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
   hostAndPort: 10.100.200.43:9200
+  #  hostAndPort: 10.100.202.113:9200
+  checkpermission: false
   initCache: false
+  logMq: false
+  #  enableCopyShipOrder: false
   flink:
     enable: true
     databaseList:
-      - wms_liku
+      - liku
     tableList:
       - dbo.InventoryItemDetail
       - dbo.InventoryItem
       - dbo.Inventory
       - dbo.Location
-      - dbo.Laneway_copy1
+      - dbo.ShipOrder
+    #      - dbo.InventoryItemDetail_copy1
     hostname: 10.100.200.43
     port: 1433
     username: sa
     password: gen@song123
     checkpointStoragePath: D:/flinkcdc/checkpoints
     tmpdir: D:\\flinkcdc\\temp
+  upload:
+    directory: D:/upload
+    #驼峰写法wmsFrontServer Java 风格
+    #w中划线写法 ms-front-server     #Spring Boot 官方推荐风格
+    wms-front-server: http://localhost:8032/
 
 xxl:
   job:
@@ -202,7 +266,10 @@ xxl:
       logretentiondays: 30
       port: 9999
 
-
+##mybatis log 日志显示配置
+#mybatis-plus:
+#  configuration:
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 mybatis-plus:
   ##  mybatis全局配置文件
   #  config-location: classpath:mybatis-config.xml
@@ -213,9 +280,26 @@ mybatis-plus:
   #  M_Str1  默认命中mStr1
   configuration:
     map-underscore-to-camel-case: false  #默认true
-
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 不配置由log4j2控制 ，会打印在控制台和日志  SQL脚本输出到控制台
+#    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl  #SQL脚本输出文件
 logging:
   config: classpath:log4j2.xml
-  #mybatis-plus 日志级别配置，不用配置
+  #mybatis-plus 日志级别配置，不用配置，会打印sql日志到控制台和文件 log4j2 配置AsyncRoot level="all  name="org.mybatis"
 #  level:
-#    com.baomidou.mybatisplus: DEBUG
+#    #    com.baomidou.mybatisplus: DEBUG
+#    com:
+#      baomidou:
+#        mybatisplus: DEBUG
+#      example:
+#        demo:
+#          dao: DEBUG
+
+
+#注意密码过期，用户组了设置
+ftp:
+  host: 10.100.201.8
+  port: 21
+  username: fancky
+  password: Abc!123456
+  base-path: wms/
+  passive-mode: true
