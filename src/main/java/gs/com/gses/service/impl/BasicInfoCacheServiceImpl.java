@@ -84,6 +84,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initLocation() {
         log.info("start init location");
+        redisTemplate.delete(locationPrefix);
+        log.info("delete Location complete");
         List<Location> list = this.locationService.list();
 
         Map<String, Location> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
@@ -111,6 +113,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initLaneway() {
         log.info("start init Laneway");
+        redisTemplate.delete(lanewayPrefix);
+        log.info("delete Laneway complete");
         List<Laneway> list = this.lanewayService.list();
         Map<String, Laneway> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(lanewayPrefix, map);
@@ -121,6 +125,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initZone() {
         log.info("start init Zone");
+        redisTemplate.delete(zonePrefix);
+        log.info("delete Laneway complete");
         List<Zone> list = this.zoneService.list();
         Map<String, Zone> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(zonePrefix, map);
@@ -131,6 +137,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initMaterial() {
         log.info("start init Material");
+        redisTemplate.delete(materialPrefix);
+        log.info("delete Material complete");
         List<Material> list = this.materialService.list();
         Map<String, Material> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(materialPrefix, map);
@@ -141,6 +149,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initWarehouse() {
         log.info("start init Warehouse");
+        redisTemplate.delete(warehousePrefix);
+        log.info("delete Warehouse complete");
         List<Warehouse> list = this.warehouseService.list();
         Map<String, Warehouse> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(warehousePrefix, map);
@@ -151,6 +161,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initOrgnization() {
         log.info("start init Orgnization");
+        redisTemplate.delete(orgnizationPrefix);
+        log.info("delete Orgnization complete");
         List<Orgnization> list = this.orgnizationService.list();
         Map<String, Orgnization> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(orgnizationPrefix, map);
@@ -161,6 +173,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initPackageUnit() {
         log.info("start init PackageUnit");
+        redisTemplate.delete(packageUnitPrefix);
+        log.info("delete PackageUnit complete");
         List<PackageUnit> list = this.packageUnitService.list();
         Map<String, PackageUnit> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(packageUnitPrefix, map);
@@ -172,6 +186,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     public void initConveyor() {
 
         log.info("start init Conveyor");
+        redisTemplate.delete(conveyorPrefix);
+        log.info("delete Conveyor complete");
         List<Conveyor> list = this.conveyorService.list();
         Map<String, Conveyor> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(conveyorPrefix, map);
@@ -186,6 +202,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initConveyorLaneway() {
         log.info("start init ConveyorLaneway");
+        redisTemplate.delete(conveyorLanewayPrefix);
+        log.info("delete ConveyorLaneway complete");
         List<ConveyorLaneway> list = this.conveyorLanewayService.list();
         Map<String, List<Long>> conveyorGroupMap = list.stream()
                 .collect(Collectors.groupingBy(

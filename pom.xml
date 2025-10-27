@@ -38,6 +38,8 @@
         <flink-sql-connector-sqlserver-cdc.version>3.3.0</flink-sql-connector-sqlserver-cdc.version>
         <flink.version>1.20.1</flink.version>
         <debezium.version>2.7.4.Final</debezium.version>
+        <msgpack.version>0.9.10</msgpack.version>
+        <jackson.version>2.18.4</jackson.version>
     </properties>
     <dependencies>
         <dependency>
@@ -67,6 +69,42 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+
+
+
+
+        <!-- 统一 Jackson 版本 :msgpack 版本高于springboot  内置版本-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+
+
+
+
+
+
+
+
+
+
 
 <!--        <dependency>-->
 <!--            <groupId>com.microsoft.sqlserver</groupId>-->
@@ -444,9 +482,30 @@
             <version>3.5.3</version>
         </dependency>
 
-
-
-
+        <!-- 统一 Jackson 版本 :msgpack 版本高于springboot  内置版本-->
+        <!-- https://mvnrepository.com/artifact/org.msgpack/msgpack-core -->
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>msgpack-core</artifactId>
+            <version>${msgpack.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.msgpack/jackson-dataformat-msgpack -->
+        <dependency>
+            <groupId>org.msgpack</groupId>
+            <artifactId>jackson-dataformat-msgpack</artifactId>
+<!--            <version>${msgpack.version}</version>-->
+            <version>${msgpack.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
 
 

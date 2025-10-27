@@ -1,7 +1,10 @@
 package gs.com.gses.config;
 
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -14,6 +17,7 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import gs.com.gses.config.zonedDateTimeConfig.ZonedDateTimeDeserializer;
 import gs.com.gses.config.zonedDateTimeConfig.ZonedDateTimeSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -27,7 +31,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.TimeZone;
 
 /**
- *  @JsonIgnore  //jackson 不序列化 反序列化
+ *  @JsonIgnore //jackson 不序列化 反序列化
  *   @JsonProperty("XCode") 字段映射
  *
  *       @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  // 用于 Spring 接收前端传入的字符串日期
@@ -36,17 +40,24 @@ import java.util.TimeZone;
 @Configuration
 public class JacksonConfig {
 
-    /**
-//    @Autowired
-//    private ObjectMapper upperObjectMapper;  // 注入名为"upperObjectMapper"的bean
-//
-//    @Autowired
-//    private ObjectMapper objectMapper;      // 注入带有@Primary的主bean
-*/
     /*
+     如果只用 @Autowired，Spring 会根据类型自动注入 Bean。
+     如果存在多个同类型的 Bean（例如两个 ObjectMapper），
+     Spring 会根据 @Primary 来决定使用哪个。除非 @Autowired + @Qualifier("nonEmptyObjectMapper")
+     指定bean 名称
+
+     当只使用 @Autowired 时，Spring 会按类型 (ObjectMapper) 查找
+    找到多个同类型 Bean 时，Spring 优先选择 @Primary 的 Bean
+    所以即使字段名是 nonEmptyObjectMapper，也会注入 @Primary 的 objectMapper()
+     */
+
+
+    /**
+    多个类型相同的bean最好为每个bean 指定 @Qualifier
      * 时区在配置文件中配置
      * @return
      */
+    @Qualifier("objectMapper")
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
@@ -264,8 +275,14 @@ public class JacksonConfig {
 
     }
 
+    /**
+     *     @Autowired
+     *     @Qualifier("nonEmptyObjectMapper") //注意 加上    @Qualifier("nonEmptyObjectMapper") ,否则应用的是objectMapper()
+     *     public ObjectMapper nonEmptyObjectMapper;
+     * @return
+     */
 
-    @Bean
+    @Bean("nonEmptyObjectMapper")
     public ObjectMapper nonEmptyObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
 //        ZonedDateTime
@@ -281,6 +298,15 @@ public class JacksonConfig {
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE);
         //不序列化空值 ：默认JsonInclude.Include.ALWAYS
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+
+
+        //        不能启用类型信息，否则  objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);  配置不生效
+        //@CLASS 信息
+        //objectMapper.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+//        不能启用类型信息，否则  objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);  配置不生效
+//        objectMapper.deactivateDefaultTyping();
+
+
         // 日期和时间格式化
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
@@ -302,17 +328,17 @@ public class JacksonConfig {
 
 //        SimpleModule module = new SimpleModule();
         // "" 不序列化成null
-        javaTimeModule.addSerializer(String.class, new JsonSerializer<String>() {
-            @Override
-            public void serialize(String value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-//                if (value == null || value.isEmpty()) {
-                if (value == null) {
-                    gen.writeNull(); // 序列化为 null
-                } else {
-                    gen.writeString(value); // 正常序列化
-                }
-            }
-        });
+//        javaTimeModule.addSerializer(String.class, new JsonSerializer<String>() {
+//            @Override
+//            public void serialize(String value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+////                if (value == null || value.isEmpty()) {
+//                if (value == null) {
+//                    gen.writeNull(); // 序列化为 null
+//                } else {
+//                    gen.writeString(value); // 正常序列化
+//                }
+//            }
+//        });
 //        objectMapper.registerModule(module);
 
 
