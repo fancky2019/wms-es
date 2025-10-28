@@ -3,6 +3,7 @@ package gs.com.gses.service;
 import gs.com.gses.model.entity.*;
 
 public interface BasicInfoCacheService {
+    void getBasicInfoCache();
     void initLocation();
 
     void initLaneway();

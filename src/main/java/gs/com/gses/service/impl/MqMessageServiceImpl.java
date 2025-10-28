@@ -426,7 +426,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         log.info("start executing publish");
         try {
             for (MqMessage message : mqMessageList) {
-                log.info("rePublish MqMessage id {} msgId {}",message.getId(),message.getMsgId());
+                log.info("rePublish MqMessage id {} msgId {}", message.getId(), message.getMsgId());
                 mqSendUtil.send(message);
             }
         } catch (Exception ex) {
@@ -455,8 +455,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //            }
 //            mqMessageService.consume(message);
             if ((message.getMaxRetryCount() != null && message.getMaxRetryCount() > message.getRetryCount()) ||
-                    message.getMaxRetryCount() == 0) {
-                log.info("reConsume MqMessage id {} msgId {}",message.getId(),message.getMsgId());
+                    message.getMaxRetryCount() != null && message.getMaxRetryCount() == 0) {
+                log.info("reConsume MqMessage id {} msgId {}", message.getId(), message.getMsgId());
                 consume(message);
             } else {
                 log.info("exceed  max retry count {}", message.getId());

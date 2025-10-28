@@ -3,6 +3,7 @@ package gs.com.gses.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.service.*;
+import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
@@ -64,6 +65,9 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     private RedissonClient redissonClient;
 
     @Autowired
+    private RedisUtil redisUtil;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     public static final String locationPrefix = "BasicInfo:Location";
@@ -79,6 +83,13 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
     //__NULL__
     public static final String EMPTY_VALUE = "-1@.EmptyValue";
+
+    @Override
+    public void getBasicInfoCache() {
+        Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
+        Location location = locationMap.get("509955478157011");
+        int m = 0;
+    }
 
     @Async("threadPoolExecutor")
     @Override
@@ -126,7 +137,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     public void initZone() {
         log.info("start init Zone");
         redisTemplate.delete(zonePrefix);
-        log.info("delete Laneway complete");
+        log.info("delete Zone complete");
         List<Zone> list = this.zoneService.list();
         Map<String, Zone> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(zonePrefix, map);
@@ -228,9 +239,10 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
             String lockKey = locationPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
             try {
 
-                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
                 if (!lockSuccessfully) {
                     log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -249,7 +261,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key
                 //如果锁因超时（leaseTime）会抛异常
-                lock.unlock();
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
             }
         }
         return location;
@@ -266,9 +279,10 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
             String lockKey = lanewayPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
             try {
 
-                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
                 if (!lockSuccessfully) {
                     log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -287,7 +301,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key
                 //如果锁因超时（leaseTime）会抛异常
-                lock.unlock();
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
             }
         }
         return laneway;
@@ -303,9 +318,10 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
             String lockKey = zonePrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
             try {
 
-                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
                 if (!lockSuccessfully) {
                     log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -324,7 +340,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key
                 //如果锁因超时（leaseTime）会抛异常
-                lock.unlock();
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
             }
         }
         return zone;
@@ -346,9 +363,10 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
             String lockKey = materialPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
             try {
 
-                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
                 if (!lockSuccessfully) {
                     log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -367,7 +385,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key
                 //如果锁因超时（leaseTime）会抛异常
-                lock.unlock();
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
             }
         }
         return material;
@@ -383,9 +402,10 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
             String lockKey = warehousePrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
             try {
 
-                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
                 if (!lockSuccessfully) {
                     log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -404,7 +424,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key
                 //如果锁因超时（leaseTime）会抛异常
-                lock.unlock();
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
             }
         }
         return warehouse;
@@ -420,9 +441,10 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
             String lockKey = orgnizationPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
             try {
 
-                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
                 if (!lockSuccessfully) {
                     log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -441,7 +463,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key
                 //如果锁因超时（leaseTime）会抛异常
-                lock.unlock();
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
             }
         }
         return orgnization;
@@ -457,9 +480,10 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
             String lockKey = packageUnitPrefix + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
             try {
 
-                boolean lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
                 if (!lockSuccessfully) {
                     log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
 
@@ -478,7 +502,8 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
                 //unlock 删除key
                 //如果锁因超时（leaseTime）会抛异常
-                lock.unlock();
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
             }
         }
         return packageUnit;

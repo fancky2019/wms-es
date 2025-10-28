@@ -28,5 +28,15 @@ public class BasicInfoController {
         return MessageResult.success();
     }
 
+    /**
+     * 初始化缓存信息
+     * @return
+     * @throws Exception
+     */
+    @GetMapping("/getBasicInfoCache")
+    public MessageResult<Void> getBasicInfoCache() throws Exception {
+        basicInfoCacheService.getBasicInfoCache();
+        return MessageResult.success();
+    }
 
 }

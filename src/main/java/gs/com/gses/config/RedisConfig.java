@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -42,18 +43,28 @@ public class RedisConfig {
     @Qualifier("nonEmptyObjectMapper")
     public ObjectMapper nonEmptyObjectMapper;
 
-
-    @Bean
-    @SuppressWarnings("all")
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
-
-        RedisTemplate<String, Object> template = new RedisTemplate<String, Object>();
-        template.setConnectionFactory(factory);
-        ObjectMapper objectMapper = new ObjectMapper();
-
+//    @Bean
+//    @SuppressWarnings("all")
+//    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
 //
+//        RedisTemplate<String, Object> template = new RedisTemplate<String, Object>();
+//        template.setConnectionFactory(factory);
+//        Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        // 日期和时间格式化
+//        JavaTimeModule javaTimeModule = new JavaTimeModule();
+//        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+//        javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+//        javaTimeModule.addSerializer(LocalTime.class, new LocalTimeSerializer(DateTimeFormatter.ofPattern("HH:mm:ss")));
+//        javaTimeModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+//        javaTimeModule.addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+//        javaTimeModule.addDeserializer(LocalTime.class, new LocalTimeDeserializer(DateTimeFormatter.ofPattern("HH:mm:ss")));
+//        objectMapper.registerModule(javaTimeModule);
+//
+//        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+//        objectMapper.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+//        jackson2JsonRedisSerializer.setObjectMapper(objectMapper);
 //        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
-//        //jackson 序列化器
 //        // key采用String的序列化方式
 //        template.setKeySerializer(stringRedisSerializer);
 //        // hash的key也采用String的序列化方式
@@ -62,6 +73,20 @@ public class RedisConfig {
 //        template.setValueSerializer(jackson2JsonRedisSerializer);
 //        // hash的value序列化方式采用jackson
 //        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+//
+//        template.afterPropertiesSet();
+//
+//        return template;
+//
+//    }
+
+    @Bean
+    @SuppressWarnings("all")
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+
+        RedisTemplate<String, Object> template = new RedisTemplate<String, Object>();
+        template.setConnectionFactory(factory);
+//        ObjectMapper objectMapper = new ObjectMapper();
 
 //        //使用jasckson 配置
 //        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
@@ -83,7 +108,6 @@ public class RedisConfig {
         template.setValueSerializer(jacksonMessagePackSerializer());
         template.setHashKeySerializer(stringRedisSerializer);
         template.setHashValueSerializer(jacksonMessagePackSerializer());
-
 
         template.afterPropertiesSet();
         return template;
@@ -148,6 +172,13 @@ public class RedisConfig {
      */
     private Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer() {
         Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
+//        //属性字段可见性
+////        默认情况下，Jackson 的可见性规则是： 只检测 public 的字段和方法 需要 getter/setter 方法来访问 private 字段
+//        nonEmptyObjectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+//        //类型信息，不认反序列化会转成LinkedHashMap
+////        启用默认类型信息，在序列化 JSON 时添加类型信息，用于反序列化时识别具体类型。
+////        默认情况下，Jackson 不启用 DefaultTyping，即： 不添加类型信息 反序列化时可能丢失多态类型信息
+//        nonEmptyObjectMapper.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
         jackson2JsonRedisSerializer.setObjectMapper(nonEmptyObjectMapper);
         return jackson2JsonRedisSerializer;
 
@@ -156,6 +187,7 @@ public class RedisConfig {
 
     @Bean
     public RedisSerializer<Object> jacksonMessagePackSerializer() {
+        //注意ObjectMapper 构造函数的参数MessagePackFactory
         ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         //        ZonedDateTime
         // 设置时区为 GMT+8   UTC
@@ -170,16 +202,6 @@ public class RedisConfig {
 //        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE);
         //不序列化空值 ：默认JsonInclude.Include.ALWAYS
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-
-
-        //PropertyAccessor.ALL：指定对所有类型的属性访问器生效
-        //JsonAutoDetect.Visibility.ANY：允许检测所有类型的属性（包括 private）
-//        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-//        objectMapper.configure(MapperFeature.USE_ANNOTATIONS, false);
-//        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        //Jackson 在序列化每个对象时都附带类型信息（@class 字段），//注释了 禁用类型信息
-        // objectMapper.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
-
 
         // 日期和时间格式化
         JavaTimeModule javaTimeModule = new JavaTimeModule();
@@ -200,28 +222,18 @@ public class RedisConfig {
 //        javaTimeModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
 //        javaTimeModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer(DateTimeFormatter.ISO_ZONED_DATE_TIME));
 
-//        SimpleModule module = new SimpleModule();
-        // "" 不序列化成null
-//        javaTimeModule.addSerializer(String.class, new JsonSerializer<String>() {
-//            @Override
-//            public void serialize(String value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-////                if (value == null || value.isEmpty()) {
-//                if (value == null) {
-//                    gen.writeNull(); // 序列化为 null
-//                } else {
-//                    gen.writeString(value); // 正常序列化
-//                }
-//            }
-//        });
-//        objectMapper.registerModule(module);
 
         objectMapper.registerModule(javaTimeModule);
-
-// 使用 Jackson2JsonRedisSerializer 并传入 MessagePack ObjectMapper
+//        默认情况下，Jackson 的可见性规则是： 只检测 public 的字段和方法 需要 getter/setter 方法来访问 private 字段
+        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        //类型信息，不认反序列化会转成LinkedHashMap
+//        启用默认类型信息，在序列化 JSON 时添加类型信息，用于反序列化时识别具体类型。
+//        默认情况下，Jackson 不启用 DefaultTyping，即： 不添加类型信息 反序列化时可能丢失多态类型信息
+        objectMapper.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        // 使用 Jackson2JsonRedisSerializer 并传入 MessagePack ObjectMapper
         Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(Object.class);
         serializer.setObjectMapper(objectMapper);
 
-//        return new GenericJackson2JsonRedisSerializer(objectMapper);
         return serializer;
     }
 
