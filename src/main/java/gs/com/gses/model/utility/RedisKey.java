@@ -21,4 +21,8 @@ public class RedisKey {
 
     //endregion
 
+
+    public static final String INVENTORY_DELETED= "inventoryDeleted:";
+
+
 }

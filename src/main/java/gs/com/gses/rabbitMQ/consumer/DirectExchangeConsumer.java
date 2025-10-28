@@ -1,10 +1,12 @@
 package gs.com.gses.rabbitMQ.consumer;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.entity.MqMessage;
+import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.rabbitMQ.BaseRabbitMqHandler;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.service.InventoryInfoService;
@@ -16,8 +18,17 @@ import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+
+import java.text.MessageFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -34,6 +45,9 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
 
     @Autowired
     private TruckOrderService truckOrderService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
 //    private static Logger logger = LogManager.getLogger(DirectExchangeConsumer.class);
 
@@ -89,16 +103,47 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
 
         super.onMessage(DataChangeInfo.class, message, channel, (msg) -> {
             try {
-                switch (msg.getTableName())
-                {
+                switch (msg.getTableName()) {
                     case "ShipOrder":
                         shipOrderService.sink(msg);
                         break;
                     default:
+                        //region DELETE
+                        if ("DELETE".equals(msg.getEventType())) {
+                            switch (msg.getTableName()) {
+
+                                case "Inventory":
+                                case "InventoryItem":
+                                case "InventoryItemDetail":
+                                   LocalDateTime changeTime = LocalDateTime.ofInstant(
+                                            Instant.ofEpochMilli(msg.getChangeTime()),
+                                            ZoneId.systemDefault()
+                                    );
+                                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                                    String changeTimeStr = changeTime.format(formatter);
+                                    DateTimeFormatter formatterDate = DateTimeFormatter.ofPattern("yyyyMM");
+                                    String formatterDateStr = changeTime.format(formatterDate);
+                                    String key = MessageFormat.format("{0}{1}:{2}:{3}", RedisKey.INVENTORY_DELETED, formatterDateStr,msg.getTableName(), msg.getId());
+
+                                    redisTemplate.opsForValue().set(key, changeTimeStr, 365,  TimeUnit.DAYS);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        //endregion
+
                         inventoryInfoService.sink(msg);
                         break;
                 }
             } catch (Exception e) {
+                String json = null;
+                try {
+                    json = objectMapper.writeValueAsString(msg);
+                } catch (JsonProcessingException ex) {
+                    throw new RuntimeException(ex);
+                }
+                log.error("DataChangeInfo:{}", json);
                 throw new RuntimeException(e);
             }
 
@@ -109,8 +154,8 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
     @RabbitHandler
     @RabbitListener(queues = RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME)
     public void mqMessage(Message message, Channel channel,
-                            @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
-                            @Header(AmqpHeaders.CONSUMER_QUEUE) String queueName)  {
+                          @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
+                          @Header(AmqpHeaders.CONSUMER_QUEUE) String queueName) {
 
 
         super.onMessage(Long.class, message, channel, (msg) -> {
