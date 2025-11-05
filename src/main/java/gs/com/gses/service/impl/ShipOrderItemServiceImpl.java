@@ -53,7 +53,8 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
     private MaterialService materialService;
     @Autowired
     private ShipOrderService shipOrderService;
-
+    @Autowired
+    private ObjectMapper objectMapper;
     @Autowired
     private SnowFlake snowFlake;
 
@@ -169,10 +170,15 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
     @Override
     public PageData<ShipOrderItemResponse> getShipOrderItemPage(ShipOrderItemRequest request) throws Exception {
         LambdaQueryWrapper<ShipOrderItem> queryWrapper = new LambdaQueryWrapper<>();
+        log.info("getShipOrderItemPage - {}",objectMapper.writeValueAsString(request));
 //        queryWrapper.eq(MqMessage::getStatus, 2);
         //排序
 //        queryWrapper.orderByDesc(User::getAge)
 //                .orderByAsc(User::getName);
+
+        if (request.getId() != null && request.getId() > 0) {
+            queryWrapper.eq(ShipOrderItem::getId, request.getId());
+        }
 
         if (request.getShipOrderId() != null && request.getShipOrderId() > 0) {
             queryWrapper.eq(ShipOrderItem::getShipOrderId, request.getShipOrderId());

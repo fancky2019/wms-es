@@ -16,7 +16,7 @@ import java.util.List;
 public interface InventoryInfoService {
 
     PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception;
-
+    PageData<Long> getInventoryInfoIdList(InventoryInfoRequest request) throws Exception;
     PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
 
     void initInventoryInfoFromDb() throws Exception;
@@ -47,6 +47,7 @@ public interface InventoryInfoService {
     void addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception;
     void exportByPage(HttpServletResponse response, InventoryInfoRequest request) throws Exception;
 
+    List<Long> detailDifference() throws Exception;
 
 
 }

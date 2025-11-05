@@ -158,4 +158,9 @@ public class InventoryController {
         this.inventoryInfoService.exportByPage(httpServletResponse, request);
     }
 
+
+    @GetMapping("/detailDifference")
+    public MessageResult<List<Long>> detailDifference() throws Exception {
+        return MessageResult.success(this.inventoryInfoService.detailDifference());
+    }
 }

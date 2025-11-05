@@ -4,8 +4,10 @@ import gs.com.gses.model.entity.ShipOrderItem;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
+import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.HashMap;
 import java.util.List;

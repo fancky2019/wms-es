@@ -269,6 +269,12 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         return result;
     }
 
+    @Override
+    public List<Long> getAllIdList() {
+        List<Long> idList = this.baseMapper.getAllIdList();
+        return idList;
+    }
+
 
     private void checkPackageQuantity(BigDecimal inventoryPackageQuantity, BigDecimal needPackageQuantity) throws Exception {
         if (inventoryPackageQuantity.compareTo(needPackageQuantity) < 0) {
@@ -636,7 +642,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
     @Override
     public PageData<InventoryItemDetailResponse> getInventoryItemDetailPage(InventoryItemDetailRequest request) throws
             Exception {
-        log.info(objectMapper.writeValueAsString(request));
+        log.info("getInventoryItemDetailPage - {}",objectMapper.writeValueAsString(request));
         LambdaQueryWrapper<InventoryItemDetail> queryWrapper = new LambdaQueryWrapper<>();
         /**
          * gt: Greater than（大于）

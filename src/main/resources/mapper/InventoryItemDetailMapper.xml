@@ -115,4 +115,8 @@
         InboundDate,MaterialRackId,Days,
         ImageFile
     </sql>
+
+    <select id="getAllIdList" resultType="java.lang.Long">
+        select id from InventoryItemDetail
+    </select>
 </mapper>

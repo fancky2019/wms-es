@@ -36,7 +36,7 @@ public class TruckOrderItemController {
      * @return
      * @throws Exception
      */
-    @DuplicateSubmission(timeOut = 30)
+//    @DuplicateSubmission(timeOut = 30)
     @PostMapping("/getTruckOrderItemPage")
     public MessageResult<PageData<TruckOrderItemResponse>> getTruckOrderItemPage(@RequestBody TruckOrderItemRequest request) throws Exception {
         PageData<TruckOrderItemResponse> page = truckOrderItemService.getTruckOrderItemPage(request);
@@ -55,4 +55,9 @@ public class TruckOrderItemController {
         return MessageResult.success();
     }
 
+    @PostMapping("/auditFieldTest/{id}")
+    public MessageResult<Void> auditFieldTest(@PathVariable("id") Long id) throws Exception {
+        truckOrderItemService.auditFieldTest(id);
+        return MessageResult.success();
+    }
 }

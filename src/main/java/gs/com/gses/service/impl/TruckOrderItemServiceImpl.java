@@ -39,6 +39,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.MessageFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -365,6 +367,20 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         if (!re1) {
             throw new Exception("Update TruckOrderItem truckOrderId fail");
         }
+
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void auditFieldTest(Long id) {
+        TruckOrderItem truckOrderItem=  this.getById(id);
+        DateTimeFormatter dateTimeFormatter=DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String timeStr = dateTimeFormatter.format(LocalDateTime.now());
+        truckOrderItem.setRemark(timeStr);
+        LambdaUpdateWrapper<TruckOrderItem> updateWrapper = new LambdaUpdateWrapper<TruckOrderItem>();
+        updateWrapper.eq(TruckOrderItem::getId, truckOrderItem.getId());
+        boolean re = this.update(truckOrderItem, updateWrapper);
+
 
     }
 }

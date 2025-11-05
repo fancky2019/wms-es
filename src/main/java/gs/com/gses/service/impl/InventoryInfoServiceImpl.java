@@ -6,9 +6,7 @@ import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.support.ExcelTypeEnum;
 import com.alibaba.excel.write.builder.ExcelWriterBuilder;
 import com.alibaba.excel.write.metadata.WriteSheet;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,8 +22,8 @@ import gs.com.gses.mapper.LocationMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.EsRequestPage;
-import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.Sort;
+import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.ShipOrderRequest;
 import gs.com.gses.model.request.wms.ShipPickOrderItemRequest;
@@ -40,8 +38,6 @@ import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.ScriptQueryBuilder;
@@ -63,9 +59,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
-import org.springframework.data.elasticsearch.core.index.AliasAction;
-import org.springframework.data.elasticsearch.core.index.AliasActionParameters;
-import org.springframework.data.elasticsearch.core.index.AliasActions;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.*;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -193,7 +186,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            lock.tryLock(waitTime, TimeUnit.SECONDS);
 //            lock.lock(leaseTime, TimeUnit.SECONDS);
             //boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException
-            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+//            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
             if (!lockSuccessfully) {
                 String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
                 throw new Exception(msg);
@@ -273,15 +267,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
 //                lock.unlock();
 //            }
-            if (lockSuccessfully) {
-                try {
-                    if (lock.isHeldByCurrentThread()) {
-                        lock.unlock();
-                    }
-                } catch (Exception e) {
-                    log.warn("Redis check lock ownership failed: ", e);
-                }
-            }
+            redisUtil.releaseLock(lock, lockSuccessfully);
         }
     }
 
@@ -296,6 +282,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                                                  Map<String, Orgnization> orgnizationMap) throws InterruptedException {
         List<InventoryInfo> inventoryInfos = new ArrayList<>();
         List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
+        log.info("inventoryItemIdList {}", inventoryItemIdList.size());
         if (CollectionUtils.isEmpty(inventoryItemIdList)) {
             log.info("addByInventoryItemDetailInfo fail inventoryItemIdList is empty");
             return 0;
@@ -1028,6 +1015,327 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //        elasticsearchRestTemplate.bulkIndex();
 //        elasticsearchRestTemplate.delete()
 //        elasticsearchRestTemplate.save()
+        return pageData;
+    }
+
+    @Override
+    public PageData<Long> getInventoryInfoIdList(InventoryInfoRequest request) throws Exception {
+        log.info("getInventoryInfoPage - {}", objectMapper.writeValueAsString(request));
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        if (request.getDeleted() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("deleted", request.getDeleted()));
+        }
+        if (StringUtils.isNotEmpty(request.getPallet())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("pallet", request.getPallet()));
+        }
+        if (request.getWhid() != null && request.getWhid() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("whid", request.getWhid()));
+        }
+        if (request.getZoneId() != null && request.getZoneId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("zoneId", request.getZoneId()));
+        }
+        if (StringUtils.isNotEmpty(request.getZoneCode())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("zoneCode", request.getZoneCode()));
+        }
+
+        if (request.getInventoryXStatus() != null && request.getInventoryXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryXStatus", request.getInventoryXStatus()));
+        }
+        if (request.getInventoryIsExpired() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryIsExpired", request.getInventoryIsExpired()));
+        }
+        if (request.getInventoryIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryIsLocked", request.getInventoryIsLocked()));
+        }
+
+        if (request.getInventoryItemIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsLocked", request.getInventoryItemIsLocked()));
+        }
+        if (request.getInventoryItemXStatus() != null && request.getInventoryItemXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemXStatus", request.getInventoryItemXStatus()));
+        }
+
+        if (request.getInventoryItemIsExpired() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsExpired", request.getInventoryItemIsExpired()));
+        }
+
+        if (request.getXStatus() != null && request.getXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("xStatus", request.getXStatus()));
+        }
+        if (request.getIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isLocked", request.getIsLocked()));
+        }
+        if (request.getIsExpired() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isExpired", request.getIsExpired()));
+        }
+
+        if (request.getLocationXStatus() != null && request.getLocationXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationXStatus", request.getLocationXStatus()));
+        }
+
+        if (request.getForbidOutbound() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("forbidOutbound", request.getForbidOutbound()));
+        }
+        if (request.getLocationIsLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationIsLocked", request.getLocationIsLocked()));
+        }
+        if (request.getIsCountLocked() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isCountLocked", request.getIsCountLocked()));
+        }
+
+        if (request.getLocationXType() != null && request.getLocationXType() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationXType", request.getLocationXType()));
+        }
+        if (request.getLanewayXStatus() != null && request.getLanewayXStatus() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("lanewayXStatus", request.getLanewayXStatus()));
+        }
+        if (request.getInventoryItemDetailId() != null && request.getInventoryItemDetailId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemDetailId", request.getInventoryItemDetailId()));
+        }
+        if (request.getInventoryItemId() != null && request.getInventoryItemId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemId", request.getInventoryItemId()));
+        }
+
+        if (request.getInventoryId() != null && request.getInventoryId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryId", request.getInventoryId()));
+        }
+
+        if (CollectionUtils.isNotEmpty(request.getLanewaysIdList())) {
+            boolQueryBuilder.must(QueryBuilders.termsQuery("lanewayId", request.getLanewaysIdList()));
+        }
+
+        if (request.getLanewayId() != null && request.getLanewayId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("lanewayId", request.getLanewayId()));
+        }
+        if (request.getLocationId() != null && request.getLocationId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("locationId", request.getLocationId()));
+        }
+        //rangeQuery gt  gte  lte
+
+//        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryPackageQuantity").gt(0));
+//        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryAllocatedPackageQuantity", 0));
+//        boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryItemPackageQuantity").gt(0));
+//        boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemAllocatedPackageQuantity", 0));
+//        boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
+        //  boolQueryBuilder.must(QueryBuilders.termQuery("allocatedPackageQuantity", 0));
+
+
+        if (request.getMaterialId() != null && request.getMaterialId() > 0) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("materialId", request.getMaterialId()));
+        }
+
+        if (CollectionUtils.isNotEmpty(request.getMaterialCodeList())) {
+            //materialId 字段必须匹配给定的列表中的任意一个值
+            boolQueryBuilder.must(QueryBuilders.termsQuery("materialCode", request.getMaterialCodeList()));
+        }
+
+        if (request.getIsSealed() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("isSealed", request.getIsSealed()));
+        }
+        if (request.getInventoryItemIsSealed() != null) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemIsSealed", request.getInventoryItemIsSealed()));
+        }
+
+        if (StringUtils.isNotEmpty(request.getBatchNo())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("batchNo", request.getBatchNo()));
+        }
+        if (StringUtils.isNotEmpty(request.getBatchNo2())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("batchNo2", request.getBatchNo2()));
+        }
+
+        if (StringUtils.isNotEmpty(request.getBatchNo3())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("batchNo3", request.getBatchNo3()));
+        }
+
+        if (request.getPackageQuantityGtZero() != null && request.getPackageQuantityGtZero()) {
+            boolQueryBuilder.must(QueryBuilders.rangeQuery("packageQuantity").gt(0));
+        }
+        if (request.getAllocatedPackageQuantityEqualZero() != null && request.getAllocatedPackageQuantityEqualZero()) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("allocatedPackageQuantity", 0));
+        }
+
+        if (request.getInventoryItemPackageQuantityGtZero() != null && request.getInventoryItemPackageQuantityGtZero()) {
+            boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryItemPackageQuantity").gt(0));
+        }
+        if (request.getInventoryPackageQuantityGtZero() != null && request.getInventoryPackageQuantityGtZero()) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryItemAllocatedPackageQuantity", 0));
+        }
+
+        if (request.getInventoryAllocatedPackageQuantityEqualZero() != null && request.getInventoryAllocatedPackageQuantityEqualZero()) {
+            boolQueryBuilder.must(QueryBuilders.rangeQuery("inventoryPackageQuantity").gt(0));
+        }
+        if (request.getInventoryAllocatedPackageQuantityEqualZero() != null && request.getInventoryAllocatedPackageQuantityEqualZero()) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("inventoryAllocatedPackageQuantity", 0));
+        }
+
+
+        if (request.getEnoughPackQuantity() != null && request.getEnoughPackQuantity()) {
+            Script script = new Script("doc['packageQuantity'].value > doc['allocatedPackageQuantity'].value");
+            ScriptQueryBuilder scriptQuery = QueryBuilders.scriptQuery(script);
+            boolQueryBuilder.must(scriptQuery);
+        }
+
+        if (request.getItemEnoughPackQuantity() != null && request.getItemEnoughPackQuantity()) {
+            Script script = new Script("doc['inventoryItemPackageQuantity'].value > doc['inventoryItemAllocatedPackageQuantity'].value");
+            ScriptQueryBuilder scriptQuery = QueryBuilders.scriptQuery(script);
+            boolQueryBuilder.must(scriptQuery);
+        }
+
+
+        if (request.getInventoryEnoughPackQuantity() != null && request.getInventoryEnoughPackQuantity()) {
+            Script script = new Script("doc['inventoryPackageQuantity'].value > doc['inventoryAllocatedPackageQuantity'].value");
+            ScriptQueryBuilder scriptQuery = QueryBuilders.scriptQuery(script);
+            boolQueryBuilder.must(scriptQuery);
+        }
+
+        if (StringUtils.isNotEmpty(request.getApplyOrOrderCode())) {
+            boolQueryBuilder.must(QueryBuilders.termQuery("applyOrOrderCode", request.getApplyOrOrderCode()));
+        }
+
+        if (request.getApplyOrOrderCodeEmpty() != null && request.getApplyOrOrderCodeEmpty()) {
+            // 过滤字段存在且非空
+            boolQueryBuilder.mustNot(QueryBuilders.existsQuery("applyOrOrderCode"));
+        }
+
+        // in id  查询
+        if (CollectionUtils.isNotEmpty(request.getMaterialIdList())) {
+            boolQueryBuilder.must(QueryBuilders.termsQuery("materialId", request.getMaterialIdList()));
+        }
+
+        if (CollectionUtils.isNotEmpty(request.getInventoryItemDetailIdList())) {
+            boolQueryBuilder.must(QueryBuilders.termsQuery("inventoryItemDetailId", request.getInventoryItemDetailIdList()));
+        }
+
+
+// 日期大于某个时间点
+//        RangeQueryBuilder dateQuery = QueryBuilders.rangeQuery("timestamp")
+//                .gt("2023-01-01T00:00:00")
+//                .format("strict_date_optional_time");
+//        boolQuery.must(dateQuery);
+
+
+//        List<String> includeList = new ArrayList<>();
+//        includeList.add("applyShipOrderId");
+//        includeList.add("materialName");
+//        String[] ii=  includeList.toArray(new String[0]);
+//        String[] includes = new String[]{"applyShipOrderId", "materialName"};
+
+
+        List<SortBuilder<?>> sortBuilderList = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(request.getSortFieldList())) {
+            SortOrder sortOrder = null;
+            for (Sort sort : request.getSortFieldList()) {
+                switch (sort.getSortType().toLowerCase()) {
+                    case "asc":
+                        sortOrder = SortOrder.ASC;
+                        break;
+                    case "desc":
+                        sortOrder = SortOrder.DESC;
+                        break;
+                    default:
+                        throw new Exception("不支持的排序");
+                }
+                sortBuilderList.add(SortBuilders.fieldSort(sort.getSortField())
+                        .order(sortOrder));
+            }
+        }
+
+//        sortBuilderList.add(SortBuilders.fieldSort("id").order(SortOrder.DESC));
+//        //taskCompletedTime task_completed_time
+//        sortBuilderList.add(SortBuilders.fieldSort("taskCompletedTime").order(SortOrder.DESC));
+
+
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                //查询条件:es支持分词查询，最小是一个词，要精确匹配分词
+                //在指定字段中查找值
+//                .withQuery(QueryBuilders.queryStringQuery("合肥").field("product_name").field("produce_address"))
+                // .withQuery(QueryBuilders.multiMatchQuery("安徽合肥", "product_name", "produce_address"))
+                //必须要加keyword，否则查不出来
+                .withQuery(boolQueryBuilder)
+                //SEARCH_AFTER 不用指定 from size
+//                .withQuery(QueryBuilders.rangeQuery("price").from("5").to("9"))//多个条件and 的关系
+                //分页：page 从0开始
+                .withPageable(PageRequest.of(request.getPageIndex(), request.getPageSize()))
+                //排序
+//                .withSort(SortBuilders.fieldSort("id").order(SortOrder.DESC))
+//                .withSort(SortBuilders.fieldSort("task_completed_time").order(SortOrder.DESC))
+                .withSorts(sortBuilderList)
+                .withSourceFilter(new SourceFilter() {
+
+                    //两个都不设置 返回全部
+
+
+                    //返回的字段
+                    @Override
+                    public String[] getIncludes() {
+//                        return includeList.toArray(new String[0]);
+//
+                        if (request.getSourceFieldList() != null) {
+                            return request.getSourceFieldList().toArray(new String[0]);
+                        } else {
+                            return new String[0];
+                        }
+
+                    }
+
+                    //不需要返回的字段
+                    @Override
+                    public String[] getExcludes() {
+                        return new String[0];
+                    }
+                })
+                //高亮字段显示
+//                .withHighlightFields(new HighlightBuilder.Field("product_name"))
+                .withTrackTotalHits(true)//解除最大1W条限制
+                .build();
+//        nativeSearchQuery.setTrackTotalHitsUpTo(10000000);
+
+//        SearchHits<InventoryDetail> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryDetail.class);
+//        List<InventoryDetail> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+//        List<Long> idList=inventoryInfoList.stream().map(p->p.getInventoryItemDetailId()).collect(Collectors.toList());
+
+
+
+//        InventoryDetail
+//        SearchHits<Object> search = elasticsearchRestTemplate.search(nativeSearchQuery, Object.class);
+//
+//        // 提取 inventoryItemDetailId 字段值
+//        List<Long> idList = search.getSearchHits().stream()
+//                .map(hit -> {
+//                    Object fieldValue = hit.getContent();
+//                    // 如果字段值直接可用
+//                    if (fieldValue instanceof Map) {
+//                        Map<String, Object> sourceMap = (Map<String, Object>) fieldValue;
+//                        return (Long) sourceMap.get("inventoryItemDetailId");
+//                    }
+//                    return null;
+//                })
+//                .filter(Objects::nonNull)
+//                .collect(Collectors.toList());
+
+
+        SearchHits<Map> searchHits = elasticsearchRestTemplate.search(
+                nativeSearchQuery,
+                Map.class,
+                //要加上索引，不然根据  Map.class 找不到索引：
+                IndexCoordinates.of("inventory_info")
+        );
+
+        List<Long> idList = searchHits.getSearchHits().stream()
+                .map(hit -> {
+                    Map<String, Object> sourceMap = hit.getContent();
+                    Object idValue = sourceMap.get("inventoryItemDetailId");
+                    if (idValue instanceof Integer) {
+                        return ((Integer) idValue).longValue();
+                    }
+                    return (Long) idValue;
+                })
+                .collect(Collectors.toList());
+
+        long count = searchHits.getTotalHits();
+        PageData<Long> pageData = new PageData<>();
+        pageData.setCount(count);
+        pageData.setData(idList);
         return pageData;
     }
 
@@ -2387,19 +2695,19 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存详情没有可分配的库存";
+            return "库存详情没有可分配的库存,检查任务";
         }
 
         request.setItemEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存明细没有可分配的库存";
+            return "库存明细没有可分配的库存,检查任务";
         }
 
         request.setInventoryEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存主表没有可分配的库存";
+            return "库存主表没有可分配的库存,检查任务";
         }
 
         if (StringUtils.isNotEmpty(shipOrderItemRequest.getShipOrderCode())) {
@@ -2724,11 +3032,55 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             //   maxId = list.stream().map(p -> p.getId().intValue()).max(Comparator.comparing(Integer::intValue)).orElse(0);
 
         }
-
-
         writer.finish();
-
-
     }
 
+    @Override
+    public List<Long> detailDifference() throws Exception {
+        InventoryInfoRequest request = new InventoryInfoRequest();
+        request.setFieldMap(EsRequestPage.setFieldMapByField(Arrays.asList("inventoryItemDetailId")));
+
+        request.setPageIndex(0);
+        request.setPageSize(1);
+//        getInventoryInfoPage
+        PageData<Long> pageData = getInventoryInfoIdList(request);
+
+        long count = pageData.getCount();
+        int stepCount = 50000;
+//        count = 999;
+        long loopCount = count / stepCount;
+        long remainder = count % stepCount;
+        if (remainder > 1) {
+            loopCount++;
+        }
+
+        int maxId = 0;
+        List<Long> esIdList = new ArrayList<>();
+        for (int i = 1; i <= loopCount; i++) {
+            request.setPageIndex(i - 1);
+            request.setPageSize(stepCount);
+            PageData<Long> currentPageData = getInventoryInfoIdList(request);
+            List<Long> currentPageDataEsIdList = currentPageData.getData();
+            esIdList.addAll(currentPageDataEsIdList);
+        }
+        List<Long> dbIdList = this.inventoryItemDetailService.getAllIdList();
+        List<Long> findIdsNotInDb = findIdsNotInDb(esIdList, dbIdList);
+        return findIdsNotInDb;
+    }
+
+    public List<Long> findIdsNotInDb(List<Long> esIdList, List<Long> dbIdList) {
+        if (esIdList == null || esIdList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        if (dbIdList == null || dbIdList.isEmpty()) {
+            return new ArrayList<>(esIdList);
+        }
+        // 将dbIdList转换为HashSet以提高查找效率
+        Set<Long> dbIdSet = new HashSet<>(dbIdList);
+        // 使用Stream过滤出不在dbIdSet中的元素
+        List<Long> result = esIdList.stream()
+                .filter(id -> !dbIdSet.contains(id))
+                .collect(Collectors.toList());
+        return result;
+    }
 }

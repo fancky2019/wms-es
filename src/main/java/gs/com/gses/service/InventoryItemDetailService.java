@@ -35,6 +35,8 @@ public interface InventoryItemDetailService extends IService<InventoryItemDetail
 
 
     List<Map<String, String>> trunkBarCodePreview(long id) throws Exception;
+
+    List<Long> getAllIdList();
 }
 
 

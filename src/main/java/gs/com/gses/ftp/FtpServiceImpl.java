@@ -67,7 +67,7 @@ public class FtpServiceImpl implements FtpService {
 //    @Value("${ftp.base-path}")
 //    private String basePath;
 
-    @PostConstruct
+//    @PostConstruct
     public void init() {
         ftpClient = new FTPClient();
         ftpClient.setControlEncoding("GBK");

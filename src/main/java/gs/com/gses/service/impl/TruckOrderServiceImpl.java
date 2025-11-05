@@ -211,7 +211,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
                 //根据分配库存拆分装车明细
                 for (ShipOrderItemResponse itemResponse : orderItemList) {
-                    for (AllocateModel allocateModel : shipOrderAllocateModelList) {
+                    List<AllocateModel> currentShipOrderItemAllocateModelList = shipOrderAllocateModelList.stream().filter(p -> p.getShipOrderItemId().equals(itemResponse.getId())).collect(Collectors.toList());
+                    for (AllocateModel allocateModel : currentShipOrderItemAllocateModelList) {
                         newTruckOrderItemRequest = new TruckOrderItemRequest();
                         BeanUtils.copyProperties(truckOrderItemRequest, newTruckOrderItemRequest);
                         newTruckOrderItemRequest.setProjectName(itemResponse.getM_Str8());

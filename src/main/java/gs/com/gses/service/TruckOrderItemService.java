@@ -28,5 +28,6 @@ public interface TruckOrderItemService extends IService<TruckOrderItem> {
 
     void mergeTruckOrder(List<Long> truckOrderIdList) throws Exception;
 
+    void auditFieldTest(Long id);
 
 }
