@@ -209,6 +209,7 @@ feign:
 
 
 sbp:
+#  enable: true
 #  true  false
 #  ordermigratedbtoolurl: http://localhost:8101
 #  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
@@ -223,9 +224,9 @@ sbp:
     - "http://localhost:[*]"
     - "http://127.0.0.1:[*]"
   authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
-  hostAndPort: 10.100.200.43:9200
-#  hostAndPort: 10.100.202.113:9200
-  checkpermission: false
+#  hostAndPort: 10.100.200.43:9200
+  hostAndPort: 10.100.202.113:9200
+  checkpermission: true
   initCache: false
   logMq: false
 #  enableCopyShipOrder: false
@@ -304,3 +305,14 @@ ftp:
   password: Abc!123456
   base-path: wms/
   passive-mode: true
+
+# 在 application.yml 中设置
+# 禁用 swagger-ui 页面
+#  springdoc.swagger-ui.enabled=false
+#  # 禁用 /v3/api-docs 端点
+#  springdoc.api-docs.enabled=false
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

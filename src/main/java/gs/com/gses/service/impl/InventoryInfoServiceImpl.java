@@ -56,6 +56,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.*;
 import org.springframework.data.elasticsearch.core.document.Document;
@@ -83,7 +84,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class InventoryInfoServiceImpl implements InventoryInfoService {
-
+    @Value("${sbp.enable:false}")
+    private boolean enable;
 
     @Autowired
     private ShipOrderInfoRepository shipOrderInfoRepository;
@@ -1293,7 +1295,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //        SearchHits<InventoryDetail> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryDetail.class);
 //        List<InventoryDetail> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
 //        List<Long> idList=inventoryInfoList.stream().map(p->p.getInventoryItemDetailId()).collect(Collectors.toList());
-
 
 
 //        InventoryDetail
@@ -2589,9 +2590,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         return updatedMap;
     }
 
+    //endregion
 
     @Override
     public String allocatedReason(ShipOrderItemRequest shipOrderItemRequest) throws Exception {
+        if (!enable && !basicInfoCacheService.getSbpEnable()) {
+            return "暂未查出公共原因";
+        }
+
         if (StringUtils.isEmpty(shipOrderItemRequest.getMaterialCode())) {
             throw new Exception("物料号为空");
         }
@@ -3064,22 +3070,23 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             esIdList.addAll(currentPageDataEsIdList);
         }
         List<Long> dbIdList = this.inventoryItemDetailService.getAllIdList();
-        List<Long> findIdsNotInDb = findIdsNotInDb(esIdList, dbIdList);
-        return findIdsNotInDb;
+        List<Long> findIdsNotInEs = findIdsNotInEs(esIdList, dbIdList);
+        return findIdsNotInEs;
     }
 
-    public List<Long> findIdsNotInDb(List<Long> esIdList, List<Long> dbIdList) {
-        if (esIdList == null || esIdList.isEmpty()) {
+    public List<Long> findIdsNotInEs(List<Long> esIdList, List<Long> dbIdList) {
+        if (dbIdList == null || dbIdList.isEmpty()) {
             return new ArrayList<>();
         }
-        if (dbIdList == null || dbIdList.isEmpty()) {
-            return new ArrayList<>(esIdList);
+        if (esIdList == null || esIdList.isEmpty()) {
+            return new ArrayList<>(dbIdList);
         }
+        log.info("esIdList {} dbIdList {}", esIdList.size(), dbIdList.size());
         // 将dbIdList转换为HashSet以提高查找效率
-        Set<Long> dbIdSet = new HashSet<>(dbIdList);
+        Set<Long> esIdSet = new HashSet<>(esIdList);
         // 使用Stream过滤出不在dbIdSet中的元素
-        List<Long> result = esIdList.stream()
-                .filter(id -> !dbIdSet.contains(id))
+        List<Long> result = dbIdList.stream()
+                .filter(id -> !esIdSet.contains(id))
                 .collect(Collectors.toList());
         return result;
     }

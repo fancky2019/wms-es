@@ -153,6 +153,8 @@ public class MqMessage implements Serializable {
     @TableField(value = "Status")
     private Integer status;
 
+//    private Boolean sendMq;
+
     /**
      *
      */

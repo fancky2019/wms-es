@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-/*
+/**
 
 
 <dependency>
@@ -225,6 +225,9 @@ public class LogAspect {
                 long waitTime = 1;
                 //持有所超时释放锁时间  24 * 60 * 60;
                 // 注意：锁超时自动释放，另外一个线程就会获取锁继续执行，代码版本号处理
+                //此处可以不设计超时释放，因为锁的是token操作，token 只会有一个不会影响其他。
+                //UtilityController getRepeatToken 时候向redis 插入一个token
+                //redis token 状态删除设置过期时间操作失败，可设计token 存储在数据库和业务数据做原子操作。在业务层做判断tokens是否处理
                 long leaseTime = 600;
                 lockSuccessfully = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
@@ -260,7 +263,7 @@ public class LogAspect {
                     } else {
                         deleteOrExpire = true;
                     }
-
+                    //redis token 状态删除设置过期时间操作失败，可设计token 存储在数据库和业务数据做原子操作。在业务层做判断tokens是否处理
                     if (!deleteOrExpire) {
                         //基于指纹的此处不用加锁，如果基于生成的token此处要加锁，因为获取token时候，此处可能设置完成 ，
                         //存在并发 。project TokenService getRepeatToken

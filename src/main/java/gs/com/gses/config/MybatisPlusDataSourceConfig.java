@@ -1,5 +1,6 @@
 package gs.com.gses.config;
 
+import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusProperties;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
@@ -7,7 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
-import gs.com.gses.Interceptor.MetaObjectHandlerImp;
+import gs.com.gses.mybatisplus.MetaObjectHandlerImp;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,7 +16,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import javax.sql.DataSource;
 
@@ -27,6 +27,9 @@ import javax.sql.DataSource;
 public class MybatisPlusDataSourceConfig {
     @Autowired
     private MybatisPlusProperties mybatisPlusProperties;
+    @Autowired
+    private MetaObjectHandlerImp metaObjectHandlerImp;
+
     @Bean
     @Primary
     public SqlSessionFactory sqlSessionFactory(@Qualifier("dataSource") DataSource dataSource) throws Exception {
@@ -76,7 +79,7 @@ public class MybatisPlusDataSourceConfig {
         bean.setTypeAliasesPackage(mybatisPlusProperties.getTypeAliasesPackage());
 
         // 从配置文件中获取 Configuration
-        MybatisConfiguration configuration =  new MybatisConfiguration();
+        MybatisConfiguration configuration = new MybatisConfiguration();
         // 确保设置为 false #默认true.  M_Str1  默认命中mStr1
         configuration.setMapUnderscoreToCamelCase(false);
         bean.setConfiguration(configuration);
@@ -85,20 +88,26 @@ public class MybatisPlusDataSourceConfig {
         bean.setPlugins(mybatisPlusInterceptor());
 
         GlobalConfig globalConfig = GlobalConfigUtils.defaults();
-        globalConfig.setMetaObjectHandler(new MetaObjectHandlerImp());
+        globalConfig.setMetaObjectHandler(metaObjectHandlerImp);
         bean.setGlobalConfig(globalConfig);
 
         return bean.getObject();
 
     }
 
-//    @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor(){
+    //    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         //        PaginationInnerInterceptor paginationInterceptor=new PaginationInnerInterceptor(DbType.SQL_SERVER);
 
-        PaginationInnerInterceptor paginationInterceptor=new PaginationInnerInterceptor();
+        PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor();
         interceptor.addInnerInterceptor(paginationInterceptor);
+        // 添加防止全表更新与删除插件
+        //拦截没有 WHERE 条件的 UPDATE 和 DELETE 语句，防止因误操作或恶意攻击导致的全表数据更新或删除，从而保护数据的完整性和安全性。
+//        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+
+
         return interceptor;
     }
+
 }

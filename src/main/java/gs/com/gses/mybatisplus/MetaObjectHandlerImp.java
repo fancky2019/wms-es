@@ -1,7 +1,8 @@
-package gs.com.gses.Interceptor;
+package gs.com.gses.mybatisplus;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 
+import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.entity.TruckOrderItem;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
 
 /**
  * mybatisplus统一修改审计信息
@@ -32,12 +32,12 @@ import java.time.LocalDateTime;
  *
  * 事务可能执行不成功：此方法先事务提交执行
  *
- *
+ *插入无法获取id信息
  *
  *
  */
 @Slf4j
-//@Component
+@Component
 public class MetaObjectHandlerImp implements MetaObjectHandler {
 
     @Autowired
@@ -51,9 +51,16 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
 //        this.strictInsertFill(metaObject, "modifyTime", LocalDateTime.class, LocalDateTime.now());
 //        this.strictInsertFill(metaObject, "traceId", String.class, MDC.get("traceId"));
 
+        //  这里只能处理非ID字段的填充
         Object originalObject = metaObject.getOriginalObject();
-        if (originalObject instanceof TruckOrderItem) {
-            int m = 0;
+        if (originalObject instanceof TruckOrder) {
+            TruckOrder truckOrder=(TruckOrder)originalObject;
+           log.info("truckOrderId {} truckOrderCode {}",truckOrder.getId(),truckOrder.getTruckOrderCode());
+        }
+        else if(originalObject instanceof TruckOrderItem)
+        {
+            TruckOrderItem truckOrderItem=(TruckOrderItem)originalObject;
+            log.info("truckOrderId {} truckOrderItemId {}",truckOrderItem.getTruckOrderId(),truckOrderItem.getId());
         }
         int n = 0;
     }

@@ -343,9 +343,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         Long retainId = truckOrderList.get(0).getId();
         List<Long> deletedTruckOrderIdList = truckOrderIdList.stream().filter(p -> !p.equals(retainId)).collect(Collectors.toList());
         String mergeMsg = MessageFormat.format("retainId:{0},deletedTruckOrderIdList:{1}", retainId, deletedTruckOrderIdList.stream().map(Object::toString).collect(Collectors.joining(",")));
-
         log.info(mergeMsg);
-
         boolean re = this.truckOrderService.deleteByIds(deletedTruckOrderIdList);
         if (!re) {
             throw new Exception("Delete truckOrder fail");
@@ -355,10 +353,12 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
         truckOrderItemRequest.setTruckOrderIdList(deletedTruckOrderIdList);
         PageData<TruckOrderItemResponse> pageData = this.getTruckOrderItemPage(truckOrderItemRequest);
-
         List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
+        for(TruckOrderItemResponse item : truckOrderItemResponseList)
+        {
+            log.info("{},{},{}",item.getId(),item.getTruckOrderId(),retainId);
+        }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
-
         LambdaUpdateWrapper<TruckOrderItem> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         truckOrderLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
                 .set(TruckOrderItem::getTruckOrderId, retainId);

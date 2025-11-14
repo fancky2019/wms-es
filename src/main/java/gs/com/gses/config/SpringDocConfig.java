@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,6 +33,9 @@ http://localhost:8212/swagger-ui/index.html
  * 3.0
  * http://localhost:8088/swagger-ui/index.html
  */
+////不起作用，要用:# 禁用 swagger-ui 页面.ConditionalOnProperty 只能判断次配置类是否生效
+//@ConditionalOnProperty(prefix = "SpringDoc",value = {"enable"},havingValue = "true")
+//springdoc.swagger-ui.enabled=false
 @Configuration
 public class SpringDocConfig {
 //    @Bean

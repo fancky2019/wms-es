@@ -2,6 +2,7 @@ package gs.com.gses.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.*;
+import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -650,4 +651,30 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 //        return val;
         return "";
     }
+
+    @Override
+    public boolean getSbpEnable() {
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        Object val = valueOperations.get(RedisKey.SBP_ENABLE);
+        return val != null && val.equals(1);
+    }
+
+    @Override
+    public void setSbpEnable() {
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        valueOperations.set(RedisKey.SBP_ENABLE, 1, 3600, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public void setKeyVal(String keyVal, Object val) {
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        valueOperations.set(keyVal, val);
+    }
+
+    @Override
+    public void setKeyValExpire(String keyVal, Object val, long timeout, TimeUnit unit) {
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        valueOperations.set(keyVal, val, timeout, unit);
+    }
+
 }

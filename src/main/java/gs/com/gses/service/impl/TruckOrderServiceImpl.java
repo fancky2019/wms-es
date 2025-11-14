@@ -141,6 +141,14 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                     throw new Exception(msg);
                 }
             }
+            if(StringUtils.isEmpty(itemRequest.getMaterialCode()))
+            {
+                throw new Exception("MaterialCode fields contain blank values");
+            }
+            if(StringUtils.isEmpty(itemRequest.getProjectNo()))
+            {
+                throw new Exception("ProjectNo fields contain blank values");
+            }
         }
 
         //多个字段分组

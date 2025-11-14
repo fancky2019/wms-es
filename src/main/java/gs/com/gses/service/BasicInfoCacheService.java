@@ -2,8 +2,11 @@ package gs.com.gses.service;
 
 import gs.com.gses.model.entity.*;
 
+import java.util.concurrent.TimeUnit;
+
 public interface BasicInfoCacheService {
     void getBasicInfoCache();
+
     void initLocation();
 
     void initLaneway();
@@ -19,7 +22,9 @@ public interface BasicInfoCacheService {
     void initOrgnization();
 
     void initPackageUnit();
+
     void initConveyor();
+
     void initConveyorLaneway();
 
     Location loadFromDbLocation(Long locationId) throws InterruptedException;
@@ -46,9 +51,13 @@ public interface BasicInfoCacheService {
 
     void updateWarehouse(Warehouse wareHouse) throws InterruptedException;
 
-
-
-
-
     void batch();
+
+    boolean getSbpEnable();
+
+    void setSbpEnable();
+
+    void setKeyVal(String keyVal, Object val);
+
+    void setKeyValExpire(String keyVal, Object val, long timeout, TimeUnit unit);
 }

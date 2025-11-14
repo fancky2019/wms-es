@@ -1,18 +1,22 @@
-package gs.com.gses.Interceptor;
+package gs.com.gses.mybatisplus;
 
 
+import com.alibaba.fastjson.JSON;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.plugin.*;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.PostMapping;
 
+import javax.validation.Valid;
 import java.util.Map;
 import java.util.Properties;
 
 /**
- *
- * mybatis sql执行拦截器
- *过滤器不用到WebMvcConfigurer 添加，拦截器需要到WebMvcConfigurer注册
+ *暂时未调试通，使用
  */
 
 //@Intercepts({
@@ -20,12 +24,13 @@ import java.util.Properties;
 //        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class})
 //})
 
-//@Component
+@Component
 @Intercepts({
         @Signature(type = Executor.class,
                 method = "update",
                 args = {MappedStatement.class, Object.class}),
 })
+
 public class SqlUpdateInterceptor implements Interceptor {
 
     @Override
@@ -61,14 +66,13 @@ public class SqlUpdateInterceptor implements Interceptor {
 //            }
 
             Object data = param;
-//            String jsonString = JSON.toJSONString(data);
+            String jsonString = JSON.toJSONString(data);
 
             // 将 JSON 字符串转换为 Map
 //            Map<String, Object> jsonMap = JSON.parseObject(jsonString, new TypeReference<Map<String, Object>>() {
 //            });
 
-
-
+            int m = 0;
 
 
 //            String id = jsonMap.get("id").toString();

@@ -23,6 +23,6 @@ public class RedisKey {
 
 
     public static final String INVENTORY_DELETED= "inventoryDeleted:";
-
+    public static final String SBP_ENABLE= "Sbp:Enable";
 
 }

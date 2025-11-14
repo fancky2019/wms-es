@@ -4,9 +4,9 @@ import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.service.BasicInfoCacheService;
 import gs.com.gses.service.InventoryInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.concurrent.TimeUnit;
 
 //public class BasicInfoController {
 @RestController
@@ -36,6 +36,24 @@ public class BasicInfoController {
     @GetMapping("/getBasicInfoCache")
     public MessageResult<Void> getBasicInfoCache() throws Exception {
         basicInfoCacheService.getBasicInfoCache();
+        return MessageResult.success();
+    }
+
+    @PostMapping("/setSbpEnable")
+    public MessageResult<Void> setSbpEnable() throws Exception {
+        basicInfoCacheService.setSbpEnable();
+        return MessageResult.success();
+    }
+
+    @PostMapping("/setKeyVal/{key}/{val}")
+    public MessageResult<Void> setKeyVal(@PathVariable("key") String key,@PathVariable("val") String val) throws Exception {
+        basicInfoCacheService.setKeyVal(key,val);
+        return MessageResult.success();
+    }
+
+    @PostMapping("/setKeyValExpire/{key}/{val}/{timeout}")
+    public MessageResult<Void> setKeyValExpire(@PathVariable("key") String key,@PathVariable("val") String val,@PathVariable("timeout") long timeout) throws Exception {
+        basicInfoCacheService.setKeyValExpire(key,val,timeout, TimeUnit.SECONDS);
         return MessageResult.success();
     }
 
