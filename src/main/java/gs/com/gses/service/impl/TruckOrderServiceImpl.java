@@ -60,6 +60,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
@@ -130,6 +131,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
+        String currentTaskName = "validateParameter";
+        StopWatch stopWatch = new StopWatch("addTruckOrderAndItem");
+        stopWatch.start(currentTaskName);
         if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
             throw new Exception("装车单明细为空");
         }
@@ -141,12 +145,10 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                     throw new Exception(msg);
                 }
             }
-            if(StringUtils.isEmpty(itemRequest.getMaterialCode()))
-            {
+            if (StringUtils.isEmpty(itemRequest.getMaterialCode())) {
                 throw new Exception("MaterialCode fields contain blank values");
             }
-            if(StringUtils.isEmpty(itemRequest.getProjectNo()))
-            {
+            if (StringUtils.isEmpty(itemRequest.getProjectNo())) {
                 throw new Exception("ProjectNo fields contain blank values");
             }
         }
@@ -169,7 +171,10 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 throw new Exception("项目号设备号物料号重复 - " + StringUtils.join(multiKey.getKeys(), ","));
             }
         }
-
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "checkAvailable";
+        stopWatch.start(currentTaskName);
         List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
         HashSet<String> shipOrderCodeSet = new HashSet<>();
         List<ShipOrderItemResponse> allMatchedShipOrderItemResponseList = new ArrayList<>();
@@ -188,6 +193,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
             allAllocateModelList.addAll(allocateModelList);
         }
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "prepareParameter";
+        stopWatch.start(currentTaskName);
+
         String allMatchedShipOrderItemResponseListJson = objectMapper.writeValueAsString(allMatchedShipOrderItemResponseList);
         log.info("allMatchedShipOrderItemResponseList -:{}", allMatchedShipOrderItemResponseListJson);
 
@@ -303,12 +313,27 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         //未登录会得到全局异常
         String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequestList);
         log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
-//        Integer.parseInt("m");
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "callWmsService";
+        stopWatch.start(currentTaskName);
+
+        //        Integer.parseInt("m");
         WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
         String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
         log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
         if (wmsResponse.getResult()) {
+
+            stopWatch.stop();
+            log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+            currentTaskName = "saveTruckOrderAndItem";
+            stopWatch.start(currentTaskName);
+
             TruckOrder truckOrder = saveTruckOrderAndItem(splitRequest, createTime);
+            stopWatch.stop();
+            log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+            currentTaskName = "TruckOrderCompleteMqtt";
+            stopWatch.start(currentTaskName);
             try {
                 log.info("ThreadId - {}", Thread.currentThread().getId());
                 EwmsEvent event = new EwmsEvent(this, busProperties.getId());
@@ -318,6 +343,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             } catch (Exception ex) {
                 log.error("Publish event error", ex);
             }
+            stopWatch.stop();
+            log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+            log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
 
         } else {
             throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
