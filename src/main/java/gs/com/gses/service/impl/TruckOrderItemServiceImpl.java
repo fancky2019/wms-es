@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
@@ -80,6 +81,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
     @Override
     public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
+        String currentTaskName = "checkTruckOrderItemRequest";
+        StopWatch stopWatch = new StopWatch("checkShipOrderItemExist");
+        stopWatch.start(currentTaskName);
         ShipOrderItemRequest shipOrderItemRequest = new ShipOrderItemRequest();
         shipOrderItemRequest.setM_Str7(request.getProjectNo());
         shipOrderItemRequest.setM_Str12(request.getDeviceNo());
@@ -92,7 +96,10 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             allocateModelList = new ArrayList<>();
         }
         Boolean shipOrderItemExist = shipOrderItemService.checkItemExist(shipOrderItemRequest, matchedShipOrderItemResponseList);
-
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "checkInventoryItemDetailExist";
+        stopWatch.start(currentTaskName);
         InventoryItemDetailRequest inventoryItemDetailRequest = new InventoryItemDetailRequest();
         inventoryItemDetailRequest.setM_Str7(request.getProjectNo());
         inventoryItemDetailRequest.setM_Str12(request.getDeviceNo());
@@ -100,7 +107,10 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         inventoryItemDetailRequest.setPackageQuantity(request.getQuantity());
         inventoryItemDetailRequest.setIgnoreDeviceNo(request.getIgnoreDeviceNo());
         Boolean detailExist = inventoryItemDetailService.checkDetailExist(inventoryItemDetailRequest, matchedShipOrderItemResponseList, allocateModelList);
-
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "getMaterialInfo";
+        stopWatch.start(currentTaskName);
         request.setPallet(inventoryItemDetailRequest.getPallet());
         request.setMaterialId(inventoryItemDetailRequest.getMaterialId());
         request.setInventoryItemDetailId(inventoryItemDetailRequest.getId());
@@ -109,6 +119,10 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             throw new Exception("can't find material - " + request.getMaterialId());
         }
         request.setDeviceName(material.getXName());
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
+
         return shipOrderItemExist && detailExist;
     }
 

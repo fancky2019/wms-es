@@ -137,7 +137,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
             throw new Exception("装车单明细为空");
         }
-
+        log.info("TruckOrderItemRequestList size {} ", request.getTruckOrderItemRequestList().size());
         for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
             if (StringUtils.isNotEmpty(itemRequest.getDeviceNo())) {
                 if (itemRequest.getIgnoreDeviceNo()) {
