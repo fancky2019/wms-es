@@ -214,6 +214,7 @@ sbp:
 #  ordermigratedbtoolurl: http://localhost:8101
 #  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
   wmsurl: http://127.0.0.1:9000/api/app
+#  wmsurl: http://10.100.200.32:9000/api/app
   allowedoriginpatterns:
     - "http://10.84.4.173:8081/"
     - "http://10.100.200.43:8088"

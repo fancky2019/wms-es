@@ -2,6 +2,7 @@ package gs.com.gses.service.api;
 
 import gs.com.gses.model.entity.ShipOrder;
 import gs.com.gses.model.request.wms.ShipOrderPalletRequest;
+import gs.com.gses.model.request.wms.UpdateWmsTaskStatusRequest;
 import gs.com.gses.model.response.wms.WmsResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.SpringQueryMap;
@@ -73,6 +74,10 @@ public interface WmsService {
      */
     @PostMapping("/ShipOrder/SubAssignPalletsByShipOrderBatch")
     WmsResponse subAssignPalletsByShipOrderBatch(@RequestBody List<ShipOrderPalletRequest> dtoList, @RequestHeader("Authorization") String token) throws Throwable;
+
+
+    @PostMapping("/WmsTask/CompleteOffline")
+    WmsResponse CompleteOffline(@RequestBody UpdateWmsTaskStatusRequest request, @RequestHeader("Authorization") String token) throws Throwable;
 
 
 }

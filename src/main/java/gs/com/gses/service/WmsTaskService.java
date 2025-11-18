@@ -2,6 +2,9 @@ package gs.com.gses.service;
 
 import gs.com.gses.model.entity.WmsTask;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.elasticsearch.client.license.LicensesStatus;
+
+import java.util.List;
 
 /**
 * @author lirui
@@ -10,4 +13,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
 */
 public interface WmsTaskService extends IService<WmsTask> {
 
+    void cancelTaskByIdList(List<Long> idList, String token);
 }
