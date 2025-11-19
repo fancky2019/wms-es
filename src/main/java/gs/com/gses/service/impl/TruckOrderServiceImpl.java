@@ -79,6 +79,9 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -126,7 +129,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private RedissonClient redissonClient;
     @Autowired
     private RedisUtil redisUtil;
-
+    @Autowired
+    private Executor threadPoolExecutor;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -179,22 +183,91 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         HashSet<String> shipOrderCodeSet = new HashSet<>();
         List<ShipOrderItemResponse> allMatchedShipOrderItemResponseList = new ArrayList<>();
         List<AllocateModel> allAllocateModelList = new ArrayList<>();
-        for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
-            List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
-            List<AllocateModel> allocateModelList = new ArrayList<>();
-            Boolean result = truckOrderItemService.checkAvailable(itemRequest, matchedShipOrderItemResponseList, allocateModelList);
-            if (!result) {
-                String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.", itemRequest.getProjectNo(), itemRequest.getDeviceNo(), itemRequest.getMaterialCode());
-                throw new Exception(str);
-            }
-            List<String> shipOrderCodeList = matchedShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
-//            shipOrderCodeSet.add(itemRequest.getShipOrderCode());
-            shipOrderCodeSet.addAll(shipOrderCodeList);
-            allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
-            allAllocateModelList.addAll(allocateModelList);
+
+//            for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
+//                List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
+//                List<AllocateModel> allocateModelList = new ArrayList<>();
+//                Boolean result = truckOrderItemService.checkAvailable(itemRequest, matchedShipOrderItemResponseList, allocateModelList);
+//                if (!result) {
+//                    String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.", itemRequest.getProjectNo(), itemRequest.getDeviceNo(), itemRequest.getMaterialCode());
+//                    throw new Exception(str);
+//                }
+//                List<String> shipOrderCodeList = matchedShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
+////            shipOrderCodeSet.add(itemRequest.getShipOrderCode());
+//                shipOrderCodeSet.addAll(shipOrderCodeList);
+//                allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
+//                allAllocateModelList.addAll(allocateModelList);
+//            }
+
+        //使用多线程校验
+//            当使用 CompletableFuture.runAsync() 时，每个任务会在不同的线程中执行，
+//            而 MDC 是基于 ThreadLocal 实现的，不同线程之间无法自动共享 MDC 上下文，导致 traceId 丢失。
+        // 在主线程中捕获当前 MDC 上下文  contextMap:  traceId -> ddb27e1d921e6f97  spanId -> ddb27e1d921e6f97
+        Map<String, String> contextMap = MDC.getCopyOfContextMap();
+        List<CompletableFuture<Void>> futures = request.getTruckOrderItemRequestList()
+                .parallelStream()
+                .map(itemRequest -> CompletableFuture.runAsync(() -> {
+                    // 在异步线程中恢复 MDC 上下文
+                    if (contextMap != null) {
+                        MDC.setContextMap(contextMap);
+                    }
+                    log.info("ThreadId:" + Thread.currentThread().getId());
+
+                    List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
+                    List<AllocateModel> allocateModelList = new ArrayList<>();
+
+                    try {
+                        Boolean result = truckOrderItemService.checkAvailable(itemRequest,
+                                matchedShipOrderItemResponseList, allocateModelList);
+
+                        // 统一异常处理逻辑
+                        if (!result) {
+                            String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.",
+                                    itemRequest.getProjectNo(), itemRequest.getDeviceNo(), itemRequest.getMaterialCode());
+                            throw new RuntimeException(str);
+                        }
+
+                        // 处理成功逻辑
+                        List<String> shipOrderCodeList = matchedShipOrderItemResponseList.stream()
+                                .map(p -> p.getShipOrderCode())
+                                .distinct()
+                                .collect(Collectors.toList());
+                        shipOrderCodeSet.addAll(shipOrderCodeList);
+
+                        synchronized (allMatchedShipOrderItemResponseList) {
+                            allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
+                        }
+                        synchronized (allAllocateModelList) {
+                            allAllocateModelList.addAll(allocateModelList);
+                        }
+
+                    } catch (Exception e) {
+                        // 统一捕获所有异常（包括RuntimeException）
+                        if (e instanceof RuntimeException) {
+                            throw (RuntimeException) e;
+                        } else {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }, threadPoolExecutor))
+                .collect(Collectors.toList());
+
+        // 等待所有任务完成并收集异常
+        try {
+            //第一个异常就会中断主线程。这是 CompletableFuture.allOf().join() 的默认行为。
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        } catch (CompletionException e) {
+            // 这里会捕获到第一个失败的异常
+            Throwable realException = e.getCause();
+            throw new RuntimeException("批量处理失败: " + realException.getMessage(), realException);
         }
+
+
         stopWatch.stop();
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        if (request.getTruckOrderRequest().getSenderPhone().contains("11")) {
+            throw new Exception(stopWatch.getLastTaskTimeMillis() / 1000 + "");
+        }
         currentTaskName = "prepareParameter";
         stopWatch.start(currentTaskName);
 

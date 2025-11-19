@@ -7,7 +7,10 @@
         <Property name="logFilePath">log</Property>
         <Property name="logFileName">test.log</Property>
 <!--        "[%d{yyyy-MM-dd HH:mm:ss:SSS}] [%p] - %m%n"-->
-        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId}] %-5level %c{36} - %m%n</property>
+<!--        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId}] %-5level %c{36} - %m%n</property>-->
+
+<!--        不打印类信息-->
+        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId}] %-5level - %m%n</property>
     </Properties>
 
     <appenders>

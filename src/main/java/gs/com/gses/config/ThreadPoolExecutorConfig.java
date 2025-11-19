@@ -30,9 +30,7 @@ public class ThreadPoolExecutorConfig {
      */
 
 
-
 //
-
 
 
 //    @Override
@@ -74,9 +72,9 @@ public class ThreadPoolExecutorConfig {
      * 异步方法上直接加 @Async("threadPoolExecutor")
      * @return
      */
-    @Bean(name="threadPoolExecutor")
+    @Bean(name = "threadPoolExecutor")
     @Primary
-    public Executor threadPoolExecutor(){
+    public Executor threadPoolExecutor() {
 //        ExecutorService extends Executor
         //内部使用 LinkedBlockingQueue
         //内部使用 ThreadPoolExecutor
@@ -84,7 +82,7 @@ public class ThreadPoolExecutorConfig {
         ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();
         int processNum = Runtime.getRuntime().availableProcessors(); // 返回可用处理器的Java虚拟机的数量
         int corePoolSize = (int) (processNum / (1 - 0.2));
-        int maxPoolSize = (int) (processNum / (1 - 0.5));
+        int maxPoolSize = 3 * (int) (processNum / (1 - 0.5));
         threadPoolExecutor.setCorePoolSize(corePoolSize); // 核心池大小
         threadPoolExecutor.setMaxPoolSize(maxPoolSize); // 最大线程数
         //内部使用 LinkedBlockingQueue
@@ -103,8 +101,8 @@ public class ThreadPoolExecutorConfig {
      * 异步方法上直接加 @Async("threadPoolExecutor")
      * @return
      */
-    @Bean(name="mqFailHandlerExecutor")
-    public Executor mqFailHandlerExecutor(){
+    @Bean(name = "mqFailHandlerExecutor")
+    public Executor mqFailHandlerExecutor() {
         ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();
         int processNum = Runtime.getRuntime().availableProcessors(); // 返回可用处理器的Java虚拟机的数量
         int corePoolSize = (int) (processNum / (1 - 0.2));
