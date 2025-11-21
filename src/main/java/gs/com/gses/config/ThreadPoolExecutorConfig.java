@@ -82,7 +82,12 @@ public class ThreadPoolExecutorConfig {
         ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();
         int processNum = Runtime.getRuntime().availableProcessors(); // 返回可用处理器的Java虚拟机的数量
         int corePoolSize = (int) (processNum / (1 - 0.2));
-        int maxPoolSize = 3 * (int) (processNum / (1 - 0.5));
+        int maxPoolSize =  (int) (processNum / (1 - 0.5));
+
+        //现成创建多了处理器也不执行
+//        int corePoolSize = 3 * processNum;
+//        int maxPoolSize = 3 * processNum;
+
         threadPoolExecutor.setCorePoolSize(corePoolSize); // 核心池大小
         threadPoolExecutor.setMaxPoolSize(maxPoolSize); // 最大线程数
         //内部使用 LinkedBlockingQueue

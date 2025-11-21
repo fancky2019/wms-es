@@ -199,6 +199,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //                allAllocateModelList.addAll(allocateModelList);
 //            }
 
+
+
+        //region 多线程校验
         //使用多线程校验
 //            当使用 CompletableFuture.runAsync() 时，每个任务会在不同的线程中执行，
 //            而 MDC 是基于 ThreadLocal 实现的，不同线程之间无法自动共享 MDC 上下文，导致 traceId 丢失。
@@ -262,12 +265,13 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             throw new RuntimeException("批量处理失败: " + realException.getMessage(), realException);
         }
 
+//endregion
 
         stopWatch.stop();
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
-        if (request.getTruckOrderRequest().getSenderPhone().contains("11")) {
-            throw new Exception(stopWatch.getLastTaskTimeMillis() / 1000 + "");
-        }
+//        if (request.getTruckOrderRequest().getSenderPhone().contains("11")) {
+//            throw new Exception(stopWatch.getLastTaskTimeMillis() / 1000 + "");
+//        }
         currentTaskName = "prepareParameter";
         stopWatch.start(currentTaskName);
 

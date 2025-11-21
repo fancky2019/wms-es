@@ -13,8 +13,10 @@ import org.springframework.stereotype.Component;
 import javax.servlet.http.HttpServletRequest;
 
 /**
+ *
+ *
  * mybatisplus统一修改审计信息
- * 处理公共的审计字段
+ * 审计字段填充，不能操作物理删除，可以设计逻辑删除
  *
  *  更新时指定实体才会触发。批量更新实体也会触发
  *  boolean re1 = this.update(productTest, updateWrapper2);
@@ -71,7 +73,7 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
 //        String traceId = traceContext.traceId();
         String traceId = MDC.get("traceId");
         //modify_time
-        System.out.println("Update operation detected.");
+//        System.out.println("Update operation detected.");
 //        this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
 //        this.strictInsertFill(metaObject, "traceId", String.class, traceId);
 
@@ -95,8 +97,15 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
 
 
         Object originalObject = metaObject.getOriginalObject();
-        if (originalObject instanceof TruckOrderItem) {
-            int m = 0;
+        if (originalObject instanceof TruckOrder) {
+            TruckOrder truckOrder=(TruckOrder)originalObject;
+
+            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {}",truckOrder.getId(),truckOrder.getTruckOrderCode());
+        }
+        else if(originalObject instanceof TruckOrderItem)
+        {
+            TruckOrderItem truckOrderItem=(TruckOrderItem)originalObject;
+            log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}",truckOrderItem.getTruckOrderId(),truckOrderItem.getId());
         }
         int n = 0;
     }
