@@ -18,6 +18,8 @@ import java.util.List;
 public interface TruckOrderItemService extends IService<TruckOrderItem> {
     Boolean checkAvailable(TruckOrderItemRequest request,List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
 
+    Boolean checkAvailableBatch(List<TruckOrderItemRequest> requestList,List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
+
     Boolean add(TruckOrderItemRequest request);
 
     Boolean addBatch(List<TruckOrderItemRequest> requestList);

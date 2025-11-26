@@ -3,11 +3,8 @@ package gs.com.gses.service;
 import gs.com.gses.model.entity.ShipOrderItem;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
-import gs.com.gses.model.request.wms.TruckOrderItemRequest;
-import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +18,7 @@ public interface ShipOrderItemService extends IService<ShipOrderItem> {
     List<ShipOrderItem> getByShipOrderIds(List<Long> shipOrderIdList);
 
     Boolean checkItemExist(ShipOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
+    Boolean checkItemExistBatch(List<ShipOrderItemRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
 
     PageData<ShipOrderItemResponse> getShipOrderItemPage(ShipOrderItemRequest request) throws Exception;
 

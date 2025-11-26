@@ -27,6 +27,7 @@ import gs.com.gses.model.request.EsRequestPage;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
+import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
@@ -42,6 +43,7 @@ import org.apache.poi.ss.formula.functions.T;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
@@ -154,7 +156,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                 }
                 request.setId(inventoryItemDetailResponse.getId());
                 checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
-                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList);
+                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
                 allocateModelList.addAll(currentAllocateModelList);
 
             } else {
@@ -163,7 +165,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                         .map(InventoryItemDetailResponse::getPackageQuantity)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 checkPackageQuantity(sum, request.getPackageQuantity());
-                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList);
+                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
                 allocateModelList.addAll(currentAllocateModelList);
                 inventoryItemDetailResponse = detailResponseList.get(0);
             }
@@ -171,7 +173,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         } else {
             inventoryItemDetailResponse = detailResponseList.get(0);
             checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
-            List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList);
+            List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
             allocateModelList.addAll(currentAllocateModelList);
         }
         request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
@@ -179,8 +181,121 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
     }
 
     @Override
+    public Boolean checkDetailExistBatch(List<InventoryItemDetailRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
+
+        String currentTaskName = "getInventoryItemDetail";
+        StopWatch stopWatch = new StopWatch("checkDetailExistBatch");
+        stopWatch.start(currentTaskName);
+        LambdaQueryWrapper<InventoryItemDetail> wrapper = new LambdaQueryWrapper<>();
+
+        wrapper.and(qw -> {
+            for (InventoryItemDetailRequest query : requestList) {
+                qw.or(w -> {
+                    w.eq(InventoryItemDetail::getM_Str7, query.getM_Str7());
+                    if (StringUtils.isNotEmpty(query.getM_Str12())) {
+                        w.eq(InventoryItemDetail::getM_Str12, query.getM_Str12());
+                    }
+                    if (query.getMaterialId() != null) {
+                        w.eq(InventoryItemDetail::getMaterialId, query.getMaterialId());
+                    }
+                });
+            }
+        });
+
+        List<InventoryItemDetail> inventoryItemDetailList = baseMapper.selectList(wrapper);
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "getPalletInfo";
+        stopWatch.start(currentTaskName);
+        List<Long> detailIdList = inventoryItemDetailList.stream().map(m -> m.getId()).collect(Collectors.toList());
+        Map<Long, String> palletMap = getPalletInfo(detailIdList);
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "allocate";
+        stopWatch.start(currentTaskName);
+        for (InventoryItemDetailRequest request : requestList) {
+
+            List<InventoryItemDetail> currentInventoryItemDetailList = inventoryItemDetailList.stream().filter(p ->
+                    request.getMaterialId().equals(p.getMaterialId()) && request.getM_Str7().equals(p.getM_Str7())
+            ).collect(Collectors.toList());
+            if (StringUtils.isNotEmpty(request.getM_Str12())) {
+                currentInventoryItemDetailList = inventoryItemDetailList.stream().filter(p ->
+                        request.getM_Str12().equals(p.getM_Str12())
+                ).collect(Collectors.toList());
+            }
+
+            List<ShipOrderItemResponse> currentShipOrderItemResponseList = matchedShipOrderItemResponseList.stream().filter(p ->
+                    request.getMaterialId().equals(p.getMaterialId()) && request.getM_Str7().equals(p.getM_Str7())
+            ).collect(Collectors.toList());
+            if (StringUtils.isNotEmpty(request.getM_Str12())) {
+                currentShipOrderItemResponseList = currentShipOrderItemResponseList.stream().filter(p ->
+                        request.getM_Str12().equals(p.getM_Str12())
+                ).collect(Collectors.toList());
+            }
+
+            int size = currentInventoryItemDetailList.size();
+            if (size == 0) {
+                String msg = MessageFormat.format("Can't Match InventoryItemDetail by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+                throw new Exception(msg);
+            }
+
+            List<InventoryItemDetailResponse> detailResponseList = currentInventoryItemDetailList.stream().map(p -> {
+                InventoryItemDetailResponse response = new InventoryItemDetailResponse();
+                BeanUtils.copyProperties(p, response);
+                return response;
+            }).collect(Collectors.toList());
+
+            InventoryItemDetailResponse inventoryItemDetailResponse = null;
+            if (size > 1) {
+
+                int count = 0;
+                if (StringUtils.isNotEmpty(request.getM_Str12())) {
+                    for (InventoryItemDetailResponse detailResponse : detailResponseList) {
+                        List<String> mStr12List = Arrays.stream(detailResponse.getM_Str12().split(",")).collect(Collectors.toList());
+                        if (mStr12List.contains(request.getM_Str12())) {
+                            count++;
+                            inventoryItemDetailResponse = detailResponse;
+                        }
+                    }
+
+                    if (count > 1) {
+                        String msg = MessageFormat.format("Match multiple InventoryItemDetails by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+                        throw new Exception(msg);
+                    }
+                    request.setId(inventoryItemDetailResponse.getId());
+                    checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+                    List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList,palletMap);
+                    allocateModelList.addAll(currentAllocateModelList);
+
+                } else {
+                    //求和
+                    BigDecimal sum = detailResponseList.stream()
+                            .map(InventoryItemDetailResponse::getPackageQuantity)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    checkPackageQuantity(sum, request.getPackageQuantity());
+                    List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList,palletMap);
+                    allocateModelList.addAll(currentAllocateModelList);
+                    inventoryItemDetailResponse = detailResponseList.get(0);
+                }
+
+            } else {
+                inventoryItemDetailResponse = detailResponseList.get(0);
+                checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+                List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList,palletMap);
+                allocateModelList.addAll(currentAllocateModelList);
+            }
+            request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
+        }
+
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
+        return true;
+    }
+
+    @Override
     public List<AllocateModel> allocate(List<ShipOrderItemResponse> shipOrderItemList,
-                                        List<InventoryItemDetailResponse> detailList) throws Exception {
+                                        List<InventoryItemDetailResponse> detailList, Map<Long, String> palletMap) throws Exception {
         List<AllocateModel> allocateModelList = new ArrayList<>();
         if (CollectionUtils.isEmpty(shipOrderItemList)) {
             log.info("shipOrderItemList is empty");
@@ -188,9 +303,10 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         }
         shipOrderItemList = shipOrderItemList.stream().sorted(Comparator.comparingLong(ShipOrderItemResponse::getId)).collect(Collectors.toList());
         HashMap<Long, BigDecimal> usedDetailDic = new HashMap<Long, BigDecimal>();
-        List<Long> detailIdList = detailList.stream().map(m -> m.getId()).collect(Collectors.toList());
-        Map<Long, String> palletMap = getPalletInfo(detailIdList);
-
+        if (palletMap == null) {
+            List<Long> detailIdList = detailList.stream().map(m -> m.getId()).collect(Collectors.toList());
+            palletMap = getPalletInfo(detailIdList);
+        }
         for (int i = 0; i < shipOrderItemList.size(); i++) {
             ShipOrderItemResponse shipOrderItem = shipOrderItemList.get(i);
             BigDecimal itemNeedPackageQuantity = shipOrderItem.getRequiredPkgQuantity().subtract(shipOrderItem.getAlloactedPkgQuantity());
@@ -238,6 +354,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         }
         return allocateModelList;
     }
+
 
     @Override
     public List<Map<String, String>> trunkBarCodePreview(long id) throws Exception {
@@ -642,7 +759,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
     @Override
     public PageData<InventoryItemDetailResponse> getInventoryItemDetailPage(InventoryItemDetailRequest request) throws
             Exception {
-        log.info("getInventoryItemDetailPage - {}",objectMapper.writeValueAsString(request));
+        log.info("getInventoryItemDetailPage - {}", objectMapper.writeValueAsString(request));
         LambdaQueryWrapper<InventoryItemDetail> queryWrapper = new LambdaQueryWrapper<>();
         /**
          * gt: Greater than（大于）

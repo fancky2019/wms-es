@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.model.elasticsearch.DemoProduct;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.enums.OutboundOrderXStatus;
 import gs.com.gses.model.request.Sort;
@@ -166,11 +168,119 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         return true;
     }
 
+    @Override
+    public Boolean checkItemExistBatch(List<ShipOrderItemRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception {
+
+        if (matchedShipOrderItemResponseList == null) {
+            matchedShipOrderItemResponseList = new ArrayList<>();
+        }
+        List<Integer> xStatusList = new ArrayList<>();
+        xStatusList.add(1);
+        xStatusList.add(2);
+        xStatusList.add(3);
+
+        LambdaQueryWrapper<ShipOrderItem> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(ShipOrderItem::getXStatus, xStatusList);
+        wrapper.and(qw -> {
+            for (ShipOrderItemRequest query : requestList) {
+                qw.or(w -> {
+                    w.eq(ShipOrderItem::getM_Str7, query.getM_Str7());
+                    if (StringUtils.isNotEmpty(query.getM_Str12())) {
+                        w.eq(ShipOrderItem::getM_Str12, query.getM_Str12());
+                    }
+                    if (query.getMaterialId() != null) {
+                        w.eq(ShipOrderItem::getMaterialId, query.getMaterialId());
+                    }
+                });
+            }
+        });
+
+        List<ShipOrderItem> shipOrderItemList = baseMapper.selectList(wrapper);
+        List<Long> shipOrderIdList = shipOrderItemList.stream().map(ShipOrderItem::getShipOrderId).distinct().collect(Collectors.toList());
+        List<ShipOrder> shipOrderList = this.shipOrderService.listByIds(shipOrderIdList);
+
+        Map<Long, ShipOrder> shipOrderMap = shipOrderList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
+
+        for (ShipOrderItemRequest request : requestList) {
+            List<ShipOrderItem> currentShipOrderItemList = shipOrderItemList.stream().filter(p ->
+                    request.getMaterialId().equals(p.getMaterialId()) && request.getM_Str7().equals(p.getM_Str7())
+            ).collect(Collectors.toList());
+            if (StringUtils.isNotEmpty(request.getM_Str12())) {
+                currentShipOrderItemList = shipOrderItemList.stream().filter(p ->
+                        request.getM_Str12().equals(p.getM_Str12())
+                ).collect(Collectors.toList());
+                int size = currentShipOrderItemList.size();
+                if (size == 0) {
+                    String msg = MessageFormat.format("Can't Match ShipOrderItems by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+                    throw new Exception(msg);
+                } else if (size > 1) {
+                    String msg = MessageFormat.format("Match multiple ShipOrderItems by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+                    throw new Exception(msg);
+                }
+                log.info("M_Str12 is not empty set RequiredPkgQuantity one");
+                request.setRequiredPkgQuantity(BigDecimal.ONE);
+            }
+
+
+            List<ShipOrderItemResponse> shipOrderItemResponseList = currentShipOrderItemList.stream().map(p -> {
+                ShipOrderItemResponse response = new ShipOrderItemResponse();
+                BeanUtils.copyProperties(p, response);
+                return response;
+            }).collect(Collectors.toList());
+
+
+            BigDecimal requiredPkgQuantity = request.getRequiredPkgQuantity();
+//            List<ShipOrderItemResponse> shipOrderItemResponseList = page.getData();
+            BigDecimal allRequiredPkgQuantity = shipOrderItemResponseList.stream()
+                    .map(ShipOrderItemResponse::getRequiredPkgQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (requiredPkgQuantity.compareTo(allRequiredPkgQuantity) > 0) {
+                throw new Exception(MessageFormat.format("发货单待出库数量 - {0} 小于 当前要出库数量 {1}", allRequiredPkgQuantity, requiredPkgQuantity));
+            }
+
+//            List<Long> shipOrderIdList = shipOrderItemResponseList.stream().map(ShipOrderItemResponse::getShipOrderId).distinct().collect(Collectors.toList());
+//            List<ShipOrder> shipOrderList = this.shipOrderService.listByIds(shipOrderIdList);
+            BigDecimal leftRequiredPkgQuantity = request.getRequiredPkgQuantity();
+            for (ShipOrderItemResponse shipOrderItemResponse : shipOrderItemResponseList) {
+                if (leftRequiredPkgQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
+//                ShipOrder shipOrder = shipOrderList.stream().filter(p -> p.getId().equals(shipOrderItemResponse.getShipOrderId()))
+//                        .findFirst()
+//                        .orElse(null);
+
+                ShipOrder shipOrder = shipOrderMap.get(shipOrderItemResponse.getShipOrderId());
+                if (shipOrder == null) {
+                    String str = MessageFormat.format("ShipOrder - {0} lost", shipOrderItemResponse.getShipOrderId().toString());
+                    throw new Exception(str);
+                }
+
+
+                BigDecimal itemNeedPackageQuantity = shipOrderItemResponse.getRequiredPkgQuantity().subtract(shipOrderItemResponse.getPickedPkgQuantity());
+                if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                if (leftRequiredPkgQuantity.compareTo(itemNeedPackageQuantity) > 0) {
+                    shipOrderItemResponse.setCurrentAllocatedPkgQuantity(itemNeedPackageQuantity);
+                } else {
+                    shipOrderItemResponse.setCurrentAllocatedPkgQuantity(leftRequiredPkgQuantity);
+                }
+                leftRequiredPkgQuantity = leftRequiredPkgQuantity.subtract(shipOrderItemResponse.getCurrentAllocatedPkgQuantity());
+                shipOrderItemResponse.setApplyShipOrderCode(shipOrder.getApplyShipOrderCode());
+                shipOrderItemResponse.setShipOrderCode(shipOrder.getXCode());
+                matchedShipOrderItemResponseList.add(shipOrderItemResponse);
+            }
+        }
+        return true;
+
+    }
 
     @Override
     public PageData<ShipOrderItemResponse> getShipOrderItemPage(ShipOrderItemRequest request) throws Exception {
         LambdaQueryWrapper<ShipOrderItem> queryWrapper = new LambdaQueryWrapper<>();
-        log.info("getShipOrderItemPage - {}",objectMapper.writeValueAsString(request));
+        log.info("getShipOrderItemPage - {}", objectMapper.writeValueAsString(request));
 //        queryWrapper.eq(MqMessage::getStatus, 2);
         //排序
 //        queryWrapper.orderByDesc(User::getAge)
@@ -293,7 +403,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             ShipOrderItem cloneShipOrderItem = new ShipOrderItem();
             BeanUtils.copyProperties(shipOrderItemDb, cloneShipOrderItem);
 //            cloneShipOrderItem.setId(snowFlake.nextId());
-            Long id=nextId(Arrays.asList(shipOrderItemDb.getId()+3000)).get(0);
+            Long id = nextId(Arrays.asList(shipOrderItemDb.getId() + 3000)).get(0);
             cloneShipOrderItem.setId(id);
             cloneShipOrderItem.setShipOrderId(cloneShipOrderId);
             cloneShipOrderItem.setXStatus(OutboundOrderXStatus.NEW.getValue());
@@ -319,7 +429,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             if (!opt.isPresent()) {
                 result.add(id);
             } else {
-                result.add(snowFlake.nextId()/1000);
+                result.add(snowFlake.nextId() / 1000);
             }
 
         }

@@ -1006,9 +1006,19 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 .withTrackTotalHits(true)//解除最大1W条限制
                 .build();
 //        nativeSearchQuery.setTrackTotalHitsUpTo(10000000);
-        SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
-        List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
 
+        String currentTaskName = "esQuery";
+        StopWatch stopWatch = new StopWatch("search");
+        stopWatch.start(currentTaskName);
+        SearchHits<InventoryInfo> search = elasticsearchRestTemplate.search(nativeSearchQuery, InventoryInfo.class);
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        //  log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
+        currentTaskName = "CreateInventoryInfo";
+        stopWatch.start(currentTaskName);
+        List<InventoryInfo> inventoryInfoList = search.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
         long count = search.getTotalHits();
         PageData<InventoryInfo> pageData = new PageData<>();
         pageData.setCount(count);

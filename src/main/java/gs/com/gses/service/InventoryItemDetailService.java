@@ -24,6 +24,8 @@ public interface InventoryItemDetailService extends IService<InventoryItemDetail
 
     Boolean checkDetailExist(InventoryItemDetailRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
 
+    Boolean checkDetailExistBatch(List<InventoryItemDetailRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
+
     void importExcelModifyMStr12(HttpServletResponse httpServletResponse, MultipartFile file) throws IOException;
 
     <T> void exportExcelModifyMStrTemplate(HttpServletResponse httpServletResponse, Class<T> cla) throws IOException;
@@ -31,7 +33,7 @@ public interface InventoryItemDetailService extends IService<InventoryItemDetail
     void downloadErrorData(HttpServletResponse response) throws IOException;
 
     List<AllocateModel> allocate(List<ShipOrderItemResponse> shipOrderItemList,
-                                 List<InventoryItemDetailResponse> detailList) throws Exception;
+                                 List<InventoryItemDetailResponse> detailList, Map<Long, String> palletMap) throws Exception;
 
 
     List<Map<String, String>> trunkBarCodePreview(long id) throws Exception;

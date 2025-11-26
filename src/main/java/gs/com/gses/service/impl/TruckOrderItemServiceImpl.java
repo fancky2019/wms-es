@@ -13,14 +13,11 @@ import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
-import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
-import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
-import gs.com.gses.model.response.wms.TruckOrderResponse;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
 import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.*;
@@ -126,6 +123,80 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         return shipOrderItemExist && detailExist;
     }
 
+
+    @Override
+    public Boolean checkAvailableBatch(List<TruckOrderItemRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
+        if (CollectionUtils.isEmpty(requestList)) {
+            throw new Exception("TruckOrderItemRequest is null");
+        }
+        String currentTaskName = "getMaterialInfo";
+        StopWatch stopWatch = new StopWatch("checkAvailableBatch");
+        stopWatch.start(currentTaskName);
+        List<String> materialCodeList = requestList.stream().map(p -> p.getMaterialCode()).distinct().collect(Collectors.toList());
+        List<Material> materialList = this.materialService.getByCodeList(materialCodeList);
+        Map<String, Material> materialMap = materialList.stream().collect(Collectors.toMap(p -> p.getXCode(), p -> p));
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "PrepareRequest";
+        stopWatch.start(currentTaskName);
+
+        List<ShipOrderItemRequest> shipOrderItemRequestList = new ArrayList<>();
+        List<InventoryItemDetailRequest> inventoryItemDetailRequestList = new ArrayList<>();
+        for (TruckOrderItemRequest request : requestList) {
+
+            if (StringUtils.isEmpty(request.getProjectNo())) {
+                throw new Exception("ProjectNo is null");
+            }
+
+            if (StringUtils.isEmpty(request.getMaterialCode())) {
+                throw new Exception("materialCode is null");
+            }
+            Material material = materialMap.get(request.getMaterialCode());
+            request.setMaterialId(material.getId());
+            ShipOrderItemRequest shipOrderItemRequest = new ShipOrderItemRequest();
+            shipOrderItemRequest.setM_Str7(request.getProjectNo());
+            shipOrderItemRequest.setM_Str12(request.getDeviceNo());
+            shipOrderItemRequest.setMaterialCode(request.getMaterialCode());
+            shipOrderItemRequest.setMaterialId(material.getId());
+            shipOrderItemRequest.setRequiredPkgQuantity(request.getQuantity());
+            shipOrderItemRequestList.add(shipOrderItemRequest);
+
+            InventoryItemDetailRequest inventoryItemDetailRequest = new InventoryItemDetailRequest();
+            inventoryItemDetailRequest.setM_Str7(request.getProjectNo());
+            inventoryItemDetailRequest.setM_Str12(request.getDeviceNo());
+            inventoryItemDetailRequest.setMaterialCode(request.getMaterialCode());
+            inventoryItemDetailRequest.setMaterialId(material.getId());
+            inventoryItemDetailRequest.setPackageQuantity(request.getQuantity());
+            inventoryItemDetailRequest.setIgnoreDeviceNo(request.getIgnoreDeviceNo());
+            inventoryItemDetailRequestList.add(inventoryItemDetailRequest);
+        }
+
+        if (matchedShipOrderItemResponseList == null) {
+            matchedShipOrderItemResponseList = new ArrayList<>();
+        }
+        if (allocateModelList == null) {
+            allocateModelList = new ArrayList<>();
+        }
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "checkItemExistBatch";
+        stopWatch.start(currentTaskName);
+        Boolean shipOrderItemExist = shipOrderItemService.checkItemExistBatch(shipOrderItemRequestList, matchedShipOrderItemResponseList);
+
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "checkDetailExistBatch";
+        stopWatch.start(currentTaskName);
+        Boolean detailExist = inventoryItemDetailService.checkDetailExistBatch(inventoryItemDetailRequestList, matchedShipOrderItemResponseList, allocateModelList);
+
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
+
+        return shipOrderItemExist && detailExist;
+
+    }
+
     @Override
     public Boolean add(TruckOrderItemRequest request) {
         TruckOrderItem truckOrderItem = new TruckOrderItem();
@@ -222,9 +293,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             if (CollectionUtils.isNotEmpty(truckOrderList)) {
                 List<Long> truckOrderIdList = truckOrderList.stream().map(TruckOrder::getId).distinct().collect(Collectors.toList());
                 truckOrderItemQueryWrapper.in(TruckOrderItem::getTruckOrderId, truckOrderIdList);
-            }
-            else {
-                return  new PageData<>();
+            } else {
+                return new PageData<>();
             }
         }
 
@@ -368,9 +438,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         truckOrderItemRequest.setTruckOrderIdList(deletedTruckOrderIdList);
         PageData<TruckOrderItemResponse> pageData = this.getTruckOrderItemPage(truckOrderItemRequest);
         List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
-        for(TruckOrderItemResponse item : truckOrderItemResponseList)
-        {
-            log.info("{},{},{}",item.getId(),item.getTruckOrderId(),retainId);
+        for (TruckOrderItemResponse item : truckOrderItemResponseList) {
+            log.info("{},{},{}", item.getId(), item.getTruckOrderId(), retainId);
         }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
         LambdaUpdateWrapper<TruckOrderItem> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
@@ -387,8 +456,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void auditFieldTest(Long id) {
-        TruckOrderItem truckOrderItem=  this.getById(id);
-        DateTimeFormatter dateTimeFormatter=DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        TruckOrderItem truckOrderItem = this.getById(id);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String timeStr = dateTimeFormatter.format(LocalDateTime.now());
         truckOrderItem.setRemark(timeStr);
         LambdaUpdateWrapper<TruckOrderItem> updateWrapper = new LambdaUpdateWrapper<TruckOrderItem>();

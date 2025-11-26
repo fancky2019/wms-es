@@ -135,6 +135,10 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
+        addTruckOrderAndItemAsync(request, token);
+        if (true) {
+            return;
+        }
         String currentTaskName = "validateParameter";
         StopWatch stopWatch = new StopWatch("addTruckOrderAndItem");
         stopWatch.start(currentTaskName);
@@ -198,7 +202,6 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //                allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
 //                allAllocateModelList.addAll(allocateModelList);
 //            }
-
 
 
         //region 多线程校验
@@ -353,7 +356,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         if (CollectionUtils.isEmpty(shipOrderPalletRequestList)) {
             throw new Exception("AllocateException:shipOrderPalletRequestList is empty");
         }
-
+//        if (true) {
+//            return;
+//        }
         //校验
         for (ShipOrderPalletRequest shipOrderPalletRequest : shipOrderPalletRequestList) {
             if (StringUtils.isEmpty(shipOrderPalletRequest.getShipOrderCode())) {
@@ -430,6 +435,191 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void addTruckOrderAndItemAsync(AddTruckOrderRequest request, String token) throws Throwable {
+        String currentTaskName = "validateParameter";
+        StopWatch stopWatch = new StopWatch("addTruckOrderAndItem");
+        stopWatch.start(currentTaskName);
+        if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
+            throw new Exception("装车单明细为空");
+        }
+        log.info("TruckOrderItemRequestList size {} ", request.getTruckOrderItemRequestList().size());
+        for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
+            if (StringUtils.isNotEmpty(itemRequest.getDeviceNo())) {
+                if (itemRequest.getIgnoreDeviceNo()) {
+                    String msg = MessageFormat.format("DeviceNo - {0} is not empty,can not ignore DeviceNo ", itemRequest.getDeviceNo());
+                    throw new Exception(msg);
+                }
+            }
+            if (StringUtils.isEmpty(itemRequest.getMaterialCode())) {
+                throw new Exception("MaterialCode fields contain blank values");
+            }
+            if (StringUtils.isEmpty(itemRequest.getProjectNo())) {
+                throw new Exception("ProjectNo fields contain blank values");
+            }
+        }
+
+        //多个字段分组
+        MultiKeyMap<MultiKey, List<TruckOrderItemRequest>> multiKeyMap = new MultiKeyMap<>();
+        for (TruckOrderItemRequest p : request.getTruckOrderItemRequestList()) {
+            MultiKey key = new MultiKey<>(p.getProjectNo(), p.getDeviceNo(), p.getMaterialCode());
+            List<TruckOrderItemRequest> group = multiKeyMap.get(key);
+            if (group == null) {
+                group = new ArrayList<>();
+                multiKeyMap.put(key, group);
+            }
+            group.add(p);
+        }
+
+        for (MultiKey multiKey : multiKeyMap.keySet()) {
+            List<TruckOrderItemRequest> itemList = multiKeyMap.get(multiKey);
+            if (itemList.size() > 1) {
+                throw new Exception("项目号设备号物料号重复 - " + StringUtils.join(multiKey.getKeys(), ","));
+            }
+        }
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "checkAvailable";
+        stopWatch.start(currentTaskName);
+        List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
+        HashSet<String> shipOrderCodeSet = new HashSet<>();
+        List<ShipOrderItemResponse> allMatchedShipOrderItemResponseList = new ArrayList<>();
+        List<AllocateModel> allAllocateModelList = new ArrayList<>();
+        this.truckOrderItemService.checkAvailableBatch(request.getTruckOrderItemRequestList(), allMatchedShipOrderItemResponseList, allAllocateModelList);
+        int n = 0;
+
+
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "prepareParameter";
+        stopWatch.start(currentTaskName);
+
+        String allMatchedShipOrderItemResponseListJson = objectMapper.writeValueAsString(allMatchedShipOrderItemResponseList);
+        log.info("allMatchedShipOrderItemResponseList -:{}", allMatchedShipOrderItemResponseListJson);
+
+        String allAllocateModelListJson = objectMapper.writeValueAsString(allAllocateModelList);
+        log.info("allAllocateModelList -:{}", allAllocateModelListJson);
+        List<TruckOrderItemRequest> splitTruckOrderItemRequestList = new ArrayList<>();
+        TruckOrderItemRequest newTruckOrderItemRequest = null;
+        //分组成map
+//        Map<Long, List<AllocateModel>> allocateModelMap = allAllocateModelList.stream()
+//                .collect(Collectors.groupingBy(AllocateModel::getShipOrderItemId));
+
+        for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
+
+            List<ShipOrderItemResponse> currentShipOrderItemResponseList = allMatchedShipOrderItemResponseList.stream().filter(p -> p.getM_Str7().equals(truckOrderItemRequest.getProjectNo()) && p.getMaterialId().equals(truckOrderItemRequest.getMaterialId())).collect(Collectors.toList());
+
+            if (StringUtils.isNotEmpty(truckOrderItemRequest.getDeviceNo())) {
+                currentShipOrderItemResponseList = currentShipOrderItemResponseList.stream().filter(p -> p.getM_Str12().equals(truckOrderItemRequest.getDeviceNo())).collect(Collectors.toList());
+            }
+
+            List<String> currentShipOrderCodeList = currentShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
+
+            for (String shipOrderCode : currentShipOrderCodeList) {
+
+                //当前装车明细对应发货单的明细
+                List<ShipOrderItemResponse> orderItemList = currentShipOrderItemResponseList.stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).distinct().collect(Collectors.toList());
+                //发货单明细的分配
+                List<Long> orderItemIdList = orderItemList.stream().map(p -> p.getId()).collect(Collectors.toList());
+                List<AllocateModel> shipOrderAllocateModelList = allAllocateModelList.stream().filter(p -> orderItemIdList.contains(p.getShipOrderItemId())).collect(Collectors.toList());
+
+                //根据分配库存拆分装车明细
+                for (ShipOrderItemResponse itemResponse : orderItemList) {
+                    List<AllocateModel> currentShipOrderItemAllocateModelList = shipOrderAllocateModelList.stream().filter(p -> p.getShipOrderItemId().equals(itemResponse.getId())).collect(Collectors.toList());
+                    for (AllocateModel allocateModel : currentShipOrderItemAllocateModelList) {
+                        newTruckOrderItemRequest = new TruckOrderItemRequest();
+                        BeanUtils.copyProperties(truckOrderItemRequest, newTruckOrderItemRequest);
+                        newTruckOrderItemRequest.setProjectName(itemResponse.getM_Str8());
+                        newTruckOrderItemRequest.setQuantity(allocateModel.getAllocateQuantity());
+                        newTruckOrderItemRequest.setApplyShipOrderCode(itemResponse.getApplyShipOrderCode());
+                        newTruckOrderItemRequest.setShipOrderId(itemResponse.getShipOrderId().toString());
+                        newTruckOrderItemRequest.setShipOrderCode(itemResponse.getShipOrderCode());
+                        newTruckOrderItemRequest.setShipOrderItemId(itemResponse.getId().toString());
+                        newTruckOrderItemRequest.setInventoryItemDetailId(allocateModel.getInventoryItemDetailId());
+                        newTruckOrderItemRequest.setPallet(allocateModel.getPallet());
+                        splitTruckOrderItemRequestList.add(newTruckOrderItemRequest);
+                    }
+                }
+                if (CollectionUtils.isEmpty(splitTruckOrderItemRequestList)) {
+                    throw new Exception("AllocateException:splitTruckOrderItemRequestList is empty");
+                }
+
+                //分配的托盘
+                List<String> itemAllocatedPalletList = shipOrderAllocateModelList.stream().map(AllocateModel::getPallet).distinct().collect(Collectors.toList());
+                //根据托盘拆分
+                for (String pallet : itemAllocatedPalletList) {
+                    BigDecimal currentPalletQuantity = shipOrderAllocateModelList.stream().filter(p -> p.getPallet().equals(pallet)).map(AllocateModel::getAllocateQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+                    List<ShipOrderPalletRequest> added = shipOrderPalletRequestList.stream().filter(p -> p.getShipOrderCode().equals(shipOrderCode)).collect(Collectors.toList());
+
+                    if (CollectionUtils.isNotEmpty(added)) {
+                        ShipOrderPalletRequest shipOrderPalletRequest = added.get(0);
+                        List<InventoryItemDetailRequest> inventoryItemDetailRequestList = shipOrderPalletRequest.getInventoryItemDetailDtoList();
+                        InventoryItemDetailRequest detailRequest = getInventoryItemDetailRequest(truckOrderItemRequest, currentPalletQuantity, pallet);
+                        inventoryItemDetailRequestList.add(detailRequest);
+                    } else {
+                        ShipOrderPalletRequest shipOrderPalletRequest = new ShipOrderPalletRequest();
+                        shipOrderPalletRequest.setShipOrderCode(shipOrderCode);
+                        List<InventoryItemDetailRequest> inventoryItemDetailRequestList = new ArrayList<>();
+                        InventoryItemDetailRequest detailRequest = getInventoryItemDetailRequest(truckOrderItemRequest, currentPalletQuantity, pallet);
+                        inventoryItemDetailRequestList.add(detailRequest);
+                        shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
+                        shipOrderPalletRequestList.add(shipOrderPalletRequest);
+                    }
+                }
+            }
+        }
+
+        if (CollectionUtils.isEmpty(shipOrderPalletRequestList)) {
+            throw new Exception("AllocateException:shipOrderPalletRequestList is empty");
+        }
+//        if (true) {
+//            return;
+//        }
+        //校验
+        for (ShipOrderPalletRequest shipOrderPalletRequest : shipOrderPalletRequestList) {
+            if (StringUtils.isEmpty(shipOrderPalletRequest.getShipOrderCode())) {
+                throw new Exception("AllocateException:ShipOrderPalletRequest ShipOrderCode is empty");
+            }
+            if (CollectionUtils.isEmpty(shipOrderPalletRequest.getInventoryItemDetailDtoList())) {
+                throw new Exception("AllocateException:ShipOrderPalletRequest InventoryItemDetailDtoList is empty");
+
+            }
+            for (InventoryItemDetailRequest detailRequest : shipOrderPalletRequest.getInventoryItemDetailDtoList()) {
+                if (StringUtils.isEmpty(detailRequest.getPallet())) {
+                    throw new Exception("AllocateException:InventoryItemDetailRequest Pallet is empty");
+                }
+                if (StringUtils.isEmpty(detailRequest.getMaterialCode())) {
+                    throw new Exception("AllocateException:InventoryItemDetailRequest MaterialCode is empty");
+                }
+                if (StringUtils.isEmpty(detailRequest.getM_Str7())) {
+                    throw new Exception("AllocateException:InventoryItemDetailRequest M_Str7 is empty");
+                }
+
+            }
+        }
+
+        AddTruckOrderRequest splitRequest = new AddTruckOrderRequest();
+        splitRequest.setTruckOrderItemRequestList(null);
+        BeanUtils.copyProperties(request, splitRequest);
+        splitRequest.setTruckOrderItemRequestList(splitTruckOrderItemRequestList);
+
+//        long createTime = LocalDateTime.now().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
+        long createTime = Instant.now().toEpochMilli();
+        splitRequest.getTruckOrderRequest().setCreationTime(LocalDateTime.now());
+        String addTruckOrderRequestJson = objectMapper.writeValueAsString(splitRequest);
+        log.info("addTruckOrderRequestJson -:{}", addTruckOrderRequestJson);
+
+
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        currentTaskName = "saveTruckOrderAndItem";
+        stopWatch.start(currentTaskName);
+        TruckOrder truckOrder = saveTruckOrderAndItem(splitRequest, createTime);
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
+    }
 
     private InventoryItemDetailRequest getInventoryItemDetailRequest(TruckOrderItemRequest truckOrderItemRequest, BigDecimal movedPkgQuantity, String pallet) {
         InventoryItemDetailRequest detailRequest = new InventoryItemDetailRequest();

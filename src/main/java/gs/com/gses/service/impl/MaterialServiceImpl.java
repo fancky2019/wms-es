@@ -30,8 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -64,6 +63,37 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
             throw new Exception("can't get material info  by " + materialCode);
         }
         return list.get(0);
+    }
+
+    @Override
+    public List<Material> getByCodeList(List<String> materialCodeList) throws Exception {
+        if (CollectionUtils.isEmpty(materialCodeList)) {
+            throw new Exception("materialCodeList is null ");
+        }
+        LambdaQueryWrapper<Material> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(Material::getXCode, materialCodeList);
+        List<Material> list = this.list(queryWrapper);
+//        Map<String, Material> map = list.stream().collect(Collectors.toMap(Material::getXCode, p -> p));
+//        for (String materialCode : materialCodeList) {
+//            Material material = map.get(materialCode);
+//            if (material == null) {
+//                throw new Exception("materialCode " + materialCode + " does not exist");
+//            }
+//        }
+
+        Set<String> existCodes = list.stream()
+                .map(Material::getXCode)
+                .collect(Collectors.toSet());
+
+        // 找出不存在的物料编码
+        List<String> notExistCodes = materialCodeList.stream()
+                .filter(code -> !existCodes.contains(code))
+                .collect(Collectors.toList());
+
+        if (!notExistCodes.isEmpty()) {
+            throw new RuntimeException("Non-existent materialCode: " + notExistCodes);
+        }
+        return list;
     }
 
     @Override

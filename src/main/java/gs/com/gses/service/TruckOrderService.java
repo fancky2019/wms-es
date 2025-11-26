@@ -21,6 +21,7 @@ import java.util.List;
  */
 public interface TruckOrderService extends IService<TruckOrder> {
     void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable;
+    void addTruckOrderAndItemAsync(AddTruckOrderRequest request, String token) throws Throwable;
 
     void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable;
 
