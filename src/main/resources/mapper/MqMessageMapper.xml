@@ -31,6 +31,7 @@
             <result property="version" column="Version" jdbcType="INTEGER"/>
             <result property="businessId" column="BusinessId" jdbcType="BIGINT"/>
             <result property="retry" column="Retry" jdbcType="BIT"/>
+            <result property="sendMq" column="SendMq" jdbcType="BIT"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -42,6 +43,6 @@
         BusinessKey,Deleted,ErrorStack,
         FailureReason,MaxRetryCount,NextRetryTime,
         RetryCount,Status,Version,
-        BusinessId,Retry
+        BusinessId,Retry,SendMq
     </sql>
 </mapper>

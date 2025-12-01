@@ -257,6 +257,19 @@ public class ShipOrderResponse {
      * 打印次数
      */
     private Long printingTimes;
+    /**
+     *
+     */
+    private String shipOrderCode;
 
+    /**
+     *
+     */
+    private String pallet;
+
+    /**
+     *
+     */
+    private Long inventoryItemDetailId;
     private static final long serialVersionUID = 1L;
 }

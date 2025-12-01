@@ -1,5 +1,6 @@
 package gs.com.gses.model.request.wms;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import gs.com.gses.model.request.EsRequestPage;
 import gs.com.gses.model.request.RequestPage;
@@ -144,6 +145,23 @@ public class TruckOrderItemRequest extends RequestPage {
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  // 用于 Spring 接收前端传入的字符串日期
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")  // 用于返回给前端时格式化 JSON 输出
     private LocalDateTime lastModificationTime;
+
+    /**
+     *
+     */
+    private Integer status;
+
+    /**
+     *
+     */
+    private String processMsg;
+
+    /**
+     *
+     */
+    private Date latestProcessTime;
+
+
 
     private static final long serialVersionUID = 1L;
 }

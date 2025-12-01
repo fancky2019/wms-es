@@ -6,40 +6,62 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.filter.UserInfoHolder;
+import gs.com.gses.listener.event.EwmsEvent;
+import gs.com.gses.listener.event.EwmsEventTopic;
 import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.entity.*;
+import gs.com.gses.model.enums.MqMessageSourceEnum;
+import gs.com.gses.model.enums.MqMessageStatus;
+import gs.com.gses.model.enums.TruckOrderStausEnum;
 import gs.com.gses.model.request.Sort;
+import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
+import gs.com.gses.model.request.wms.ShipOrderPalletRequest;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
+import gs.com.gses.model.response.wms.WmsResponse;
+import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
 import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.*;
 import gs.com.gses.mapper.TruckOrderItemMapper;
+import gs.com.gses.service.api.WmsService;
+import gs.com.gses.sse.ISseEmitterService;
 import gs.com.gses.utility.LambdaFunctionHelper;
+import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StopWatch;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -49,8 +71,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper, TruckOrderItem>
-        implements TruckOrderItemService {
+public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper, TruckOrderItem> implements TruckOrderItemService {
 
     @Autowired
     private ShipOrderItemService shipOrderItemService;
@@ -75,6 +96,20 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Autowired
     @Qualifier("upperObjectMapper")
     private ObjectMapper upperObjectMapper;
+    @Autowired
+    private RedissonClient redissonClient;
+    @Autowired
+    private RedisUtil redisUtil;
+    @Autowired
+    private MqMessageService mqMessageService;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private ISseEmitterService sseEmitterService;
+    @Autowired
+    private WmsService wmsService;
 
     @Override
     public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
@@ -205,8 +240,50 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
-    public Boolean addBatch(List<TruckOrderItemRequest> requestList) {
+    public void update(TruckOrderItem truckOrderItem) throws Exception {
+        String lockKey = RedisKey.UPDATE_TRUCK_ORDER_ITEM + ":" + truckOrderItem.getId();
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+
+            //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
+            log.info("update get lock {}", lockKey);
+
+            Integer oldVersion = truckOrderItem.getVersion();
+            truckOrderItem.setVersion(truckOrderItem.getVersion() + 1);
+            truckOrderItem.setLastModificationTime(LocalDateTime.now());
+            LambdaUpdateWrapper<TruckOrderItem> updateWrapper = new LambdaUpdateWrapper<TruckOrderItem>();
+            updateWrapper.eq(TruckOrderItem::getVersion, oldVersion);
+            updateWrapper.eq(TruckOrderItem::getId, truckOrderItem.getId());
+            boolean re = this.update(truckOrderItem, updateWrapper);
+            if (!re) {
+                String message = MessageFormat.format("TruckOrderItem update fail :id - {0} ,version - {1}", truckOrderItem.getId(), oldVersion);
+                throw new Exception(message);
+            }
+
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            //非事务操作在此释放
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+        }
+    }
+
+    @Override
+    public List<TruckOrderItem> addBatch(List<TruckOrderItemRequest> requestList) {
         List<TruckOrderItem> truckOrderItemList = new ArrayList<>();
         for (TruckOrderItemRequest request : requestList) {
             TruckOrderItem item = new TruckOrderItem();
@@ -219,7 +296,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
 //        this.customSaveBatch(truckOrderItemList);
 
-        return true;
+        return truckOrderItemList;
     }
 
     @Override
@@ -249,8 +326,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
 
         // 使用BATCH执行器
-        SqlSession sqlSession = sqlSessionTemplate.getSqlSessionFactory()
-                .openSession(ExecutorType.BATCH);
+        SqlSession sqlSession = sqlSessionTemplate.getSqlSessionFactory().openSession(ExecutorType.BATCH);
         try {
             TruckOrderItemMapper mapper = sqlSession.getMapper(TruckOrderItemMapper.class);
             for (TruckOrderItem item : list) {
@@ -443,8 +519,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
         LambdaUpdateWrapper<TruckOrderItem> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        truckOrderLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
-                .set(TruckOrderItem::getTruckOrderId, retainId);
+        truckOrderLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList).set(TruckOrderItem::getTruckOrderId, retainId);
 
         boolean re1 = this.update(null, truckOrderLambdaUpdateWrapper);
         if (!re1) {
@@ -463,6 +538,110 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         LambdaUpdateWrapper<TruckOrderItem> updateWrapper = new LambdaUpdateWrapper<TruckOrderItem>();
         updateWrapper.eq(TruckOrderItem::getId, truckOrderItem.getId());
         boolean re = this.update(truckOrderItem, updateWrapper);
+    }
+
+    @Transactional(rollbackFor = Exception.class,propagation = Propagation.REQUIRES_NEW)
+    @Override
+    public void debit(MqMessage mqMessage) throws Exception {
+        log.info("debit MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
+        String lockKey = RedisKey.DEBIT;
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+
+            //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+            //获取不到锁直接返回，下一个定时任务周期在处理
+
+            lockSuccessfully = lock.tryLock();
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                log.info(msg);
+                return;
+            }
+            log.info("update get lock {}", lockKey);
+            MqMessage dbMessage = this.mqMessageService.getById(mqMessage.getId());
+            if (dbMessage.getStatus().equals(MqMessageStatus.CONSUMED.getValue())) {
+                log.info("Msg id {} has been consumed", mqMessage.getId());
+            }
+
+            long truckOrderItemId = objectMapper.readValue(mqMessage.getMsgContent(), Long.class);
+            TruckOrderItem truckOrderItem = this.getById(truckOrderItemId);
+            if (truckOrderItem == null) {
+                String msg = MessageFormat.format("TruckOrderItem {0} doesn't exist", truckOrderItemId);
+                throw new Exception(msg);
+            }
+            if(truckOrderItem.getStatus().equals(TruckOrderStausEnum.DEBITED.getValue()))
+            {
+                log.info("truckOrderItem - {} has been debited",truckOrderItem.getId());
+                return;
+            }
+            ShipOrderPalletRequest shipOrderPalletRequest = new ShipOrderPalletRequest();
+            shipOrderPalletRequest.setShipOrderCode(truckOrderItem.getShipOrderCode());
+            List<InventoryItemDetailRequest> inventoryItemDetailRequestList = new ArrayList<>();
+            InventoryItemDetailRequest detailRequest = new InventoryItemDetailRequest();
+            detailRequest.setId(truckOrderItem.getInventoryItemDetailId());
+            detailRequest.setPallet(truckOrderItem.getPallet());
+            detailRequest.setMaterialCode(truckOrderItem.getMaterialCode());
+            detailRequest.setUpdateMStr12(true);
+            detailRequest.setM_Str7(truckOrderItem.getProjectNo());
+            detailRequest.setM_Str12(truckOrderItem.getDeviceNo());
+            detailRequest.setMovedPkgQuantity(truckOrderItem.getQuantity());
+            inventoryItemDetailRequestList.add(detailRequest);
+            shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
+            List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
+            shipOrderPalletRequestList.add(shipOrderPalletRequest);
+            //未登录会得到全局异常
+            String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequest);
+            log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
+            LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrderItem.getCreatorId());
+
+//            //            String token="";
+//            String token = "Bearer " + userTokenDto.getAccessToken();
+//            WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
+//            String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
+//            log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
+//            if (wmsResponse.getResult()) {
+//                try {
+//                    log.info("ThreadId - {}", Thread.currentThread().getId());
+//                    EwmsEvent event = new EwmsEvent(this, "debit");
+//                    event.setData(truckOrderItem.getTruckOrderId().toString());
+//                    event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
+//                    eventPublisher.publishEvent(event);
+//                } catch (Exception ex) {
+//                    log.error("Publish event error", ex);
+//                }
+//            } else {
+//                throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
+//            }
+
+            truckOrderItem.setStatus(TruckOrderStausEnum.DEBITED.getValue());
+            this.update(truckOrderItem);
+
+            //
+            String msg=objectMapper.writeValueAsString(truckOrderItem);
+            String userId=userTokenDto.getId();
+            //事务回调：事务同步，此处待处理， 所有事务提交了才会执行 事务回调
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                @Override
+                public void afterCompletion(int status) {
+                    sseEmitterService.sendMsgToClient(userId,msg);
+                }
+            });
+            //
+
+
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            //非事务操作在此释放
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+        }
 
 
     }

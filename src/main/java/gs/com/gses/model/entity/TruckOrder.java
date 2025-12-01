@@ -83,7 +83,11 @@ public class TruckOrder implements Serializable {
      */
     @TableField(value = "Deleted")
     private Integer deleted;
-
+    /**
+     *
+     */
+    @TableField(value = "Status")
+    private Integer status;
     /**
      * 
      */

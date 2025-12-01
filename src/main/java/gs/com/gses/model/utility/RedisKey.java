@@ -1,6 +1,7 @@
 package gs.com.gses.model.utility;
 
 import gs.com.gses.model.entity.TruckOrder;
+import gs.com.gses.model.entity.TruckOrderItem;
 
 public class RedisKey {
     public static final String UPDATE_INVENTORY_INFO = "redisson:updateInventoryInfo";
@@ -18,6 +19,7 @@ public class RedisKey {
     //region 表锁
     public static final String UPDATE_MQ_MESSAGE_INFO = "redisson:updateMqMessage";
     public static final String UPDATE_TRUCK_ORDER_INFO = "redisson:updateTruckOrder";
+    public static final String UPDATE_TRUCK_ORDER_ITEM = "redisson:updateTruckOrderItem";
 
     //endregion
 
@@ -25,4 +27,5 @@ public class RedisKey {
     public static final String INVENTORY_DELETED= "inventoryDeleted:";
     public static final String SBP_ENABLE= "Sbp:Enable";
 
+    public static final String DEBIT= "redisson:debit";
 }

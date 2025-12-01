@@ -73,7 +73,7 @@ public interface WmsService {
      * @return
      */
     @PostMapping("/ShipOrder/SubAssignPalletsByShipOrderBatch")
-    WmsResponse subAssignPalletsByShipOrderBatch(@RequestBody List<ShipOrderPalletRequest> dtoList, @RequestHeader("Authorization") String token) throws Throwable;
+    WmsResponse subAssignPalletsByShipOrderBatch(@RequestBody List<ShipOrderPalletRequest> dtoList, @RequestHeader("Authorization") String token) throws Exception;
 
 
     @PostMapping("/WmsTask/CompleteOffline")

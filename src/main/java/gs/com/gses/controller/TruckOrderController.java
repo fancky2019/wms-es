@@ -12,11 +12,13 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
 import gs.com.gses.model.response.wms.TruckOrderResponse;
 import gs.com.gses.service.TruckOrderService;
+import gs.com.gses.sse.ISseEmitterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -153,4 +155,37 @@ public class TruckOrderController {
         this.truckOrderService.exportTrunkOrderExcel(id, httpServletResponse);
     }
 
+    //region sse (sever-sent event)
+    @Autowired
+    private ISseEmitterService sseEmitterService;
+
+    /**
+     * 前段页面 user /index.html
+     *http://127.0.0.1:8081/sbp/utility/sseConnect/1
+     * @return
+     * @throws Exception
+     */
+    @GetMapping(value = "/sseConnect/")
+    public SseEmitter sseConnect() throws Exception {
+        LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
+        return sseEmitterService.createSseConnect(userTokenDto.getId());
+    }
+
+    @GetMapping(value = "/pushTest/")
+    public void pushTest() {
+        LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
+        sseEmitterService.pushTest(userTokenDto.getId());
+
+    }
+
+    @GetMapping(value = "/sseSendMsg")
+    public void sendMsg(String userId) {
+        sseEmitterService.sendMsgToClient(userId, "test");
+    }
+
+    @GetMapping(value = "/close/{userId}")
+    public void close(@PathVariable("userId") String userId) {
+        sseEmitterService.closeSseConnect(userId);
+    }
+    //endregion
 }

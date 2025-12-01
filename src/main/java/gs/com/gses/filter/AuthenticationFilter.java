@@ -89,6 +89,7 @@ public class AuthenticationFilter implements Filter {
 //           String jsonStr= objectMapper.writeValueAsString( dto.getData());
 //            LoginUserTokenDto pojoJacksonPojo = objectMapper.readValue(jsonStr, LoginUserTokenDto.class);
                     UserInfoHolder.setUser(userInfo);
+                    UserInfoHolder.setUser(userInfo.getId(), userInfo);
                     int m = 0;
                 }
 

@@ -196,6 +196,9 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         });
 
         List<ShipOrderItem> shipOrderItemList = baseMapper.selectList(wrapper);
+        if (CollectionUtils.isEmpty(shipOrderItemList)) {
+            throw new Exception("Get ShipOrderItem fail");
+        }
         List<Long> shipOrderIdList = shipOrderItemList.stream().map(ShipOrderItem::getShipOrderId).distinct().collect(Collectors.toList());
         List<ShipOrder> shipOrderList = this.shipOrderService.listByIds(shipOrderIdList);
 

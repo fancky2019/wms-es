@@ -17,6 +17,7 @@
             <result property="trunkNo" column="TrunkNo" jdbcType="VARCHAR"/>
             <result property="deleted" column="Deleted" jdbcType="TINYINT"/>
             <result property="version" column="Version" jdbcType="INTEGER"/>
+            <result property="status" column="Status" jdbcType="INTEGER"/>
             <result property="creatorId" column="CreatorId" jdbcType="VARCHAR"/>
             <result property="creatorName" column="CreatorName" jdbcType="VARCHAR"/>
             <result property="lastModifierId" column="LastModifierId" jdbcType="VARCHAR"/>
@@ -29,7 +30,7 @@
         Id,TruckOrderCode,SenderAddress,
         ReceiverAddress,SenderPhone,ReceiverPhone,
         SendTime,TrunkType,DriverPhone,
-        TrunkNo,Deleted,Version,
+        TrunkNo,Deleted,Version,Status,
         CreatorId,CreatorName,LastModifierId,
         LastModifierName,CreationTime,LastModificationTime
     </sql>

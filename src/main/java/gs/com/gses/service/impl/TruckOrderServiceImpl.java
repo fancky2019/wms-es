@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.listener.eventbus.CustomEvent;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
@@ -20,7 +21,9 @@ import gs.com.gses.mapper.TruckOrderMapper;
 import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrder;
+import gs.com.gses.model.entity.TruckOrderItem;
 import gs.com.gses.model.enums.MqMessageStatus;
+import gs.com.gses.model.enums.TruckOrderStausEnum;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
@@ -671,6 +674,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         if (request.getTruckOrderRequest().getCreationTime() != null) {
             creationTime = request.getTruckOrderRequest().getCreationTime();
         }
+        truckOrderRequest.setStatus(TruckOrderStausEnum.NOT_DEBITED.getValue());
         truckOrderRequest.setCreationTime(creationTime);
         truckOrderRequest.setLastModificationTime(creationTime);
         truckOrderRequest.setCreatorId(user.getId());
@@ -680,6 +684,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         TruckOrder truckOrder = add(request.getTruckOrderRequest());
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
+            truckOrderItemRequest.setStatus(TruckOrderStausEnum.NOT_DEBITED.getValue());
             truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
             truckOrderItemRequest.setCreationTime(LocalDateTime.now());
             truckOrderItemRequest.setLastModificationTime(LocalDateTime.now());
@@ -689,7 +694,53 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //            truckOrderItemRequest.setCreatorName(shipPickOrderResponse.getCreatorName());
 
         }
-        truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
+        List<TruckOrderItem> truckOrderItemList = truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
+
+        List<MqMessage> mqMessageList = new ArrayList<>();
+
+        for (TruckOrderItem truckOrderItem : truckOrderItemList) {
+            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+            String content = objectMapper.writeValueAsString(truckOrderItem.getId());
+            MqMessage mqMessage = new MqMessage();
+            mqMessage.setMsgId(msgId);
+            mqMessage.setBusinessId(truckOrder.getId());
+            mqMessage.setBusinessKey(truckOrder.getTruckOrderCode());
+            mqMessage.setMsgContent(content);
+            mqMessage.setExchange("");
+            mqMessage.setRouteKey("");
+            mqMessage.setQueue(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+            mqMessage.setTopic(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+            mqMessage.setRetry(true);
+            mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
+            mqMessage.setTraceId(MDC.get("traceId"));
+//        mqMessage.setRetryCount(0);
+//        //BaseRabbitMqHandler.TOTAL_RETRY_COUNT =4
+//        mqMessage.setMaxRetryCount(BaseRabbitMqHandler.TOTAL_RETRY_COUNT);
+            mqMessage.setDeleted(0);
+            mqMessage.setVersion(1);
+            mqMessage.setSendMq(false);
+            //13位  毫秒时间戳，不是秒9位  转时间戳
+            long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+//        LocalDateTime lNow=  LocalDateTime.ofInstant(
+//                Instant.ofEpochMilli(localDateTimeMillis),
+//                ZoneId.systemDefault()
+//        );
+            mqMessage.setCreationTime(localDateTimeMillis);
+            mqMessage.setLastModificationTime(localDateTimeMillis);
+            mqMessageList.add(mqMessage);
+        }
+
+        mqMessageService.addBatch(mqMessageList);
+
+
+        //            EwmsEvent event = new EwmsEvent(this, "TruckOrderComplete");
+        //  busProperties.getId():  contextId, // 通常是 spring.application.name
+        CustomEvent event = new CustomEvent(this, busProperties.getId(), mqMessageList);
+        log.info("ThreadId {} ,eventPublisher event", Thread.currentThread().getId());
+        //最好使用本地消息表
+        //发送消息的时候可能崩溃，不能保证消息被消费。如果发送成功了，还要设计消息表兜底失败的消息
+//        MyCustomEvent event = new MyCustomEvent(busProperties.getId());
+        eventPublisher.publishEvent(event);
         return truckOrder;
     }
 
@@ -855,7 +906,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //        );
             mqMessage.setCreationTime(localDateTimeMillis);
             mqMessage.setLastModificationTime(localDateTimeMillis);
-            mqMessageService.save(mqMessage);
+            mqMessageService.add(mqMessage);
 
         } catch (Exception ex) {
             log.error("", ex);

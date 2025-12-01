@@ -127,6 +127,19 @@ public class TruckOrderItemResponse implements Serializable {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastModificationTime;
+    /**
+     *
+     */
+    private Integer status;
 
+    /**
+     *
+     */
+    private String processMsg;
+
+    /**
+     *
+     */
+    private Date latestProcessTime;
     private static final long serialVersionUID = 1L;
 }

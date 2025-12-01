@@ -119,7 +119,7 @@ public class MqMessageRequest  extends RequestPage{
      *  0:未生产 1：已生产 2：已消费 3:消费失败
      */
     private Integer status;
-
+    private Boolean sendMq;
     /**
      *
      */

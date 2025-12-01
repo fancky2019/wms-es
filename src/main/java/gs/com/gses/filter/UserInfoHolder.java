@@ -2,12 +2,15 @@ package gs.com.gses.filter;
 
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 
+import java.util.HashMap;
+
 public class UserInfoHolder {
 
     /**
      * 使用ThreadLocal存储数据源
      */
     private static final ThreadLocal<LoginUserTokenDto> CONTEXT_HOLDER = new ThreadLocal<>();
+    private static HashMap<String, LoginUserTokenDto> userInfoMap = new HashMap<>();
 
     /**
      *
@@ -32,5 +35,24 @@ public class UserInfoHolder {
      */
     public static void removeUser() {
         CONTEXT_HOLDER.remove();
+    }
+
+
+    /**
+     *
+     *
+     * @return
+     */
+    public static void setUser(String userId, LoginUserTokenDto dto) {
+        userInfoMap.put(userId, dto);
+    }
+
+    /**
+     *
+     *
+     * @return
+     */
+    public static LoginUserTokenDto getUser(String userId) {
+        return userInfoMap.get(userId);
     }
 }

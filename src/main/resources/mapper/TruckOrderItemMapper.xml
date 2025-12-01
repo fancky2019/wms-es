@@ -27,16 +27,24 @@
             <result property="lastModifierName" column="LastModifierName" jdbcType="VARCHAR"/>
             <result property="creationTime" column="CreationTime" jdbcType="TIMESTAMP"/>
             <result property="lastModificationTime" column="LastModificationTime" jdbcType="TIMESTAMP"/>
+            <result property="status" column="Status" jdbcType="INTEGER"/>
+            <result property="processMsg" column="ProcessMsg" jdbcType="VARCHAR"/>
+            <result property="latestProcessTime" column="LatestProcessTime" jdbcType="TIMESTAMP"/>
+            <result property="shipOrderCode" column="ShipOrderCode" jdbcType="VARCHAR"/>
+            <result property="pallet" column="Pallet" jdbcType="VARCHAR"/>
+            <result property="inventoryItemDetailId" column="InventoryItemDetailId" jdbcType="BIGINT"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         Id,TruckOrderId,ProjectNo,
         ProjectName,ApplyShipOrderCode,ShipOrderId,
         ShipOrderItemId,MaterialId,MaterialCode,
-        DeviceName,DeviceNo,DriverPhone,
+        DeviceName,DeviceNo,
         Quantity,SendBatchNo,Remark,
         Deleted,Version,CreatorId,
         CreatorName,LastModifierId,LastModifierName,
-        CreationTime,LastModificationTime
+        CreationTime,LastModificationTime,Status,
+        ProcessMsg,LatestProcessTime,ShipOrderCode,
+        Pallet,InventoryItemDetailId
     </sql>
 </mapper>

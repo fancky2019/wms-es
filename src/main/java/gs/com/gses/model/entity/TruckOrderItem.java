@@ -148,6 +148,41 @@ public class TruckOrderItem implements Serializable {
      */
     @TableField(value = "LastModificationTime")
     private LocalDateTime lastModificationTime;
+    /**
+     *
+     */
+    @TableField(value = "Status")
+    private Integer status;
+
+    /**
+     *
+     */
+    @TableField(value = "ProcessMsg")
+    private String processMsg;
+
+    /**
+     *
+     */
+    @TableField(value = "LatestProcessTime")
+    private Date latestProcessTime;
+
+    /**
+     *
+     */
+    @TableField(value = "ShipOrderCode")
+    private String shipOrderCode;
+
+    /**
+     *
+     */
+    @TableField(value = "Pallet")
+    private String pallet;
+
+    /**
+     *
+     */
+    @TableField(value = "InventoryItemDetailId")
+    private Long inventoryItemDetailId;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

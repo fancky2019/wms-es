@@ -59,7 +59,7 @@ public class WmsServiceFallbackFactory implements FallbackFactory<WmsService> {
             }
 
             @Override
-            public WmsResponse subAssignPalletsByShipOrderBatch(List<ShipOrderPalletRequest> dtoList, String token) throws Throwable {
+            public WmsResponse subAssignPalletsByShipOrderBatch(List<ShipOrderPalletRequest> dtoList, String token) throws Exception {
 
                 //// 对非关键方法直接抛出异常
 //                throw throwable;

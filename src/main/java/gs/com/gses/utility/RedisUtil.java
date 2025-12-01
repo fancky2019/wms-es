@@ -1,8 +1,17 @@
 package gs.com.gses.utility;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.utility.RedisKey;
+import gs.com.gses.model.utility.RedisKeyConfigConst;
+import gs.com.gses.service.MqMessageService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.ss.formula.functions.T;
 import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -11,13 +20,77 @@ import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.security.PublicKey;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public class RedisUtil {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private RedissonClient redissonClient;
+
+    public Object getKeyWithLock(String key) {
+        log.info("getKeyWithLock {}", key);
+
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        String operationLockKey = key + RedisKeyConfigConst.KEY_LOCK_SUFFIX;
+        //并发访问，加锁控制，此方法内没有事务操作。可以用try finally 释放资源 否则用 MqSendUtil releaseLock 方法
+        RLock lock = redissonClient.getLock(operationLockKey);
+        boolean lockSuccessfully = false;
+        try {
+            long waitTime = 10;
+            lockSuccessfully = lock.tryLock(waitTime, TimeUnit.SECONDS);
+            if (lockSuccessfully) {
+                Object val = valueOperations.get(key);
+                return val;
+            } else {
+                //如果controller是void 返回类型，此处返回 MessageResult<Void>  也不会返回给前段
+                //超过waitTime ，扔未获得锁
+                log.info("getKeyWithLock: {} 获取锁失败", key);
+                return null;
+            }
+        } catch (Exception e) {
+            // throw  e;
+            log.error("", e);
+            return null;
+        } finally {
+            releaseLock(lock, lockSuccessfully);
+        }
+    }
+
+    public void setKeyWithLock(String key,Object keyVal) {
+        log.info("setKeyWithLock {}", key);
+
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        String operationLockKey = key + RedisKeyConfigConst.KEY_LOCK_SUFFIX;
+        //并发访问，加锁控制，此方法内没有事务操作。可以用try finally 释放资源 否则用 MqSendUtil releaseLock 方法
+        RLock lock = redissonClient.getLock(operationLockKey);
+        boolean lockSuccessfully = false;
+        try {
+            long waitTime = 10;
+            lockSuccessfully = lock.tryLock(waitTime, TimeUnit.SECONDS);
+            if (lockSuccessfully) {
+                valueOperations.set(key,keyVal);
+            } else {
+                //如果controller是void 返回类型，此处返回 MessageResult<Void>  也不会返回给前段
+                //超过waitTime ，扔未获得锁
+                log.info("getKeyWithLock: {} 获取锁失败", key);
+
+            }
+        } catch (Exception e) {
+            // throw  e;
+            log.error("", e);
+
+        } finally {
+            releaseLock(lock, lockSuccessfully);
+        }
+    }
 
     public <HK, HV> Map<HK, HV> getHashEntries(String key, Collection<HK> hashKeys) {
         List<HV> values = redisTemplate.<HK, HV>opsForHash().multiGet(key, hashKeys);
@@ -70,8 +143,9 @@ public class RedisUtil {
 
     public void releaseLock(RLock lock, boolean lockSuccessfully) {
         if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+            String lockName = lock.getName(); // 获取锁的名称
             lock.unlock();
-            log.info("release lock success");
+            log.info("release lock success, key: {}", lockName);
         }
     }
 }

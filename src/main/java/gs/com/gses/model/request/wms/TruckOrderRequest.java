@@ -70,7 +70,10 @@ public class TruckOrderRequest extends RequestPage {
      *
      */
     private Integer deleted;
-
+    /**
+     *
+     */
+    private Integer status;
     /**
      *
      */

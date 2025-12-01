@@ -72,7 +72,7 @@ public class TruckOrderResponse implements Serializable {
      *
      */
     private Integer version;
-
+    private Integer status;
     /**
      *
      */
