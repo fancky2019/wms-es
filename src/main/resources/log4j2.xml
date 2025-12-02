@@ -74,7 +74,7 @@
 <!--        最后继承 root 的级别。-->
 
         <!-- 新增：MyBatis Mapper 包设置为 DEBUG 级别打印sql脚本 -->
-        <logger name="gs.com.gses.mapper" level="DEBUG"/>
+<!--        <logger name="gs.com.gses.mapper" level="DEBUG"/>-->
 
 
         <!--        过滤框架的  DEBUG  INFO-->

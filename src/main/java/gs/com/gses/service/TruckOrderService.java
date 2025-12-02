@@ -1,7 +1,9 @@
 package gs.com.gses.service;
 
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
+import gs.com.gses.model.entity.TruckOrderItem;
 import gs.com.gses.model.request.wms.AddTruckOrderRequest;
 import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
@@ -21,6 +23,7 @@ import java.util.List;
  */
 public interface TruckOrderService extends IService<TruckOrder> {
     void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable;
+
     void addTruckOrderAndItemAsync(AddTruckOrderRequest request, String token) throws Throwable;
 
     void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable;
@@ -39,4 +42,8 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
 
     Boolean deleteByIds(List<Long> idList);
+
+    void synchronizeStatus(MqMessage message) throws Exception;
+
+    void updateTruckOrder(TruckOrder truckOrder) throws Exception;
 }

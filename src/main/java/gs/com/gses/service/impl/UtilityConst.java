@@ -13,6 +13,8 @@ public class UtilityConst {
     public final static String PRINT_PROCESS_INBOUND_CODE = "printProcessInBoundCode";
 
     public final static String TRUCK_ORDER_ITEM_DEBIT = "truckOrderItemDebit";
+    public final static String CHECK_TRUCK_ORDER_STATUS = "checkTruckOrderStatus";
+
 
     private final static LocalDateTime MQ_FAIL_HANDLER_TIME=null;
 

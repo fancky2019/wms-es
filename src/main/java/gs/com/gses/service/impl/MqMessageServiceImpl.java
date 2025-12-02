@@ -23,6 +23,7 @@ import gs.com.gses.model.utility.RedisKeyConfigConst;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.service.MqMessageService;
 import gs.com.gses.service.TruckOrderItemService;
+import gs.com.gses.service.TruckOrderService;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import gs.com.gses.utility.MqSendUtil;
 import gs.com.gses.utility.RedisUtil;
@@ -31,6 +32,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.slf4j.MDC;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +43,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StopWatch;
 
@@ -52,6 +55,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -96,7 +100,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Lazy
     private TruckOrderItemService truckOrderItemService;
 
-
+    @Autowired
+    private TruckOrderService truckOrderService;
     //12次
     private int[] retryPeriod = new int[]{
             5,
@@ -115,19 +120,76 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void add(MqMessage mqMessage) {
+    public MqMessage add(MqMessage mqMessage) {
         this.save(mqMessage);
+        return mqMessage;
     }
 
     @Override
-    public void addBatch(List<MqMessage> mqMessageList) {
+    public List<MqMessage> addBatch(List<MqMessage> mqMessageList) {
 
         //SQL Server的JDBC驱动限制：SQL Server的JDBC驱动在批量插入时无法完美支持返回所有插入记录的主键值，只能返回最后一个插入记录的主键值
         this.saveBatch(mqMessageList);
-
+        return mqMessageList;
 //        this.customSaveBatch(truckOrderItemList);
 
 //        return truckOrderItemList;
+    }
+
+    @Override
+    public MqMessage addMessage(MqMessageRequest request) throws Exception {
+        String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+        MqMessage mqMessage = new MqMessage();
+        mqMessage.setMsgId(msgId);
+        mqMessage.setBusinessId(request.getBusinessId());
+        mqMessage.setBusinessKey(request.getBusinessKey());
+        mqMessage.setMsgContent(request.getMsgContent());
+        mqMessage.setExchange("");
+        mqMessage.setRouteKey("");
+        mqMessage.setQueue(request.getQueue());
+        mqMessage.setTopic(request.getTopic());
+        mqMessage.setRetry(true);
+        mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
+        mqMessage.setTraceId(MDC.get("traceId"));
+
+        mqMessage.setDeleted(0);
+        mqMessage.setVersion(1);
+        mqMessage.setSendMq(request.getSendMq());
+        //13位  毫秒时间戳，不是秒9位  转时间戳
+        long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        mqMessage.setCreationTime(localDateTimeMillis);
+        mqMessage.setLastModificationTime(localDateTimeMillis);
+        return this.add(mqMessage);
+    }
+
+    @Override
+    public List<MqMessage> addMessageBatch(List<MqMessageRequest> requestList) throws Exception {
+        List<MqMessage> mqMessageList = new ArrayList<>();
+        for (MqMessageRequest request : requestList) {
+            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+            MqMessage mqMessage = new MqMessage();
+            mqMessage.setMsgId(msgId);
+            mqMessage.setBusinessId(request.getBusinessId());
+            mqMessage.setBusinessKey(request.getBusinessKey());
+            mqMessage.setMsgContent(request.getMsgContent());
+            mqMessage.setExchange("");
+            mqMessage.setRouteKey("");
+            mqMessage.setQueue(request.getQueue());
+            mqMessage.setTopic(request.getTopic());
+            mqMessage.setRetry(true);
+            mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
+            mqMessage.setTraceId(MDC.get("traceId"));
+
+            mqMessage.setDeleted(0);
+            mqMessage.setVersion(1);
+            mqMessage.setSendMq(request.getSendMq());
+            //13位  毫秒时间戳，不是秒9位  转时间戳
+            long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            mqMessage.setCreationTime(localDateTimeMillis);
+            mqMessage.setLastModificationTime(localDateTimeMillis);
+            mqMessageList.add(mqMessage);
+        }
+        return this.addBatch(mqMessageList);
     }
 
     @Override
@@ -235,6 +297,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     public void updateStaus(long mqMessageId, MqMessageStatus status) throws Exception {
 //        this.updateById(mqMessage);
 //        this.update(mqMessage, new LambdaUpdateWrapper<MqMessage>().eq(MqMessage::getId, mqMessage.getId()));
+        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
 
         String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + mqMessageId;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
@@ -555,7 +618,15 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //            mqMessageService.consume(message);
             if (message.getMaxRetryCount() == null || (message.getMaxRetryCount() != null && message.getMaxRetryCount() > message.getRetryCount())) {
                 log.info("reConsume MqMessage id {} msgId {}", message.getId(), message.getMsgId());
-                consume(message);
+//                consume(message);
+
+                Object proxyObj = AopContext.currentProxy();
+                MqMessageService mqMessageService = null;
+                if (proxyObj instanceof MqMessageService) {
+                    mqMessageService = (MqMessageService) proxyObj;
+                    mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
+                }
+
             } else {
                 log.info("exceed  max retry count {}", message.getId());
             }
@@ -574,6 +645,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
 
 
+//        事务模板方法
         // 在这里执行事务性操作
         // 操作成功则事务提交，否则事务回滚
         Exception e = transactionTemplate.execute(transactionStatus -> {
@@ -593,19 +665,29 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //                            }
                         // productTestService.mqMessageConsume(message);
                         //update message status
-                        message.setStatus(MqMessageStatus.CONSUMED.getValue());
-                        this.update(message);
+//                        message.setStatus(MqMessageStatus.CONSUMED.getValue());
+//                        this.update(message);
 
 //                    if (message.getId() % 2 != 0) {
 //                        throw new Exception("test");
 //                    }
                         break;
-                    case UtilityConst.TRUCK_ORDER_ITEM_DEBIT:
-                        truckOrderItemService.debit(message);
-                        break;
+//                    case UtilityConst.TRUCK_ORDER_ITEM_DEBIT:
+//                        truckOrderItemService.debit(message);
+//                        break;
+//                    case UtilityConst.CHECK_TRUCK_ORDER_STATUS:
+//                        truckOrderService.synchronizeStatus(message);
+//                        break;
                     default:
                         break;
                 }
+
+
+                MqMessage dbMessage = this.getById(message.getId());
+                if (dbMessage != null && !dbMessage.getStatus().equals(MqMessageStatus.CONSUMED)) {
+                    updateStaus(dbMessage.getId(), MqMessageStatus.CONSUMED);
+                }
+
                 return null;
             } catch (Exception ex) {
                 log.info("executing consume message {} fail", message.getId());
@@ -641,12 +723,13 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             });
         }
 
+
     }
 
 
     private void setRetryInfo(MqMessage message) {
         int retryCount = message.getRetryCount() == null ? 0 : message.getRetryCount();
-        int index = retryCount > retryPeriod.length ?  retryPeriod.length-1 : retryCount;
+        int index = retryCount > retryPeriod.length ? retryPeriod.length - 1 : retryCount;
         LocalDateTime nextRetryTime = LocalDateTime.now().plusSeconds(retryPeriod[index]);
         message.setNextRetryTime(nextRetryTime);
         message.setRetryCount(++retryCount);
@@ -798,18 +881,30 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             MqMessage dbMessage = this.getById(mqMessage.getId());
             if (dbMessage.getStatus().equals(MqMessageStatus.CONSUMED.getValue())) {
                 log.info("Msg id {} has been consumed", mqMessage.getId());
+                return;
             }
 
             //do business
             try {
                 switch (dbMessage.getTopic()) {
                     case UtilityConst.TRUCK_ORDER_ITEM_DEBIT:
-                        //处理业务
                         truckOrderItemService.debit(mqMessage);
+                        break;
+                    case UtilityConst.CHECK_TRUCK_ORDER_STATUS:
+                        truckOrderService.synchronizeStatus(mqMessage);
                         break;
                     default:
                         break;
                 }
+//                Object proxyObj = AopContext.currentProxy();
+//                MqMessageService mqMessageService = null;
+//                if (proxyObj instanceof MqMessageService) {
+//                    mqMessageService = (MqMessageService) proxyObj;
+//                    //   updateStaus 事务释放 redis 锁
+//                    mqMessageService.updateStaus(dbMessage.getId(), MqMessageStatus.CONSUMED);
+//                }
+                String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
+
                 updateStaus(dbMessage.getId(), MqMessageStatus.CONSUMED);
             } catch (Exception ex) {
                 //这样每次处理都会打异常信息

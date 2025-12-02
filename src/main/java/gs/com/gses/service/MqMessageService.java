@@ -18,9 +18,13 @@ import java.util.List;
  * @createDate 2024-08-12 14:23:55
  */
 public interface MqMessageService extends IService<MqMessage> {
-    void add(MqMessage mqMessage);
+    MqMessage add(MqMessage mqMessage);
 
-    void addBatch(List<MqMessage> mqMessageList);
+    List<MqMessage>  addBatch(List<MqMessage> mqMessageList);
+
+    MqMessage addMessage(MqMessageRequest mqMessage) throws Exception;
+
+    List<MqMessage>  addMessageBatch(List<MqMessageRequest> requestList) throws Exception;
 
     void delete(MqMessage mqMessage);
 

@@ -28,4 +28,6 @@ public class RedisKey {
     public static final String SBP_ENABLE= "Sbp:Enable";
 
     public static final String DEBIT= "redisson:debit";
+    public static final String SYNCHRONIZE_TRUCK_ORDER_STATUS= "redisson:synchronizeTruckOrderStatus";
+
 }

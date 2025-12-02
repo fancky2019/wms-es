@@ -42,6 +42,7 @@ import gs.com.gses.service.ShipPickOrderService;
 import gs.com.gses.service.TruckOrderItemService;
 import gs.com.gses.service.TruckOrderService;
 import gs.com.gses.service.api.WmsService;
+import gs.com.gses.sse.ISseEmitterService;
 import gs.com.gses.utility.FileUtil;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import gs.com.gses.utility.PathUtils;
@@ -59,10 +60,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.bus.BusProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -103,6 +107,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private String wmsFrontServer;
 
     @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
     private TruckOrderItemService truckOrderItemService;
 
     @Autowired
@@ -134,10 +141,14 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private RedisUtil redisUtil;
     @Autowired
     private Executor threadPoolExecutor;
+    @Autowired
+    private ISseEmitterService sseEmitterService;
+
 
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
+        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
         addTruckOrderAndItemAsync(request, token);
         if (true) {
             return;
@@ -441,6 +452,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItemAsync(AddTruckOrderRequest request, String token) throws Throwable {
+        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
         String currentTaskName = "validateParameter";
         StopWatch stopWatch = new StopWatch("addTruckOrderAndItem");
         stopWatch.start(currentTaskName);
@@ -695,48 +707,31 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         }
         List<TruckOrderItem> truckOrderItemList = truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
-
-        List<MqMessage> mqMessageList = new ArrayList<>();
-
+        List<MqMessageRequest> mqMessageRequestList = new ArrayList<>();
         for (TruckOrderItem truckOrderItem : truckOrderItemList) {
-            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
             String content = objectMapper.writeValueAsString(truckOrderItem.getId());
-            MqMessage mqMessage = new MqMessage();
-            mqMessage.setMsgId(msgId);
+            MqMessageRequest mqMessage = new MqMessageRequest();
             mqMessage.setBusinessId(truckOrder.getId());
-            mqMessage.setBusinessKey(truckOrder.getTruckOrderCode());
+            mqMessage.setBusinessKey(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
             mqMessage.setMsgContent(content);
-            mqMessage.setExchange("");
-            mqMessage.setRouteKey("");
             mqMessage.setQueue(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
             mqMessage.setTopic(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
-            mqMessage.setRetry(true);
-            mqMessage.setMaxRetryCount(12);
-            mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
-            mqMessage.setTraceId(MDC.get("traceId"));
-//        mqMessage.setRetryCount(0);
-//        //BaseRabbitMqHandler.TOTAL_RETRY_COUNT =4
-//        mqMessage.setMaxRetryCount(BaseRabbitMqHandler.TOTAL_RETRY_COUNT);
-            mqMessage.setDeleted(0);
-            mqMessage.setVersion(1);
             mqMessage.setSendMq(false);
-            //13位  毫秒时间戳，不是秒9位  转时间戳
-            long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-//        LocalDateTime lNow=  LocalDateTime.ofInstant(
-//                Instant.ofEpochMilli(localDateTimeMillis),
-//                ZoneId.systemDefault()
-//        );
-            mqMessage.setCreationTime(localDateTimeMillis);
-            mqMessage.setLastModificationTime(localDateTimeMillis);
-            mqMessageList.add(mqMessage);
+            mqMessageRequestList.add(mqMessage);
         }
+        List<MqMessage> mqMessageList = mqMessageService.addMessageBatch(mqMessageRequestList);
 
-        mqMessageService.addBatch(mqMessageList);
+        // 获取当前服务的ID springBootProject
+        String serviceId = applicationContext.getId();
+        // 或使用 busProperties.getId()
+        // String serviceId = busProperties.getId();
 
+        // 获取当前服务实例ID（通常与busProperties.getId()相同）  springBootProject:8088:f89b296d4ca5589865e70da7de918722
+        String originService = busProperties.getId();
 
         //            EwmsEvent event = new EwmsEvent(this, "TruckOrderComplete");
         //  busProperties.getId():  contextId, // 通常是 spring.application.name
-        CustomEvent event = new CustomEvent(this, busProperties.getId(), mqMessageList);
+        CustomEvent event = new CustomEvent(this, originService, mqMessageList);
         log.info("ThreadId {} ,eventPublisher event", Thread.currentThread().getId());
         //最好使用本地消息表
         //发送消息的时候可能崩溃，不能保证消息被消费。如果发送成功了，还要设计消息表兜底失败的消息
@@ -1193,9 +1188,134 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     public Boolean deleteByIds(List<Long> idList) {
         LambdaUpdateWrapper<TruckOrder> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList).set(TruckOrder::getDeleted, 1);
-
         boolean re = this.update(null, truckOrderLambdaUpdateWrapper);
         return re;
+    }
+
+    @Override
+    public void synchronizeStatus(MqMessage mqMessage) throws Exception {
+
+        log.info("synchronizeStatus MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
+        String lockKey = RedisKey.SYNCHRONIZE_TRUCK_ORDER_STATUS + ":" + mqMessage.getBusinessId();
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+            lockSuccessfully = lock.tryLock();
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                log.info(msg);
+                return;
+            }
+            log.info("update get lock {}", lockKey);
+
+            long truckOrderId = mqMessage.getBusinessId();
+            TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
+            truckOrderItemRequest.setTruckOrderId(truckOrderId);
+            truckOrderItemRequest.setSearchCount(false);
+            truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
+            PageData<TruckOrderItemResponse> pageData = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
+            List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
+            if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
+                throw new Exception("Can't get TruckOrderItem by TruckOrderId " + truckOrderId);
+            }
+            List<Integer> statusList = truckOrderItemResponseList.stream().map(p -> p.getStatus())
+                    .sorted(Collections.reverseOrder())
+                    .distinct().collect(Collectors.toList());
+
+
+            TruckOrder truckOrder = this.getById(truckOrderId);
+            if (truckOrder == null) {
+                String msg = MessageFormat.format("TruckOrder {0} doesn't exist", truckOrderId);
+                throw new Exception(msg);
+            }
+            if (truckOrder.getStatus().equals(TruckOrderStausEnum.DEBITED.getValue())) {
+                log.info("truckOrderItem - {} has been debited", truckOrder.getId());
+                return;
+            }
+            int truckOrderStatus = truckOrder.getStatus() == null ? 0 : truckOrder.getStatus().intValue();
+            boolean updateTruckOrder = false;
+            int maxStatus = statusList.get(0);
+//            TruckOrderStausEnum itemStausEnum = TruckOrderStausEnum.getTruckOrderStausEnum(maxStatus);
+//            switch (itemStausEnum) {
+//                //不能使用枚举
+//                case NOT_DEBITED:
+//                    break;
+//                case DEBITING:
+//                    break;
+//                case DEBITED:
+//                    break;
+//                default:
+//                    break;
+//            }
+            if (truckOrderStatus < maxStatus) {
+                updateTruckOrder = true;
+                truckOrder.setStatus(maxStatus);
+            }
+            if (updateTruckOrder) {
+                this.updateTruckOrder(truckOrder);
+            }
+            LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrder.getCreatorId());
+            if (userTokenDto != null) {
+                String msg = objectMapper.writeValueAsString(truckOrder);
+                String userId = userTokenDto.getId();
+                //事务回调：事务同步，此处待处理， 所有事务提交了才会执行 事务回调
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        sseEmitterService.sendMsgToClient(userId, msg);
+                    }
+                });
+            }
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+        }
+
+    }
+
+    @Override
+    public void updateTruckOrder(TruckOrder truckOrder) throws Exception {
+        String lockKey = RedisKey.UPDATE_TRUCK_ORDER_INFO + ":" + truckOrder.getId();
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+
+            //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
+            log.info("update get lock {}", lockKey);
+
+            Integer oldVersion = truckOrder.getVersion();
+            truckOrder.setVersion(truckOrder.getVersion() + 1);
+            truckOrder.setLastModificationTime(LocalDateTime.now());
+            LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<TruckOrder>();
+            updateWrapper.eq(TruckOrder::getVersion, oldVersion);
+            updateWrapper.eq(TruckOrder::getId, truckOrder.getId());
+            boolean re = this.update(truckOrder, updateWrapper);
+            if (!re) {
+                String message = MessageFormat.format("TruckOrder update fail :id - {0} ,version - {1}", truckOrder.getId(), oldVersion);
+                throw new Exception(message);
+            }
+
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            //非事务操作在此释放
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+        }
     }
 
 }

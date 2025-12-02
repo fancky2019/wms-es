@@ -4,6 +4,7 @@ package gs.com.gses.listener.eventbus;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.enums.MqMessageStatus;
+import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.service.MqMessageService;
 import gs.com.gses.service.ShipOrderService;
 import gs.com.gses.service.TruckOrderItemService;
@@ -17,8 +18,11 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 import gs.com.gses.service.impl.UtilityConst;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Arrays;
 import java.util.List;
@@ -45,6 +49,9 @@ public class CustomEventListener {
 
     @Autowired
     MqMessageService mqMessageService;
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
 
     //multiplier 2 ,每次重试时间间隔翻倍
     @Async("threadPoolExecutor")
@@ -61,6 +68,7 @@ public class CustomEventListener {
     @TransactionalEventListener //默认事务成功之后发送
 //    @TransactionalEventListener  (phase = TransactionPhase.AFTER_COMMIT)
 //    @EventListener  // 事务不成功也会检测到发送消息
+//    @Transactional(propagation = Propagation.REQUIRED) // @Async+@TransactionalEventListener会使service 层方法的事务失效
     public void handleMyCustomEvent(CustomEvent event) throws Exception {
         //此处简单设计，失败了落表重试处理。或者重新设计本地消息表
         //ApplicationEventPublisher eventPublisher;
@@ -74,14 +82,42 @@ public class CustomEventListener {
         for (MqMessage message : messageList) {
             try {
 
+                //        事务模板方法
+                // 在这里执行事务性操作
+                // 操作成功则事务提交，否则事务回滚
+                Exception e = transactionTemplate.execute(transactionStatus -> {
 
-                if (message.getSendMq()) {
-                    log.info("messageId {} SendMq,", message.getId());
-                    mqMessageService.rePublish(Arrays.asList(message));
-                } else {
-                    mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.EVENT);
-                    int nn = 1;
-                }
+                    // 事务性操作
+                    // 如果操作成功，不抛出异常，事务将提交
+
+                    try {
+
+                        if (message.getSendMq()) {
+                            log.info("messageId {} SendMq,", message.getId());
+                            mqMessageService.rePublish(Arrays.asList(message));
+                        } else {
+                            mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.EVENT);
+                            int nn = 1;
+                        }
+
+                        return null;
+                    } catch (Exception ex) {
+                        log.info("executing consume message {} fail", message.getId());
+                        log.error("", ex);
+                        // 如果操作失败，抛出异常，事务将回滚
+                        transactionStatus.setRollbackOnly();
+                        return ex;
+                        //此处是定时任务 ，处理异常不抛出
+//                    transactionStatus.setRollbackOnly();
+//                    throw  e;
+                    }
+
+
+//        TransactionCallbackWithoutResult
+
+                });
+
+
             } catch (Exception ex) {
                 int n1 = 0;
             }

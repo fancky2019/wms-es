@@ -18,10 +18,7 @@ import gs.com.gses.model.enums.MqMessageStatus;
 import gs.com.gses.model.enums.TruckOrderStausEnum;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
-import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
-import gs.com.gses.model.request.wms.ShipOrderItemRequest;
-import gs.com.gses.model.request.wms.ShipOrderPalletRequest;
-import gs.com.gses.model.request.wms.TruckOrderItemRequest;
+import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
@@ -45,6 +42,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.slf4j.MDC;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -540,9 +538,10 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         boolean re = this.update(truckOrderItem, updateWrapper);
     }
 
-    @Transactional(rollbackFor = Exception.class,propagation = Propagation.REQUIRES_NEW)
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     @Override
     public void debit(MqMessage mqMessage) throws Exception {
+        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
         log.info("debit MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
         String lockKey = RedisKey.DEBIT;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
@@ -563,6 +562,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             MqMessage dbMessage = this.mqMessageService.getById(mqMessage.getId());
             if (dbMessage.getStatus().equals(MqMessageStatus.CONSUMED.getValue())) {
                 log.info("Msg id {} has been consumed", mqMessage.getId());
+                return;
             }
 
             long truckOrderItemId = objectMapper.readValue(mqMessage.getMsgContent(), Long.class);
@@ -571,9 +571,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
                 String msg = MessageFormat.format("TruckOrderItem {0} doesn't exist", truckOrderItemId);
                 throw new Exception(msg);
             }
-            if(truckOrderItem.getStatus().equals(TruckOrderStausEnum.DEBITED.getValue()))
-            {
-                log.info("truckOrderItem - {} has been debited",truckOrderItem.getId());
+            if (truckOrderItem.getStatus().equals(TruckOrderStausEnum.DEBITED.getValue())) {
+                log.info("truckOrderItem - {} has been debited", truckOrderItem.getId());
                 return;
             }
             ShipOrderPalletRequest shipOrderPalletRequest = new ShipOrderPalletRequest();
@@ -595,7 +594,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequest);
             log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
             LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrderItem.getCreatorId());
-
+            if (userTokenDto == null) {
+                throw new Exception("Get token fail.");
+            }
 //            //            String token="";
 //            String token = "Bearer " + userTokenDto.getAccessToken();
 //            WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
@@ -619,18 +620,28 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             truckOrderItem.setStatus(TruckOrderStausEnum.DEBITED.getValue());
             this.update(truckOrderItem);
 
+
+            MqMessageRequest mqMessageRequest = new MqMessageRequest();
+            String content = objectMapper.writeValueAsString(truckOrderItem.getTruckOrderId());
+            mqMessageRequest.setBusinessId(truckOrderItem.getTruckOrderId());
+            mqMessageRequest.setBusinessKey(UtilityConst.CHECK_TRUCK_ORDER_STATUS);
+            mqMessageRequest.setMsgContent(content);
+            mqMessageRequest.setQueue(UtilityConst.CHECK_TRUCK_ORDER_STATUS);
+            mqMessageRequest.setTopic(UtilityConst.CHECK_TRUCK_ORDER_STATUS);
+            mqMessageRequest.setSendMq(false);
+            mqMessageService.addMessage(mqMessageRequest);
             //
-            String msg=objectMapper.writeValueAsString(truckOrderItem);
-            String userId=userTokenDto.getId();
+            String msg = objectMapper.writeValueAsString(truckOrderItem);
+            String userId = userTokenDto.getId();
             //事务回调：事务同步，此处待处理， 所有事务提交了才会执行 事务回调
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
                 @Override
                 public void afterCompletion(int status) {
-                    sseEmitterService.sendMsgToClient(userId,msg);
+                    sseEmitterService.sendMsgToClient(userId, msg);
+
                 }
             });
             //
-
 
 
         } catch (Exception ex) {
