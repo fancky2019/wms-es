@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -16,7 +17,7 @@ import java.util.Date;
 @Data
 public class MqMessage implements Serializable {
     /**
-     *
+     *NONE	跟随全局配置	未设置策略时，默认跟随全局配置。全局配置默认值通常为 ASSIGN_ID（雪花算法）。
      */
     @TableId(value = "Id")
     private Long id;
@@ -139,7 +140,7 @@ public class MqMessage implements Serializable {
      *
      */
     @TableField(value = "NextRetryTime")
-    private Date nextRetryTime;
+    private LocalDateTime nextRetryTime;
 
     /**
      *

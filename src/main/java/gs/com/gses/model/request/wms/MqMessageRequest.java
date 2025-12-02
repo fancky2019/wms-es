@@ -2,6 +2,7 @@ package gs.com.gses.model.request.wms;
 
 import gs.com.gses.model.request.RequestPage;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 public class MqMessageRequest  extends RequestPage{
@@ -108,7 +109,7 @@ public class MqMessageRequest  extends RequestPage{
     /**
      *
      */
-    private Date nextRetryTime;
+    private LocalDateTime nextRetryTime;
 
     /**
      *

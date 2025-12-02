@@ -711,6 +711,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             mqMessage.setQueue(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
             mqMessage.setTopic(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
             mqMessage.setRetry(true);
+            mqMessage.setMaxRetryCount(12);
             mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
             mqMessage.setTraceId(MDC.get("traceId"));
 //        mqMessage.setRetryCount(0);

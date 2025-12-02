@@ -97,6 +97,22 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     private TruckOrderItemService truckOrderItemService;
 
 
+    //12次
+    private int[] retryPeriod = new int[]{
+            5,
+            10,
+            20,
+            40,
+            60,
+            2 * 60,
+            4 * 60,
+            8 * 60,
+            16 * 60,
+            32 * 60,
+            1 * 60 * 60,
+            2 * 60 * 60};
+
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void add(MqMessage mqMessage) {
@@ -407,14 +423,14 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 String timeStr = formatter.format(LocalDateTime.now());
 
                 //将更新时间写入redis
-                String latestExecutingTimeRedis = valueOperations.get(RedisKeyConfigConst.MQ_FAIL_HANDLER_TIME);
+//                String latestExecutingTimeRedis = valueOperations.get(RedisKeyConfigConst.MQ_FAIL_HANDLER_TIME);
                 //redis key 不存在
-                if (StringUtils.isEmpty(latestExecutingTimeRedis)) {
-                    startQueryTime = null;
-                } else {
-                    startQueryTime = LocalDateTime.parse(latestExecutingTimeRedis, formatter);
-                }
-                valueOperations.set(RedisKeyConfigConst.MQ_FAIL_HANDLER_TIME, timeStr);
+//                if (StringUtils.isEmpty(latestExecutingTimeRedis)) {
+//                    startQueryTime = null;
+//                } else {
+//                    startQueryTime = LocalDateTime.parse(latestExecutingTimeRedis, formatter);
+//                }
+//                valueOperations.set(RedisKeyConfigConst.MQ_FAIL_HANDLER_TIME, timeStr);
 
                 LambdaQueryWrapper<MqMessage> queryWrapper = new LambdaQueryWrapper<>();
                 //mybatis-plus and or
@@ -434,6 +450,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //                    long startQueryMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 //                    queryWrapper.ge(MqMessage::getLastModificationTime, startQueryMillis);
                 }
+                queryWrapper.lt(MqMessage::getNextRetryTime, LocalDateTime.now());
 //                queryWrapper.ne(MqMessage::getStatus, 2);
                 queryWrapper.and(p -> p.isNull(MqMessage::getStatus).or(m -> m.ne(MqMessage::getStatus, 2)));
                 List<MqMessage> mqMessageList = this.list(queryWrapper);
@@ -610,9 +627,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             //将该条事务的异常保存
             transactionTemplate.execute(transactionStatus -> {
                 try {
+                    setRetryInfo(message);
                     //失败了就更新一下版本号和更新时间，根据更新时间的 索引 提高查询速度
                     message.setStatus(MqMessageStatus.CONSUME_FAIL.getValue());
-                    message.setRetryCount(message.getRetryCount() + 1);
                     message.setFailureReason(e.getMessage());
                     this.update(message);
                     return true;
@@ -626,6 +643,14 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
     }
 
+
+    private void setRetryInfo(MqMessage message) {
+        int retryCount = message.getRetryCount() == null ? 0 : message.getRetryCount();
+        int index = retryCount > retryPeriod.length ?  retryPeriod.length-1 : retryCount;
+        LocalDateTime nextRetryTime = LocalDateTime.now().plusSeconds(retryPeriod[index]);
+        message.setNextRetryTime(nextRetryTime);
+        message.setRetryCount(++retryCount);
+    }
 
     int i = 1;
 
@@ -789,9 +814,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             } catch (Exception ex) {
                 //这样每次处理都会打异常信息
                 log.error("", ex);
-                int retryCount = dbMessage.getRetryCount() == null ? 0 : dbMessage.getRetryCount();
+                setRetryInfo(dbMessage);
                 dbMessage.setStatus(MqMessageStatus.CONSUME_FAIL.getValue());
-                dbMessage.setRetryCount(retryCount + 1);
                 dbMessage.setFailureReason(ex.getMessage());
                 this.update(dbMessage);
             }

@@ -3,6 +3,7 @@ package gs.com.gses.model.response.wms;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 public class MqMessageResponse {
@@ -109,7 +110,7 @@ public class MqMessageResponse {
     /**
      *
      */
-    private Date nextRetryTime;
+    private LocalDateTime nextRetryTime;
 
     /**
      *

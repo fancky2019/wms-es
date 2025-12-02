@@ -152,7 +152,9 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
     @Override
     public SseEmitter sendMsgToClient(String userId, String msg) {
         SseEmitter sseEmitter = sseCache.get(userId);
-        if (sseEmitter != null) {
+        if (sseEmitter == null) {
+            log.info("userId - {} : sse  is not connected ", userId);
+        } else {
             sendMsgToClientByUserId(userId, msg, sseEmitter);
             return sseEmitter;
         }
@@ -171,8 +173,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      **/
     private void sendMsgToClientByUserId(String userId, String msg, SseEmitter sseEmitter) {
         if (sseEmitter == null) {
-            log.error("SseEmitterServiceImpl[sendMsgToClient]: 推送消息失败：客户端{}未创建长链接,失败消息:{}",
-                    userId, msg);
+            log.error("[sendMsgToClient]: 推送消息失败：客户端{}未创建长链接,失败消息:{}", userId, msg);
             return;
         }
 
@@ -181,7 +182,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
             sseEmitter.send(sendData);
         } catch (IOException e) {
             // 推送消息失败，记录错误日志，进行重推
-            log.warn("SseEmitterServiceImpl[sendMsgToClient]: 推送消息失败：{},尝试进行重推", msg);
+            log.warn("[sendMsgToClient]: 推送消息失败：{},尝试进行重推", msg);
             removeUser(userId);
 
             // 出现异常时结束响应并传递错误信息
