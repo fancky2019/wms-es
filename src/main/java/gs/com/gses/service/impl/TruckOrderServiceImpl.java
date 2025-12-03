@@ -106,8 +106,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Value("${sbp.upload.wms-front-server}")
     private String wmsFrontServer;
 
-    @Autowired
-    private ApplicationContext applicationContext;
+
 
     @Autowired
     private TruckOrderItemService truckOrderItemService;
@@ -123,7 +122,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private ObjectMapper upperObjectMapper;
     @Autowired
     private ObjectMapper objectMapper;
-
+    @Autowired
+    private ApplicationContext applicationContext;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
@@ -721,6 +721,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         }
         List<MqMessage> mqMessageList = mqMessageService.addMessageBatch(mqMessageRequestList);
 
+        publishMsg(mqMessageList);
+        return truckOrder;
+    }
+
+    private void publishMsg(List<MqMessage> mqMessageList) {
         // 获取当前服务的ID springBootProject
         String serviceId = applicationContext.getId();
         // 或使用 busProperties.getId()
@@ -737,7 +742,6 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         //发送消息的时候可能崩溃，不能保证消息被消费。如果发送成功了，还要设计消息表兜底失败的消息
 //        MyCustomEvent event = new MyCustomEvent(busProperties.getId());
         eventPublisher.publishEvent(event);
-        return truckOrder;
     }
 
 
@@ -1248,16 +1252,32 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //                default:
 //                    break;
 //            }
-            if (truckOrderStatus < maxStatus) {
-                updateTruckOrder = true;
-                truckOrder.setStatus(maxStatus);
+            if (maxStatus != TruckOrderStausEnum.DEBITED.getValue()) {
+                if (truckOrderStatus < maxStatus) {
+                    updateTruckOrder = true;
+                    truckOrder.setStatus(maxStatus);
+                    log.info("truckOrderUpdateStatus {} set status {}",truckOrder.getId(),maxStatus);
+                }
+            } else {
+                //只有一种状态（完成）
+                if (statusList.size() == 1) {
+                    //不是完成更新为完成
+                    if (truckOrderStatus != maxStatus) {
+                        updateTruckOrder = true;
+                        truckOrder.setStatus(maxStatus);
+                        log.info("truckOrderUpdateStatus {} set status {}",truckOrder.getId(),maxStatus);
+                    }
+                }
             }
-            if (updateTruckOrder) {
-                this.updateTruckOrder(truckOrder);
+            if (!updateTruckOrder) {
+                return;
             }
+            this.updateTruckOrder(truckOrder);
             LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrder.getCreatorId());
             if (userTokenDto != null) {
-                String msg = objectMapper.writeValueAsString(truckOrder);
+                TruckOrderResponse response = new TruckOrderResponse();
+                BeanUtils.copyProperties(truckOrder, response);
+                String msg = objectMapper.writeValueAsString(response);
                 String userId = userTokenDto.getId();
                 //事务回调：事务同步，此处待处理， 所有事务提交了才会执行 事务回调
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {

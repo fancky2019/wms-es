@@ -151,7 +151,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         mqMessage.setRetry(true);
         mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
         mqMessage.setTraceId(MDC.get("traceId"));
-
+        mqMessage.setNextRetryTime(LocalDateTime.now());
         mqMessage.setDeleted(0);
         mqMessage.setVersion(1);
         mqMessage.setSendMq(request.getSendMq());
@@ -513,7 +513,10 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //                    long startQueryMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 //                    queryWrapper.ge(MqMessage::getLastModificationTime, startQueryMillis);
                 }
-                queryWrapper.lt(MqMessage::getNextRetryTime, LocalDateTime.now());
+//                queryWrapper.lt(MqMessage::getNextRetryTime, LocalDateTime.now());
+                queryWrapper.and(p -> p.lt(MqMessage::getNextRetryTime, LocalDateTime.now())
+                        .or()
+                        .isNull(MqMessage::getNextRetryTime));
 //                queryWrapper.ne(MqMessage::getStatus, 2);
                 queryWrapper.and(p -> p.isNull(MqMessage::getStatus).or(m -> m.ne(MqMessage::getStatus, 2)));
                 List<MqMessage> mqMessageList = this.list(queryWrapper);

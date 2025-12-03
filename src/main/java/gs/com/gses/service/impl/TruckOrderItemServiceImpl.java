@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
+import gs.com.gses.listener.eventbus.CustomEvent;
 import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
@@ -46,6 +47,8 @@ import org.slf4j.MDC;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.bus.BusProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -104,6 +107,10 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     private ObjectMapper objectMapper;
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    @Autowired
+    private ApplicationContext applicationContext;
+    @Autowired
+    private BusProperties busProperties;
     @Autowired
     private ISseEmitterService sseEmitterService;
     @Autowired
@@ -629,9 +636,12 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             mqMessageRequest.setQueue(UtilityConst.CHECK_TRUCK_ORDER_STATUS);
             mqMessageRequest.setTopic(UtilityConst.CHECK_TRUCK_ORDER_STATUS);
             mqMessageRequest.setSendMq(false);
-            mqMessageService.addMessage(mqMessageRequest);
-            //
-            String msg = objectMapper.writeValueAsString(truckOrderItem);
+            MqMessage updateTruckOrderStatusMsg = mqMessageService.addMessage(mqMessageRequest);
+            publishMsg(Arrays.asList(updateTruckOrderStatusMsg));
+
+            TruckOrderItemResponse response = new TruckOrderItemResponse();
+            BeanUtils.copyProperties(truckOrderItem, response);
+            String msg = objectMapper.writeValueAsString(response);
             String userId = userTokenDto.getId();
             //事务回调：事务同步，此处待处理， 所有事务提交了才会执行 事务回调
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
@@ -656,6 +666,25 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
 
 
+    }
+
+    private void publishMsg(List<MqMessage> mqMessageList) {
+        // 获取当前服务的ID springBootProject
+        String serviceId = applicationContext.getId();
+        // 或使用 busProperties.getId()
+        // String serviceId = busProperties.getId();
+
+        // 获取当前服务实例ID（通常与busProperties.getId()相同）  springBootProject:8088:f89b296d4ca5589865e70da7de918722
+        String originService = busProperties.getId();
+
+        //            EwmsEvent event = new EwmsEvent(this, "TruckOrderComplete");
+        //  busProperties.getId():  contextId, // 通常是 spring.application.name
+        CustomEvent event = new CustomEvent(this, originService, mqMessageList);
+        log.info("ThreadId {} ,eventPublisher event", Thread.currentThread().getId());
+        //最好使用本地消息表
+        //发送消息的时候可能崩溃，不能保证消息被消费。如果发送成功了，还要设计消息表兜底失败的消息
+//        MyCustomEvent event = new MyCustomEvent(busProperties.getId());
+        eventPublisher.publishEvent(event);
     }
 }
 
