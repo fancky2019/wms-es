@@ -36,6 +36,7 @@ import org.slf4j.MDC;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -52,10 +53,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -72,6 +70,11 @@ import java.util.stream.Collectors;
 @Service
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
 
+    @Autowired
+    @Lazy  // 防止循环依赖
+    private MqMessageService selfProxy;
+    @Autowired
+    private ApplicationContext applicationContext;
     @Autowired
     @Lazy
     private MqSendUtil mqSendUtil;
@@ -532,13 +535,16 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 //可设计单独的job 处理消费失败.消费失败的，才走定时任务补偿处理
                 List<MqMessage> consumerFailList = mqMessageList.stream().filter(p -> p.getStatus() != null && p.getStatus().equals(3)).collect(Collectors.toList());
                 rePublish(unPushList);
-
-                Object proxyObj = AopContext.currentProxy();
-                MqMessageService mqMessageService = null;
-                if (proxyObj instanceof MqMessageService) {
-                    mqMessageService = (MqMessageService) proxyObj;
-                }
-                mqMessageService.reConsume(consumerFailList);
+                Object object = selfProxy;
+                // 从 ApplicationContext 获取代理对象
+                MqMessageService proxyService = applicationContext.getBean(MqMessageService.class);
+                //AopContext.currentProxy() 返回的是当前方法调用链中的代理对象,返回的是 ScheduledTasks 的代理
+//                Object proxyObj = AopContext.currentProxy();
+//                MqMessageService mqMessageService = null;
+//                if (proxyObj instanceof MqMessageService) {
+//                    mqMessageService = (MqMessageService) proxyObj;
+//                }
+                selfProxy.reConsume(consumerFailList);
 
 
             } else {
@@ -623,12 +629,42 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 log.info("reConsume MqMessage id {} msgId {}", message.getId(), message.getMsgId());
 //                consume(message);
 
-                Object proxyObj = AopContext.currentProxy();
-                MqMessageService mqMessageService = null;
-                if (proxyObj instanceof MqMessageService) {
-                    mqMessageService = (MqMessageService) proxyObj;
-                    mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
-                }
+//                Object proxyObj = AopContext.currentProxy();
+//                MqMessageService mqMessageService = null;
+//                if (proxyObj instanceof MqMessageService) {
+//                    mqMessageService = (MqMessageService) proxyObj;
+//                    mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
+//                }
+//                selfProxy.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
+
+                //@Async + @Transactional 事务不生效
+                //        事务模板方法
+                // 在这里执行事务性操作
+                // 操作成功则事务提交，否则事务回滚
+                Exception e = transactionTemplate.execute(transactionStatus -> {
+
+                    // 事务性操作
+                    // 如果操作成功，不抛出异常，事务将提交
+
+                    try {
+
+                        selfProxy.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
+                        return null;
+                    } catch (Exception ex) {
+                        log.info("executing reConsume message {} fail", message.getId());
+                        log.error("", ex);
+                        // 如果操作失败，抛出异常，事务将回滚
+                        transactionStatus.setRollbackOnly();
+                        return ex;
+                        //此处是定时任务 ，处理异常不抛出
+//                    transactionStatus.setRollbackOnly();
+//                    throw  e;
+                    }
+
+
+//        TransactionCallbackWithoutResult
+
+                });
 
             } else {
                 log.info("exceed  max retry count {}", message.getId());

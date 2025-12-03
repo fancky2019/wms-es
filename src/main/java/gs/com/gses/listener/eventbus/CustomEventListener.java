@@ -82,6 +82,7 @@ public class CustomEventListener {
         for (MqMessage message : messageList) {
             try {
 
+                //@Async + @Transactional 事务不生效
                 //        事务模板方法
                 // 在这里执行事务性操作
                 // 操作成功则事务提交，否则事务回滚

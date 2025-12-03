@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,7 +19,7 @@ import java.time.format.DateTimeFormatter;
 @Component
 public class ScheduledTasks {
 
-//    private static final Logger log = LoggerFactory.getLogger(ScheduledTasks.class);
+    //    private static final Logger log = LoggerFactory.getLogger(ScheduledTasks.class);
     @Autowired
     private InventoryInfoService inventoryInfoService;
 
@@ -47,7 +48,7 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0 3 * * ?")
     public void initInventoryInfoFromDb() throws InterruptedException {
         try {
-           log.info("ScheduledTasks initInventoryInfoFromDb");
+            log.info("ScheduledTasks initInventoryInfoFromDb");
             inventoryInfoService.initInventoryInfoFromDb();
         } catch (Exception ex) {
             log.error("", ex);
@@ -79,7 +80,15 @@ public class ScheduledTasks {
     public void beanMethodJobHandler() throws Exception {
 
         try {
+
             log.info("ScheduledTasks mqOperation");
+            //定时任务内不要使用AopContext.currentProxy()，使用注册自身
+            boolean proxy = AopUtils.isAopProxy(mqMessageService);
+
+            // 1. 检查代理类型
+            boolean isAopProxy = AopUtils.isAopProxy(mqMessageService);
+            boolean isCglibProxy = AopUtils.isCglibProxy(mqMessageService);
+            boolean isJdkProxy = AopUtils.isJdkDynamicProxy(mqMessageService);
             mqMessageService.mqOperation();
         } catch (Exception ex) {
             log.error("", ex);

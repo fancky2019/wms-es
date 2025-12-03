@@ -8,6 +8,11 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableAspectJAutoProxy(exposeProxy = true)//开启spring注解aop配置的支持，获取当前代理对象 (PersonService) AopContext.currentProxy();
+
+//@EnableAspectJAutoProxy(
+//        exposeProxy = true,        // 必须为true
+//        proxyTargetClass = true    // 使用CGLIB代理
+//)
 @EnableScheduling
 @EnableFeignClients
 @SpringBootApplication(exclude = {RedissonAutoConfiguration.class})

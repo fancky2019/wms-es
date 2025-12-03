@@ -623,7 +623,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 //                throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
 //            }
 
-//            int n=Integer.parseInt("n");
+            int n=Integer.parseInt("n");
             truckOrderItem.setStatus(TruckOrderStausEnum.DEBITED.getValue());
             this.update(truckOrderItem);
 
