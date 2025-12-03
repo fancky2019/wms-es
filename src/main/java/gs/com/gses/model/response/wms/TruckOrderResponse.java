@@ -2,7 +2,13 @@ package gs.com.gses.model.response.wms;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import gs.com.gses.model.enums.TruckOrderStausEnum;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -70,6 +76,23 @@ public class TruckOrderResponse implements Serializable {
      */
     private Integer version;
     private Integer status;
+    /**
+     *lombok不会生成Getter Setter
+     * @data lombox 生成的.class (应idea打开)会先生成public get,然后生成set hashcode toString
+     *
+     * Jackson 默认会序列化所有公共 getter 方法
+     *
+     * getStatusStr() 是 private 的，所以 Jackson 无法访问
+     */
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private String statusStr;
+
+    //    @JsonGetter("statusStr")  // 专门用于 Jackson 序列化的注解
+    public String getStatusStr() {
+        return TruckOrderStausEnum.getDescription(status);
+    }
+
     /**
      *
      */
