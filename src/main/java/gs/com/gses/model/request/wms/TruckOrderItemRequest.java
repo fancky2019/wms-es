@@ -1,15 +1,12 @@
 package gs.com.gses.model.request.wms;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import gs.com.gses.model.request.EsRequestPage;
 import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 @Data
@@ -159,7 +156,7 @@ public class TruckOrderItemRequest extends RequestPage {
     /**
      *
      */
-    private Date latestProcessTime;
+    private LocalDateTime latestProcessTime;
 
 
 

@@ -5,7 +5,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
+
 
 @Data
 public class InventoryItemDetailResponse implements Serializable {
@@ -390,7 +391,7 @@ public class InventoryItemDetailResponse implements Serializable {
     /**
      * 入库日期
      */
-    private Date inboundDate;
+    private LocalDateTime inboundDate;
 
     /**
      * 料架格口ID

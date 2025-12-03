@@ -4,7 +4,8 @@ import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
+
 
 @Data
 public class ShipPickOrderRequest extends RequestPage {
@@ -88,12 +89,12 @@ public class ShipPickOrderRequest extends RequestPage {
     /**
      * 完成时间
      */
-    private Date completeTime;
+    private LocalDateTime completeTime;
 
     /**
      * 生效时间
      */
-    private Date effectTime;
+    private LocalDateTime effectTime;
 
     private static final long serialVersionUID = 1L;
 }

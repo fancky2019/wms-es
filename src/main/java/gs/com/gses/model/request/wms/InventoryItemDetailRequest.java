@@ -1,13 +1,12 @@
 package gs.com.gses.model.request.wms;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
+
 
 @Data
 public class InventoryItemDetailRequest extends RequestPage {
@@ -401,7 +400,7 @@ public class InventoryItemDetailRequest extends RequestPage {
     /**
      * 入库日期
      */
-    private Date inboundDate;
+    private LocalDateTime inboundDate;
 
     /**
      * 料架格口ID

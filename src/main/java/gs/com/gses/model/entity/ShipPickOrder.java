@@ -1,13 +1,13 @@
 package gs.com.gses.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
-import lombok.Data;
+import java.time.LocalDateTime;
 
 /**
  * 
@@ -110,13 +110,13 @@ public class ShipPickOrder implements Serializable {
      * 完成时间
      */
     @TableField(value = "CompleteTime")
-    private Date completeTime;
+    private LocalDateTime completeTime;
 
     /**
      * 生效时间
      */
     @TableField(value = "EffectTime")
-    private Date effectTime;
+    private LocalDateTime effectTime;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

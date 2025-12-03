@@ -4,7 +4,6 @@ import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 public class MqMessageRequest  extends RequestPage{

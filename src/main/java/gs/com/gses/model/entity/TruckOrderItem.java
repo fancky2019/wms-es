@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.annotation.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
 import lombok.Data;
 
 /**
@@ -164,7 +163,7 @@ public class TruckOrderItem implements Serializable {
      *
      */
     @TableField(value = "LatestProcessTime")
-    private Date latestProcessTime;
+    private LocalDateTime latestProcessTime;
 
     /**
      *

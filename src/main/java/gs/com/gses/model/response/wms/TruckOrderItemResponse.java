@@ -1,16 +1,15 @@
 package gs.com.gses.model.response.wms;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import gs.com.gses.model.request.RequestPage;
+import gs.com.gses.model.enums.TruckOrderStausEnum;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 public class TruckOrderItemResponse implements Serializable {
@@ -133,6 +132,18 @@ public class TruckOrderItemResponse implements Serializable {
     private Integer status;
 
     /**
+     *lombok不会生成Getter Setter
+     * @data lombox 生成的.class (应idea打开)会先生成get,然后生成set hashcode toString
+     */
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private String statusStr;
+
+    private String getStatusStr() {
+        return TruckOrderStausEnum.getDescription(status);
+    }
+
+    /**
      *
      */
     private String processMsg;
@@ -140,6 +151,6 @@ public class TruckOrderItemResponse implements Serializable {
     /**
      *
      */
-    private Date latestProcessTime;
+    private LocalDateTime latestProcessTime;
     private static final long serialVersionUID = 1L;
 }

@@ -5,7 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
+
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -323,13 +324,13 @@ public class ShipOrder implements Serializable {
      * 完成时间
      */
     @TableField(value = "CompleteTime")
-    private Date completeTime;
+    private LocalDateTime completeTime;
 
     /**
      * 生效时间
      */
     @TableField(value = "EffectTime")
-    private Date effectTime;
+    private LocalDateTime effectTime;
 
     /**
      * 库存是否足够

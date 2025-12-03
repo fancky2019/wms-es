@@ -1,11 +1,10 @@
 package gs.com.gses.model.response.wms;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
+
 
 @Data
 public class ShipPickOrderResponse {
@@ -87,12 +86,12 @@ public class ShipPickOrderResponse {
     /**
      * 完成时间
      */
-    private Date completeTime;
+    private LocalDateTime completeTime;
 
     /**
      * 生效时间
      */
-    private Date effectTime;
+    private LocalDateTime effectTime;
 
     private static final long serialVersionUID = 1L;
 }

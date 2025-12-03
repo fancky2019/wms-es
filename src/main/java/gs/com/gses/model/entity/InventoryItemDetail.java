@@ -8,7 +8,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * 
@@ -473,7 +473,7 @@ public class InventoryItemDetail implements Serializable {
      * 入库日期
      */
     @TableField(value = "InboundDate")
-    private Date inboundDate;
+    private LocalDateTime inboundDate;
 
     /**
      * 料架格口ID
