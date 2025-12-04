@@ -393,6 +393,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Transactional(rollbackFor = Exception.class)
     public void updateByMsgId(String msgId, int status, String queue) throws Exception {
         if (StringUtils.isEmpty(queue)) {
+            log.info("updateByMsgId {} queue {} isEmpty return", msgId, queue);
             return;
         } else if (queue.equals(RabbitMQConfig.DIRECT_QUEUE_NAME)) {
             log.info("updateByMsgId {} queue {} return", msgId, queue);
@@ -404,9 +405,6 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
     @Override
     public PageData<MqMessageResponse> list(MqMessageRequest request) throws JsonProcessingException {
-        MqMessage message = this.getById(7);
-        String json = objectMapper.writeValueAsString(message);
-
         // 设置时区为 GMT+8   UTC
         ZonedDateTime zonedDateTime = ZonedDateTime.now();
 

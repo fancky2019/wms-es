@@ -57,6 +57,7 @@ import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StopWatch;
 
+import javax.print.DocFlavor;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -505,7 +506,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
 
         truckOrderList = truckOrderList.stream().sorted(Comparator.comparingLong(TruckOrder::getId)).collect(Collectors.toList());
-        Long retainId = truckOrderList.get(0).getId();
+        TruckOrder retainTruckOrder = truckOrderList.get(0);
+        Long retainId = retainTruckOrder.getId();
         List<Long> deletedTruckOrderIdList = truckOrderIdList.stream().filter(p -> !p.equals(retainId)).collect(Collectors.toList());
         String mergeMsg = MessageFormat.format("retainId:{0},deletedTruckOrderIdList:{1}", retainId, deletedTruckOrderIdList.stream().map(Object::toString).collect(Collectors.joining(",")));
         log.info(mergeMsg);
@@ -513,6 +515,18 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         if (!re) {
             throw new Exception("Delete truckOrder fail");
         }
+        List<String> attachmentPathList = truckOrderList.stream().filter(p -> StringUtils.isNotEmpty(p.getFilePath())).map(p -> p.getFilePath()).collect(Collectors.toList());
+        List<String> splitAttachmentPathList = new ArrayList<>();
+        for (String path : attachmentPathList) {
+            List<String> currentPathList = Arrays.asList(path.split(","));
+            splitAttachmentPathList.addAll(currentPathList);
+        }
+        splitAttachmentPathList=splitAttachmentPathList.stream().distinct().collect(Collectors.toList());
+        String mergedAttachmentPath = String.join(",",splitAttachmentPathList);
+        log.info("retainTruckOrder {} oldAttachmentPath {} ,newAttachmentPath {}",retainTruckOrder.getId(),retainTruckOrder.getFilePath(),mergedAttachmentPath);
+        retainTruckOrder.setFilePath(mergedAttachmentPath);
+        this.truckOrderService.updateTruckOrder(retainTruckOrder);
+
         TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
         truckOrderItemRequest.setSearchCount(false);
         truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
@@ -523,10 +537,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             log.info("{},{},{}", item.getId(), item.getTruckOrderId(), retainId);
         }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
-        LambdaUpdateWrapper<TruckOrderItem> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        truckOrderLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList).set(TruckOrderItem::getTruckOrderId, retainId);
-
-        boolean re1 = this.update(null, truckOrderLambdaUpdateWrapper);
+        LambdaUpdateWrapper<TruckOrderItem> truckOrderItemLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+        truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList).set(TruckOrderItem::getTruckOrderId, retainId);
+        boolean re1 = this.update(null, truckOrderItemLambdaUpdateWrapper);
         if (!re1) {
             throw new Exception("Update TruckOrderItem truckOrderId fail");
         }
