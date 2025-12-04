@@ -90,7 +90,7 @@ public class TruckOrderResponse implements Serializable {
 
     //    @JsonGetter("statusStr")  // 专门用于 Jackson 序列化的注解
     public String getStatusStr() {
-        return TruckOrderStausEnum.getDescription(status);
+        return status == null ? "" : TruckOrderStausEnum.getDescription(status);
     }
 
     /**

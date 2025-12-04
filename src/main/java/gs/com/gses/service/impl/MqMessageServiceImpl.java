@@ -6,16 +6,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.mapper.MqMessageMapper;
-import gs.com.gses.model.elasticsearch.InventoryInfo;
-import gs.com.gses.model.entity.*;
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.enums.MqMessageStatus;
 import gs.com.gses.model.request.wms.MqMessageRequest;
-import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MqMessageResponse;
 import gs.com.gses.model.utility.RedisKey;
@@ -33,12 +30,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.MDC;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.Async;
@@ -46,14 +41,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.util.StopWatch;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -147,8 +143,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         mqMessage.setBusinessId(request.getBusinessId());
         mqMessage.setBusinessKey(request.getBusinessKey());
         mqMessage.setMsgContent(request.getMsgContent());
-        mqMessage.setExchange("");
-        mqMessage.setRouteKey("");
+        mqMessage.setExchange(request.getExchange());
+        mqMessage.setRouteKey(request.getRouteKey());
         mqMessage.setQueue(request.getQueue());
         mqMessage.setTopic(request.getTopic());
         mqMessage.setRetry(true);
@@ -175,8 +171,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             mqMessage.setBusinessId(request.getBusinessId());
             mqMessage.setBusinessKey(request.getBusinessKey());
             mqMessage.setMsgContent(request.getMsgContent());
-            mqMessage.setExchange("");
-            mqMessage.setRouteKey("");
+            mqMessage.setExchange(request.getExchange());
+            mqMessage.setRouteKey(request.getRouteKey());
             mqMessage.setQueue(request.getQueue());
             mqMessage.setTopic(request.getTopic());
             mqMessage.setRetry(true);
@@ -240,59 +236,100 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+//    @Transactional(rollbackFor = Exception.class)
     public void updateByMsgId(String msgId, int status) throws Exception {
 //        this.updateById(mqMessage);
 //        this.update(mqMessage, new LambdaUpdateWrapper<MqMessage>().eq(MqMessage::getId, mqMessage.getId()));
+        Exception e = transactionTemplate.execute(transactionStatus -> {
 
-        String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + msgId;
-        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
-        RLock lock = redissonClient.getLock(lockKey);
-        boolean lockSuccessfully = false;
-        try {
+            // 事务性操作
+            // 如果操作成功，不抛出异常，事务将提交
+
+            try {
+
+
+                String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + msgId;
+                //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+                RLock lock = redissonClient.getLock(lockKey);
+                boolean lockSuccessfully = false;
+                try {
 
 //            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
-            //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
-            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
-            if (!lockSuccessfully) {
-                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
-                throw new Exception(msg);
-            }
-            log.info("updateByMsgId get lock {}", lockKey);
-            LambdaQueryWrapper<MqMessage> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(MqMessage::getMsgId, msgId);
-            List<MqMessage> mqMessageList = this.list(queryWrapper);
-            MqMessage mqMessage = null;
-            if (!mqMessageList.isEmpty()) {
-                mqMessage = mqMessageList.get(0);
-            }
-            if (mqMessage == null) {
-                throw new Exception("Can't get MqMessage by MsgId :" + mqMessage.getMsgId());
-            }
+                    //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+                    lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+                    if (!lockSuccessfully) {
+                        String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                        throw new Exception(msg);
+                    }
+                    log.info("updateByMsgId get lock {}", lockKey);
+                    LambdaQueryWrapper<MqMessage> queryWrapper = new LambdaQueryWrapper<>();
+                    queryWrapper.eq(MqMessage::getMsgId, msgId);
+                    List<MqMessage> mqMessageList = this.list(queryWrapper);
+                    MqMessage mqMessage = null;
+                    if (!mqMessageList.isEmpty()) {
+                        mqMessage = mqMessageList.get(0);
+                    }
+                    if (mqMessage == null) {
+                        throw new Exception("Can't get MqMessage by MsgId :" + mqMessage.getMsgId());
+                    }
+//                    rabbitmq 同一条消息都已经消费了  rabbitmq才收到该消息的确认 confirm.要进行状态判断
+                    if (status == MqMessageStatus.PRODUCE.getValue()) {
+                        if (mqMessage.getStatus() != MqMessageStatus.NOT_PRODUCED.getValue()) {
+                            log.info("MqMessage {} MqMessageStatus - {} is not NOT_PRODUCED", mqMessage.getId(), mqMessage.getStatus());
+                            return null;
+                        }
 
-            Integer oldVersion = mqMessage.getVersion();
-            mqMessage.setVersion(mqMessage.getVersion() + 1);
-            mqMessage.setStatus(status);
-            mqMessage.setLastModificationTime(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
-            LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<MqMessage>();
-            updateWrapper.eq(MqMessage::getVersion, oldVersion);
-            updateWrapper.eq(MqMessage::getId, mqMessage.getId());
-            boolean re = this.update(mqMessage, updateWrapper);
-            if (!re) {
-                String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
-                throw new Exception(message);
-            }
+                    } else if (status == MqMessageStatus.CONSUMED.getValue()) {
+                        if (mqMessage.getStatus() == MqMessageStatus.CONSUMED.getValue()) {
+                            log.info("MqMessage {} has been CONSUMED", mqMessage.getId());
+                            return null;
+                        }
+                    } else if (status == MqMessageStatus.CONSUME_FAIL.getValue()) {
+                        if (mqMessage.getStatus() == MqMessageStatus.CONSUMED.getValue()) {
+                            log.info("MqMessage {} has been CONSUMED", mqMessage.getId());
+                            return null;
+                        }
+                    }
 
-        } catch (Exception ex) {
-            log.error("", ex);
-            throw ex;
-        } finally {
-            //非事务操作在此释放
+                    Integer oldVersion = mqMessage.getVersion();
+                    mqMessage.setVersion(mqMessage.getVersion() + 1);
+                    mqMessage.setStatus(status);
+                    mqMessage.setLastModificationTime(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+                    LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<MqMessage>();
+                    updateWrapper.eq(MqMessage::getVersion, oldVersion);
+                    updateWrapper.eq(MqMessage::getId, mqMessage.getId());
+                    boolean re = this.update(mqMessage, updateWrapper);
+                    if (!re) {
+                        String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
+                        throw new Exception(message);
+                    }
+
+                } catch (Exception ex) {
+                    log.error("", ex);
+                    throw ex;
+                } finally {
+                    //非事务操作在此释放
 //            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
 //                lock.unlock();
 //            }
-            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
-        }
+                    redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+                }
+
+
+                return null;
+            } catch (Exception ex) {
+                log.info("updateByMsgId {} fail", msgId);
+                log.error("", ex);
+                // 如果操作失败，抛出异常，事务将回滚
+                transactionStatus.setRollbackOnly();
+                return ex;
+                //此处是定时任务 ，处理异常不抛出
+//                    transactionStatus.setRollbackOnly();
+//                    throw  e;
+            }
+
+
+        });
     }
 
     @Override
@@ -355,18 +392,14 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateByMsgId(String msgId, int status, String queue) throws Exception {
-        if (queue.equals(RabbitMQConfig.DIRECT_QUEUE_NAME)) {
+        if (StringUtils.isEmpty(queue)) {
+            return;
+        } else if (queue.equals(RabbitMQConfig.DIRECT_QUEUE_NAME)) {
             log.info("updateByMsgId {} queue {} return", msgId, queue);
             return;
         }
         log.info("updateByMsgId {} queue {} ", msgId, queue);
-        Object proxyObj = AopContext.currentProxy();
-        MqMessageService mqMessageService = null;
-        if (proxyObj instanceof MqMessageService) {
-            mqMessageService = (MqMessageService) proxyObj;
-            mqMessageService.updateByMsgId(msgId, status);
-        }
-
+        selfProxy.updateByMsgId(msgId, status);
     }
 
     @Override
@@ -531,19 +564,15 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //                }
                 //0:未生成 1：已生产 2：已消费 3:消费失败
                 //未推送消息(未推送，推送失败
-                List<MqMessage> unPushList = mqMessageList.stream().filter(p -> p.getSendMq() != null && p.getSendMq() && (p.getStatus() == null || p.getStatus().equals(0))).collect(Collectors.toList());
+                List<MqMessage> unPushList = mqMessageList.stream().filter(p -> p.getSendMq() != null && p.getSendMq() && (p.getStatus() == null || p.getStatus().equals(MqMessageStatus.NOT_PRODUCED.getValue()))).collect(Collectors.toList());
                 //可设计单独的job 处理消费失败.消费失败的，才走定时任务补偿处理
-                List<MqMessage> consumerFailList = mqMessageList.stream().filter(p -> p.getStatus() != null && p.getStatus().equals(3)).collect(Collectors.toList());
+                List<MqMessage> consumerFailList = mqMessageList.stream().filter(p -> p.getStatus() != null &&
+                        (p.getStatus().equals(MqMessageStatus.CONSUME_FAIL.getValue()))).collect(Collectors.toList());
                 rePublish(unPushList);
                 Object object = selfProxy;
                 // 从 ApplicationContext 获取代理对象
                 MqMessageService proxyService = applicationContext.getBean(MqMessageService.class);
-                //AopContext.currentProxy() 返回的是当前方法调用链中的代理对象,返回的是 ScheduledTasks 的代理
-//                Object proxyObj = AopContext.currentProxy();
-//                MqMessageService mqMessageService = null;
-//                if (proxyObj instanceof MqMessageService) {
-//                    mqMessageService = (MqMessageService) proxyObj;
-//                }
+
                 selfProxy.reConsume(consumerFailList);
 
 
@@ -574,6 +603,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //        {
 //            publish(mqMessageList);
 //        });
+        if (CollectionUtils.isEmpty(mqMessageList)) {
+            return;
+        }
 
         executor.execute(() -> {
             publish(mqMessageList);
@@ -614,27 +646,19 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Async("mqFailHandlerExecutor")
     @Override
     public void reConsume(List<MqMessage> mqMessageList) throws Exception {
+        if (CollectionUtils.isEmpty(mqMessageList)) {
+            return;
+        }
 //        CompletableFuture.runAsync(() ->
 //        {
 //            consume(mqMessageList);
 //        });
         for (MqMessage message : mqMessageList) {
-//            Object proxyObj = AopContext.currentProxy();
-//            IMqMessageService mqMessageService = null;
-//            if (proxyObj instanceof IMqMessageService) {
-//                mqMessageService = (IMqMessageService) proxyObj;
-//            }
-//            mqMessageService.consume(message);
+
             if (message.getMaxRetryCount() == null || (message.getMaxRetryCount() != null && message.getMaxRetryCount() > message.getRetryCount())) {
                 log.info("reConsume MqMessage id {} msgId {}", message.getId(), message.getMsgId());
 //                consume(message);
 
-//                Object proxyObj = AopContext.currentProxy();
-//                MqMessageService mqMessageService = null;
-//                if (proxyObj instanceof MqMessageService) {
-//                    mqMessageService = (MqMessageService) proxyObj;
-//                    mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
-//                }
 //                selfProxy.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
 
                 //@Async + @Transactional 事务不生效
@@ -750,7 +774,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 try {
                     setRetryInfo(message);
                     //失败了就更新一下版本号和更新时间，根据更新时间的 索引 提高查询速度
-                    message.setStatus(MqMessageStatus.CONSUME_FAIL.getValue());
+                    message.setStatus(gs.com.gses.model.enums.MqMessageStatus.CONSUME_FAIL.getValue());
                     message.setFailureReason(e.getMessage());
                     this.update(message);
                     return true;
@@ -873,12 +897,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //            transactionalBusinessLogic();
 
                 //被调用方会触发事务aop, 两个方法在不同事务内
-                Object proxyObj = AopContext.currentProxy();
-                MqMessageService mqMessageService = null;
-                if (proxyObj instanceof MqMessageService) {
-                    mqMessageService = (MqMessageService) proxyObj;
-                    mqMessageService.selfInvocationTransactionalBusinessLogic(i);
-                }
+                selfProxy.selfInvocationTransactionalBusinessLogic(i);
+
             } else {
                 log.info("redissonLockReentrantLock - {} get lock failed", RedisKeyConfigConst.MQ_FAIL_HANDLER);
             }
@@ -925,15 +945,29 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
             //do business
             try {
-                switch (dbMessage.getTopic()) {
-                    case UtilityConst.TRUCK_ORDER_ITEM_DEBIT:
-                        truckOrderItemService.debit(mqMessage);
-                        break;
-                    case UtilityConst.CHECK_TRUCK_ORDER_STATUS:
-                        truckOrderService.synchronizeStatus(mqMessage);
-                        break;
-                    default:
-                        break;
+                //rabbitmq 消费失败兜底重试
+                if (dbMessage.getSendMq()) {
+                    switch (dbMessage.getQueue()) {
+                        case RabbitMQConfig.DIRECT_QUEUE_NAME:
+                            break;
+                        case RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME:
+                            truckOrderService.expungeStaleAttachment(dbMessage.getBusinessId());
+                            break;
+                        default:
+                            break;
+                    }
+                } else {
+                    //事件消息
+                    switch (dbMessage.getTopic()) {
+                        case UtilityConst.TRUCK_ORDER_ITEM_DEBIT:
+                            truckOrderItemService.debit(mqMessage);
+                            break;
+                        case UtilityConst.CHECK_TRUCK_ORDER_STATUS:
+                            truckOrderService.synchronizeStatus(mqMessage);
+                            break;
+                        default:
+                            break;
+                    }
                 }
 //                Object proxyObj = AopContext.currentProxy();
 //                MqMessageService mqMessageService = null;

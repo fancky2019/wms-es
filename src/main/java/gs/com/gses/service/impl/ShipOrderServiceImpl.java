@@ -4,35 +4,38 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.flink.DataChangeInfo;
+import gs.com.gses.mapper.ShipOrderMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
-import gs.com.gses.model.entity.*;
+import gs.com.gses.model.entity.BillType;
+import gs.com.gses.model.entity.ShipOrder;
+import gs.com.gses.model.entity.ShipOrderItem;
 import gs.com.gses.model.enums.OutboundOrderXStatus;
+import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
 import gs.com.gses.model.request.wms.ShipOrderRequest;
-import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.model.utility.RedisKey;
-import gs.com.gses.service.*;
-import gs.com.gses.mapper.ShipOrderMapper;
+import gs.com.gses.service.BillTypeService;
+import gs.com.gses.service.ShipOrderItemService;
+import gs.com.gses.service.ShipOrderService;
+import gs.com.gses.service.WaveShipOrderItemRelationService;
 import gs.com.gses.utility.SnowFlake;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -43,10 +46,6 @@ import org.springframework.util.StopWatch;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.MessageFormat;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -63,7 +62,9 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 
     @Value("${sbp.enableCopyShipOrder:false}") // 默认 false，避免报错
     private boolean enableCopyShipOrder;
-
+    @Autowired
+    @Lazy  // 防止循环依赖
+    private ShipOrderService selfProxy;
     @Autowired
     private InventoryInfoServiceImpl inventoryInfoService;
 
@@ -546,12 +547,14 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
                             //设置key并制定过期时间
                             valueOperations.set(mqMsgIdKey, shipOrder.getId(), 1, TimeUnit.DAYS);
 
-                            Object proxyObj = AopContext.currentProxy();
-                            ShipOrderService shipOrderService = null;
-                            if (proxyObj instanceof ShipOrderService) {
-                                shipOrderService = (ShipOrderService) proxyObj;
-                                shipOrderService.copyShipOrder(shipOrder.getId());
-                            }
+//                            Object proxyObj = AopContext.currentProxy();
+//                            ShipOrderService shipOrderService = null;
+//                            if (proxyObj instanceof ShipOrderService) {
+//                                shipOrderService = (ShipOrderService) proxyObj;
+//                                shipOrderService.copyShipOrder(shipOrder.getId());
+//                            }
+
+                            selfProxy.copyShipOrder(shipOrder.getId());
                         }
                     }
 

@@ -877,37 +877,16 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 throw new Exception(msg);
             }
 
-
-//        RabbitMqMessage rabbitMqMessage = new RabbitMqMessage();
-
-            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+            MqMessageRequest mqMessageRequest = new MqMessageRequest();
             String content = objectMapper.writeValueAsString(truckOrder.getId());
-            MqMessage mqMessage = new MqMessage();
-            mqMessage.setMsgId(msgId);
-            mqMessage.setBusinessId(truckOrder.getId());
-            mqMessage.setBusinessKey(truckOrder.getTruckOrderCode());
-            mqMessage.setMsgContent(content);
-            mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
-            mqMessage.setRouteKey(RabbitMQConfig.DIRECT_MQ_MESSAGE_KEY);
-            mqMessage.setQueue(RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME);
-            mqMessage.setRetry(true);
-            mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
-            mqMessage.setTraceId(MDC.get("traceId"));
-//        mqMessage.setRetryCount(0);
-//        //BaseRabbitMqHandler.TOTAL_RETRY_COUNT =4
-//        mqMessage.setMaxRetryCount(BaseRabbitMqHandler.TOTAL_RETRY_COUNT);
-            mqMessage.setDeleted(0);
-            mqMessage.setVersion(1);
-            //13位  毫秒时间戳，不是秒9位  转时间戳
-            long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-//        LocalDateTime lNow=  LocalDateTime.ofInstant(
-//                Instant.ofEpochMilli(localDateTimeMillis),
-//                ZoneId.systemDefault()
-//        );
-            mqMessage.setCreationTime(localDateTimeMillis);
-            mqMessage.setLastModificationTime(localDateTimeMillis);
-            mqMessageService.add(mqMessage);
-
+            mqMessageRequest.setBusinessId(truckOrder.getId());
+            mqMessageRequest.setBusinessKey(truckOrder.getTruckOrderCode());
+            mqMessageRequest.setMsgContent(content);
+            mqMessageRequest.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
+            mqMessageRequest.setRouteKey(RabbitMQConfig.DIRECT_MQ_MESSAGE_KEY);
+            mqMessageRequest.setQueue(RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME);
+            mqMessageRequest.setSendMq(true);
+            MqMessage updateTruckOrderStatusMsg = mqMessageService.addMessage(mqMessageRequest);
         } catch (Exception ex) {
             log.error("", ex);
             throw ex;

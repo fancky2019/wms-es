@@ -6,32 +6,29 @@ import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
-
+    @Autowired
+    @Lazy  // 防止循环依赖
+    private BasicInfoCacheService selfProxy;
     @Autowired
     private LocationService locationService;
 
@@ -565,15 +562,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
          * List/Set 的 push/add 操作不会覆盖，而是追加
          */
         log.info("start initBasicInfoCache");
-        Object proxyObj = AopContext.currentProxy();
-        BasicInfoCacheService basicInfoCacheService = null;
-        if (proxyObj instanceof BasicInfoCacheService) {
-            basicInfoCacheService = (BasicInfoCacheService) proxyObj;
-        } else {
-            log.info("get proxyObj exception");
-            return;
-        }
-
+        BasicInfoCacheService basicInfoCacheService = selfProxy;
         basicInfoCacheService.initLocation();
         basicInfoCacheService.initLaneway();
         basicInfoCacheService.initZone();

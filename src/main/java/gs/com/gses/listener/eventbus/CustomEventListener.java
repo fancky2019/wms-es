@@ -3,25 +3,13 @@ package gs.com.gses.listener.eventbus;
 
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
-import gs.com.gses.model.enums.MqMessageStatus;
-import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.service.MqMessageService;
-import gs.com.gses.service.ShipOrderService;
-import gs.com.gses.service.TruckOrderItemService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
-import org.springframework.retry.RetryContext;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
-import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
-import gs.com.gses.service.impl.UtilityConst;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Arrays;

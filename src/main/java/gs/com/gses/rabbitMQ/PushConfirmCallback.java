@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
  * 1、确认模式（confirm）：可以监听消息是否从生产者成功传递到交换。
  * 2、退回模式（return）：可以监听消息是否从交换机成功传递到队列。
  * 3、消费者消息确认（Ack）：可以监听消费者是否成功处理消息。
+ *
+ * rabbitmq 同一条消息都已经消费了  rabbitmq才收到该消息的确认 confirm.要进行状态判断
  */
 
 
@@ -54,6 +56,7 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
 //        this.mqMessageService = mqMessageService;
 //    }
 
+    // rabbitmq 同一条消息都已经消费了  rabbitmq才收到该消息的确认 confirm.要进行状态判断
     @Override
     public void confirm(CorrelationData correlationData, boolean ack, String s) {
         try {
