@@ -97,6 +97,7 @@ public class RedisUtil {
         //处理事务回调发送信息到mq
         //boolean actualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
         // 判断当前是否存在事务,如果没有开启事务是会报错的
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             // 无事务，非事务方法内会立即释放锁，在某些事务传播不支持事务的方法内会有并发问题。强制在事务内
 //            releaseLock(lock, lockSuccessfully);

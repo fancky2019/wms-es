@@ -617,24 +617,24 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             if (userTokenDto == null) {
                 throw new Exception("Get token fail.");
             }
-            //            String token="";
-            String token = "Bearer " + userTokenDto.getAccessToken();
-            WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
-            String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
-            log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
-            if (wmsResponse.getResult()) {
-                try {
-                    log.info("ThreadId - {}", Thread.currentThread().getId());
-                    EwmsEvent event = new EwmsEvent(this, "debit");
-                    event.setData(truckOrderItem.getTruckOrderId().toString());
-                    event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
-                    eventPublisher.publishEvent(event);
-                } catch (Exception ex) {
-                    log.error("Publish event error", ex);
-                }
-            } else {
-                throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
-            }
+//            //            String token="";
+//            String token = "Bearer " + userTokenDto.getAccessToken();
+//            WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
+//            String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
+//            log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
+//            if (wmsResponse.getResult()) {
+//                try {
+//                    log.info("ThreadId - {}", Thread.currentThread().getId());
+//                    EwmsEvent event = new EwmsEvent(this, "debit");
+//                    event.setData(truckOrderItem.getTruckOrderId().toString());
+//                    event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
+//                    eventPublisher.publishEvent(event);
+//                } catch (Exception ex) {
+//                    log.error("Publish event error", ex);
+//                }
+//            } else {
+//                throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
+//            }
 
 //            int n=Integer.parseInt("n");
             truckOrderItem.setStatus(TruckOrderStausEnum.DEBITED.getValue());

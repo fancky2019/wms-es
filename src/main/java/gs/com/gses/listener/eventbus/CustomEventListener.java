@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Arrays;
@@ -41,9 +43,24 @@ public class CustomEventListener {
     private TransactionTemplate transactionTemplate;
 
 
+    /**
+     * @Async 线程中：当前线程没有任何事务同步器 → Spring 认为“无法开事务”
+     *@Async 异步线程：
+     * 切换了线程
+     * ThreadLocal 丢失
+     * 没有事务同步器
+     * @Transactional 无法创建事务
+     *
+     *
+     *
+     *
+     * @param event
+     * @throws Exception
+     */
+
     //multiplier 2 ,每次重试时间间隔翻倍
-    @Async("threadPoolExecutor")
-    @EventListener
+//    @Async("threadPoolExecutor")
+//    @EventListener
 //    Spring Retry 在最后一次重试失败后才会抛出异常
 //    @Retryable(
 //            value = {Exception.class},
@@ -51,7 +68,7 @@ public class CustomEventListener {
 //            backoff = @Backoff(delay = 1000, multiplier = 2)
 //    )
 
-    //    @Async("threadPoolExecutor") //使用异步和调用线程不在一个线程内
+    @Async("threadPoolExecutor") //使用异步和调用线程不在一个线程内
     //TransactionSynchronizationManager 事务成功之后发送
     @TransactionalEventListener //默认事务成功之后发送
 //    @TransactionalEventListener  (phase = TransactionPhase.AFTER_COMMIT)
@@ -69,6 +86,21 @@ public class CustomEventListener {
 
         for (MqMessage message : messageList) {
             try {
+
+
+//                因为 MqMessageEventHandler 是在 @Async 的线程池线程中执行的，而
+//                @Transactional 依赖当前线程的事务同步器(TransactionSynchronizationManager.isSynchronizationActive())，
+//                但异步线程没有事务同步器，因此事务不会被创建
+
+//                mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.EVENT);
+//                int nn = 1;
+
+
+
+
+
+
+
 
                 //@Async + @Transactional 事务不生效
                 //        事务模板方法
@@ -108,7 +140,7 @@ public class CustomEventListener {
 
 
             } catch (Exception ex) {
-                int n1 = 0;
+               log.error("",ex);
             }
             int n = 0;
 

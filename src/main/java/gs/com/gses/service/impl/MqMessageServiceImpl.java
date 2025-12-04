@@ -42,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.swing.*;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -659,17 +660,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
 //                selfProxy.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
 
-                //@Async + @Transactional 事务不生效
-                //        事务模板方法
-                // 在这里执行事务性操作
-                // 操作成功则事务提交，否则事务回滚
                 Exception e = transactionTemplate.execute(transactionStatus -> {
-
-                    // 事务性操作
-                    // 如果操作成功，不抛出异常，事务将提交
-
                     try {
-
                         selfProxy.MqMessageEventHandler(message, MqMessageSourceEnum.JOB);
                         return null;
                     } catch (Exception ex) {
@@ -678,14 +670,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                         // 如果操作失败，抛出异常，事务将回滚
                         transactionStatus.setRollbackOnly();
                         return ex;
-                        //此处是定时任务 ，处理异常不抛出
-//                    transactionStatus.setRollbackOnly();
-//                    throw  e;
                     }
-
-
-//        TransactionCallbackWithoutResult
-
                 });
 
             } else {
@@ -909,10 +894,27 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         }
     }
 
+    //value 指定事务名称
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void MqMessageEventHandler(MqMessage mqMessage, MqMessageSourceEnum sourceEnum) throws Exception {
         log.info("MqMessageEventHandler MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
+      //getCurrentTransactionName() 当前事务的名字（默认是 null）
+        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
+//isActualTransactionActive() 最重要、最准：真正有无事务
+//        它代表：
+//        当前线程的底层数据库连接是否在事务模式中
+//        Spring 是否在此线程中开启了 beginTransaction
+//        回滚、提交是否会生效
+
+
+        //        true → 说明当前线程中存在一个活动的事务（Connection 被绑定到线程）
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+//        isSynchronizationActive() = 当前线程是否启用了 Spring 的事务同步机制（允许绑定资源和事务回调）。
+//        并不完全等于“是否有事务”，但通常和事务同时开启。
+        boolean isSynchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
+
+
         String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + mqMessage.getId();
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
         RLock lock = redissonClient.getLock(lockKey);
@@ -974,7 +976,6 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //                    //   updateStaus 事务释放 redis 锁
 //                    mqMessageService.updateStaus(dbMessage.getId(), MqMessageStatus.CONSUMED);
 //                }
-                String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
 
                 updateStaus(dbMessage.getId(), MqMessageStatus.CONSUMED);
             } catch (Exception ex) {
