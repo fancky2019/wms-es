@@ -232,7 +232,7 @@ sbp:
   logMq: false
 #  enableCopyShipOrder: false
   flink:
-    enable: true
+    enable: false
     databaseList:
       - liku
     tableList:

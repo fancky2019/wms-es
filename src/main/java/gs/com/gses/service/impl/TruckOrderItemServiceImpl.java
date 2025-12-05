@@ -616,7 +616,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             if (userTokenDto == null) {
                 throw new Exception("Get token fail.");
             }
-//            //            String token="";
+
+
+            String token = "";
 //            String token = "Bearer " + userTokenDto.getAccessToken();
 //            WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
 //            String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
