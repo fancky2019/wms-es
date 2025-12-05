@@ -131,7 +131,7 @@ public class RedisUtil {
 
     public void releaseLock(RLock lock, boolean lockSuccessfully) {
         if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-            String lockName = lock.getName(); // 获取锁的名称
+            String lockName = lock.getName();
             lock.unlock();
             log.info("release lock success, key: {}", lockName);
         }

@@ -139,6 +139,24 @@ public class CustomEventListener {
                 });
 
 
+//                if (e != null) {
+//                    //将该条事务的异常保存
+//                    transactionTemplate.execute(transactionStatus -> {
+//                        try {
+//                            //失败了就更新一下版本号和更新时间，根据更新时间的 索引 提高查询速度
+//                            message.setRetryCount(message.getRetryCount() + 1);
+//                            message.setFailureReason(e.getMessage());
+//                            this.update(message);
+//                            return true;
+//                        } catch (Exception ex) {
+//                            log.error("", ex);
+//                            transactionStatus.setRollbackOnly();
+//                            return false;
+//                        }
+//                    });
+//                }
+
+
             } catch (Exception ex) {
                log.error("",ex);
             }

@@ -521,9 +521,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             List<String> currentPathList = Arrays.asList(path.split(","));
             splitAttachmentPathList.addAll(currentPathList);
         }
-        splitAttachmentPathList=splitAttachmentPathList.stream().distinct().collect(Collectors.toList());
-        String mergedAttachmentPath = String.join(",",splitAttachmentPathList);
-        log.info("retainTruckOrder {} oldAttachmentPath {} ,newAttachmentPath {}",retainTruckOrder.getId(),retainTruckOrder.getFilePath(),mergedAttachmentPath);
+        splitAttachmentPathList = splitAttachmentPathList.stream().distinct().collect(Collectors.toList());
+        String mergedAttachmentPath = String.join(",", splitAttachmentPathList);
+        log.info("retainTruckOrder {} oldAttachmentPath {} ,newAttachmentPath {}", retainTruckOrder.getId(), retainTruckOrder.getFilePath(), mergedAttachmentPath);
         retainTruckOrder.setFilePath(mergedAttachmentPath);
         this.truckOrderService.updateTruckOrder(retainTruckOrder);
 
@@ -561,7 +561,6 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     @Override
     public void debit(MqMessage mqMessage) throws Exception {
-        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
         log.info("debit MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
         String lockKey = RedisKey.DEBIT;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁

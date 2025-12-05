@@ -338,7 +338,6 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     public void updateStaus(long mqMessageId, MqMessageStatus status) throws Exception {
 //        this.updateById(mqMessage);
 //        this.update(mqMessage, new LambdaUpdateWrapper<MqMessage>().eq(MqMessage::getId, mqMessage.getId()));
-        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
 
         String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + mqMessageId;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁

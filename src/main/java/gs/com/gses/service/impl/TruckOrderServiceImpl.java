@@ -107,7 +107,6 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private String wmsFrontServer;
 
 
-
     @Autowired
     private TruckOrderItemService truckOrderItemService;
 
@@ -148,11 +147,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
-        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
-        addTruckOrderAndItemAsync(request, token);
-        if (true) {
+        if (request.getAsync()) {
+            addTruckOrderAndItemAsync(request, token);
             return;
         }
+
         String currentTaskName = "validateParameter";
         StopWatch stopWatch = new StopWatch("addTruckOrderAndItem");
         stopWatch.start(currentTaskName);
@@ -452,7 +451,6 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItemAsync(AddTruckOrderRequest request, String token) throws Throwable {
-        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
         String currentTaskName = "validateParameter";
         StopWatch stopWatch = new StopWatch("addTruckOrderAndItem");
         stopWatch.start(currentTaskName);
@@ -1235,7 +1233,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 if (truckOrderStatus < maxStatus) {
                     updateTruckOrder = true;
                     truckOrder.setStatus(maxStatus);
-                    log.info("truckOrderUpdateStatus {} set status {}",truckOrder.getId(),maxStatus);
+                    log.info("truckOrderUpdateStatus {} set status {}", truckOrder.getId(), maxStatus);
                 }
             } else {
                 //只有一种状态（完成）
@@ -1244,7 +1242,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                     if (truckOrderStatus != maxStatus) {
                         updateTruckOrder = true;
                         truckOrder.setStatus(maxStatus);
-                        log.info("truckOrderUpdateStatus {} set status {}",truckOrder.getId(),maxStatus);
+                        log.info("truckOrderUpdateStatus {} set status {}", truckOrder.getId(), maxStatus);
                     }
                 }
             }
