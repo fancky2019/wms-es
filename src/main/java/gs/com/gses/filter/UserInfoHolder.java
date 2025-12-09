@@ -33,7 +33,7 @@ public class UserInfoHolder {
     /**
      *
      */
-    public static void removeUser() {
+    public static synchronized void removeUser() {
         CONTEXT_HOLDER.remove();
     }
 
@@ -43,7 +43,7 @@ public class UserInfoHolder {
      *
      * @return
      */
-    public static void setUser(String userId, LoginUserTokenDto dto) {
+    public static synchronized void setUser(String userId, LoginUserTokenDto dto) {
         userInfoMap.put(userId, dto);
     }
 
@@ -55,4 +55,13 @@ public class UserInfoHolder {
     public static LoginUserTokenDto getUser(String userId) {
         return userInfoMap.get(userId);
     }
+
+    public static synchronized void removeUser(String userId) {
+        userInfoMap.remove(userId);
+    }
+
+    public static synchronized void clearUser() {
+        userInfoMap.clear();
+    }
+
 }

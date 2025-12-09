@@ -1,6 +1,7 @@
 package gs.com.gses.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.model.request.authority.LoginRequest;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.service.WmsAuthorityService;
@@ -21,7 +22,6 @@ public class AuthorityController {
     private ObjectMapper objectMapper;
 
 
-
     /**
      *测试权限校验@ignore
      * @param id
@@ -32,5 +32,16 @@ public class AuthorityController {
     @GetMapping("/checkPermissionRet/{id}")
     public MessageResult<LoginUserTokenDto> checkPermissionRet(@PathVariable Long id, @RequestHeader("Authorization") String token) throws InterruptedException {
         return MessageResult.success(wmsAuthorityService.wmsUserInfo(token));
+    }
+
+    /**
+     *
+     * @param request
+     * @return
+     * @throws InterruptedException
+     */
+    @GetMapping("/login")
+    public MessageResult<LoginUserTokenDto> login(@RequestBody LoginRequest request) throws Exception {
+        return MessageResult.success(wmsAuthorityService.login(request));
     }
 }

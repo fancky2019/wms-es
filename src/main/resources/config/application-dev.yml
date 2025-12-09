@@ -253,6 +253,11 @@ sbp:
     #驼峰写法wmsFrontServer Java 风格
     #w中划线写法 ms-front-server     #Spring Boot 官方推荐风格
     wms-front-server: http://localhost:8032/
+  debit:
+    accountName: admin
+    password: 0192023a7bbd73250516f069df18b500
+#    accountName: 00128
+#    password: cf00d984be00cf8e77fb559ae44c5aa5
 
 xxl:
   job:

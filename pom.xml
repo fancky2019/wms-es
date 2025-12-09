@@ -8,7 +8,7 @@
     <name>wms-es</name>
     <description>wms-es</description>
     <properties>
-<!--        版本匹配规则：Spring Boot 的 starter 版本号（如 3.5.0）必须与 Spring Boot 本身的版本号严格一致-->
+        <!--        版本匹配规则：Spring Boot 的 starter 版本号（如 3.5.0）必须与 Spring Boot 本身的版本号严格一致-->
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -30,6 +30,7 @@
         <javaxmail.version>1.6.2</javaxmail.version>
         <redisson.version>3.17.7</redisson.version>
         <commons-codec.version>1.15</commons-codec.version>
+        <commons-beanutils.version>1.11.0</commons-beanutils.version>
         <mybatis-plus.version>3.5.6</mybatis-plus.version>
         <mysql-connector.version>8.0.33</mysql-connector.version>
         <pagehelper.version>2.1.0</pagehelper.version>
@@ -57,20 +58,17 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.elasticsearch.client</groupId>-->
-<!--            <artifactId>elasticsearch-rest-high-level-client</artifactId>-->
-<!--            <version>7.17.7</version>-->
-<!--        </dependency>-->
-
+        <!--        <dependency>-->
+        <!--            <groupId>org.elasticsearch.client</groupId>-->
+        <!--            <artifactId>elasticsearch-rest-high-level-client</artifactId>-->
+        <!--            <version>7.17.7</version>-->
+        <!--        </dependency>-->
 
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
-
 
 
         <!-- 统一 Jackson 版本 :msgpack 版本高于springboot  内置版本-->
@@ -96,21 +94,11 @@
         </dependency>
 
 
-
-
-
-
-
-
-
-
-
-
-<!--        <dependency>-->
-<!--            <groupId>com.microsoft.sqlserver</groupId>-->
-<!--            <artifactId>mssql-jdbc</artifactId>-->
-<!--            <scope>runtime</scope>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.microsoft.sqlserver</groupId>-->
+        <!--            <artifactId>mssql-jdbc</artifactId>-->
+        <!--            <scope>runtime</scope>-->
+        <!--        </dependency>-->
 
         <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
         <dependency>
@@ -131,11 +119,11 @@
             <version>${mybatis-plus.version}</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.mybatis.spring.boot</groupId>-->
-<!--            <artifactId>mybatis-spring-boot-starter</artifactId>-->
-<!--            <version>2.2.2</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.mybatis.spring.boot</groupId>-->
+        <!--            <artifactId>mybatis-spring-boot-starter</artifactId>-->
+        <!--            <version>2.2.2</version>-->
+        <!--        </dependency>-->
 
 
         <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
@@ -230,7 +218,12 @@
             <artifactId>commons-codec</artifactId>
             <version>${commons-codec.version}</version>
         </dependency>
-
+        <!-- https://mvnrepository.com/artifact/commons-beanutils/commons-beanutils -->
+        <dependency>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
+            <version>${commons-beanutils.version}</version>
+        </dependency>
         <!--        redisson-->
         <!-- https://mvnrepository.com/artifact/org.redisson/redisson-spring-boot-starter -->
         <dependency>
@@ -239,25 +232,25 @@
             <version>${redisson.version}</version>
         </dependency>
 
-<!--        兼容 Java 8 的版本（2.0.x 系列）-->
+        <!--        兼容 Java 8 的版本（2.0.x 系列）-->
         <!-- https://mvnrepository.com/artifact/org.jboss.marshalling/jboss-marshalling -->
-<!--        <dependency>-->
-<!--            <groupId>org.jboss.marshalling</groupId>-->
-<!--            <artifactId>jboss-marshalling</artifactId>-->
-<!--            <version>2.0.16.Final</version>-->
-<!--        </dependency>-->
-<!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.jboss.marshalling/jboss-marshalling-river &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.jboss.marshalling</groupId>-->
-<!--            <artifactId>jboss-marshalling-river</artifactId>-->
-<!--            <version>2.0.16.Final</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.jboss.marshalling</groupId>-->
+        <!--            <artifactId>jboss-marshalling</artifactId>-->
+        <!--            <version>2.0.16.Final</version>-->
+        <!--        </dependency>-->
+        <!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.jboss.marshalling/jboss-marshalling-river &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.jboss.marshalling</groupId>-->
+        <!--            <artifactId>jboss-marshalling-river</artifactId>-->
+        <!--            <version>2.0.16.Final</version>-->
+        <!--        </dependency>-->
 
-<!--        <dependency>-->
-<!--            <groupId>org.jboss.marshalling</groupId>-->
-<!--            <artifactId>jboss-marshalling-serial</artifactId>-->
-<!--            <version>2.0.16.Final</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.jboss.marshalling</groupId>-->
+        <!--            <artifactId>jboss-marshalling-serial</artifactId>-->
+        <!--            <version>2.0.16.Final</version>-->
+        <!--        </dependency>-->
 
 
         <dependency>
@@ -283,35 +276,24 @@
         <dependency>
             <groupId>org.springframework.integration</groupId>
             <artifactId>spring-integration-mqtt</artifactId>
-<!--            <version>6.2.0</version>-->
+            <!--            <version>6.2.0</version>-->
         </dependency>
-<!--        &lt;!&ndash; mqtt依赖 &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.integration</groupId>-->
-<!--            <artifactId>spring-integration-stream</artifactId>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.boot</groupId>-->
-<!--            <artifactId>spring-boot-starter-integration</artifactId>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.integration</groupId>-->
-<!--            <artifactId>spring-integration-mqtt</artifactId>-->
-<!--        </dependency>-->
+        <!--        &lt;!&ndash; mqtt依赖 &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.integration</groupId>-->
+        <!--            <artifactId>spring-integration-stream</artifactId>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.boot</groupId>-->
+        <!--            <artifactId>spring-boot-starter-integration</artifactId>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.integration</groupId>-->
+        <!--            <artifactId>spring-integration-mqtt</artifactId>-->
+        <!--        </dependency>-->
 
 
-
-
-
-
-
-
-
-
-
-
-
-<!--        flink               -->
+        <!--        flink               -->
 
         <!--        java.lang.ClassNotFoundException: org.apache.flink.connector.base.source.reader.RecordEmitter-->
         <dependency>
@@ -321,49 +303,46 @@
         </dependency>
 
 
-
         <!--       此依赖包含返回的数据处理结构-->
         <!-- https://mvnrepository.com/artifact/com.ververica/flink-connector-mysql-cdc -->
 
-<!--        <dependency>-->
-<!--            <groupId>com.ververica</groupId>-->
-<!--            <artifactId>flink-connector-mysql-cdc</artifactId>-->
-<!--            <version>3.0.1</version>-->
-<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.ververica</groupId>-->
+        <!--            <artifactId>flink-connector-mysql-cdc</artifactId>-->
+        <!--            <version>3.0.1</version>-->
+        <!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
+        <!--        </dependency>-->
 
         <!--         https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-mysql-cdc-->
-<!--        <dependency>-->
-<!--            <groupId>com.ververica</groupId>-->
-<!--            <artifactId>flink-sql-connector-mysql-cdc</artifactId>-->
-<!--            <version>3.0.1</version>-->
-<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--        </dependency>-->
-
-
+        <!--        <dependency>-->
+        <!--            <groupId>com.ververica</groupId>-->
+        <!--            <artifactId>flink-sql-connector-mysql-cdc</artifactId>-->
+        <!--            <version>3.0.1</version>-->
+        <!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
+        <!--        </dependency>-->
 
 
         <!--         https://mvnrepository.com/artifact/com.ververica/flink-sql-connector-mysql-cdc-->
-<!--        <dependency>-->
-<!--            <groupId>com.ververica</groupId>-->
-<!--            <artifactId>flink-sql-connector-sqlserver-cdc</artifactId>-->
-<!--&lt;!&ndash;            <version>3.3.0</version>&ndash;&gt;-->
-<!--            <version>3.0.1</version>-->
-<!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
-<!--&lt;!&ndash;            <scope>system</scope>&ndash;&gt;-->
-<!--&lt;!&ndash;            <systemPath>${project.basedir}/lib/flink-sql-connector-sqlserver-cdc-3.3.0.jar</systemPath>&ndash;&gt;-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.ververica</groupId>-->
+        <!--            <artifactId>flink-sql-connector-sqlserver-cdc</artifactId>-->
+        <!--&lt;!&ndash;            <version>3.3.0</version>&ndash;&gt;-->
+        <!--            <version>3.0.1</version>-->
+        <!--            &lt;!&ndash;            <scope>provided</scope>&ndash;&gt;-->
+        <!--&lt;!&ndash;            <scope>system</scope>&ndash;&gt;-->
+        <!--&lt;!&ndash;            <systemPath>${project.basedir}/lib/flink-sql-connector-sqlserver-cdc-3.3.0.jar</systemPath>&ndash;&gt;-->
+        <!--        </dependency>-->
 
-<!--        Flink CDC 3.x 版本的 groupId 已从 com.ververica 改为 org.apache.flink2-->
+        <!--        Flink CDC 3.x 版本的 groupId 已从 com.ververica 改为 org.apache.flink2-->
         <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-sql-connector-sqlserver-cdc -->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-sql-connector-sqlserver-cdc</artifactId>
             <version>${flink-sql-connector-sqlserver-cdc.version}</version>
-<!--            <scope>provided</scope>-->
+            <!--            <scope>provided</scope>-->
         </dependency>
 
-<!--   可不要需要：     Flink 1.15 之前checkpoint设置-->
+        <!--   可不要需要：     Flink 1.15 之前checkpoint设置-->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-statebackend-rocksdb</artifactId>
@@ -391,12 +370,12 @@
             <!--            <scope>provided</scope>-->
         </dependency>
 
-<!--        &lt;!&ndash; https://mvnrepository.com/artifact/io.debezium/debezium-storage-file &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>io.debezium</groupId>-->
-<!--            <artifactId>debezium-storage-file</artifactId>-->
-<!--            <version>3.0.1.Final</version>-->
-<!--        </dependency>-->
+        <!--        &lt;!&ndash; https://mvnrepository.com/artifact/io.debezium/debezium-storage-file &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>io.debezium</groupId>-->
+        <!--            <artifactId>debezium-storage-file</artifactId>-->
+        <!--            <version>3.0.1.Final</version>-->
+        <!--        </dependency>-->
 
         <!--        <dependency>-->
         <!--            <groupId>org.apache.flink</groupId>-->
@@ -419,10 +398,6 @@
         </dependency>
 
 
-
-
-
-
         <!--        注意springboot和springcloud的版本对应：https://spring.io/projects/spring-cloud-->
         <!--  FeignClient：注意版本号和其他版本一致-->
         <dependency>
@@ -433,11 +408,11 @@
         </dependency>
 
 
-<!--        &lt;!&ndash; Resilience4j 替代 Hystrix &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>-->
-<!--        </dependency>-->
+        <!--        &lt;!&ndash; Resilience4j 替代 Hystrix &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.cloud</groupId>-->
+        <!--            <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>-->
+        <!--        </dependency>-->
 
         <!--用okhttp 代替默认的  HTTP Client，JDK 原生的 URLConnection 发送HTTP请求，没有连接池-->
         <!-- https://mvnrepository.com/artifact/io.github.openfeign/feign-okhttp -->
@@ -465,11 +440,11 @@
         </dependency>
 
 
-<!--        <dependency>-->
-<!--            <groupId>com.baomidou</groupId>-->
-<!--            <artifactId>mybatis-plus-generator</artifactId>-->
-<!--            <version>3.5.6</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.baomidou</groupId>-->
+        <!--            <artifactId>mybatis-plus-generator</artifactId>-->
+        <!--            <version>3.5.6</version>-->
+        <!--        </dependency>-->
 
         <dependency>
             <groupId>com.google.zxing</groupId>
@@ -493,7 +468,7 @@
         <dependency>
             <groupId>org.msgpack</groupId>
             <artifactId>jackson-dataformat-msgpack</artifactId>
-<!--            <version>${msgpack.version}</version>-->
+            <!--            <version>${msgpack.version}</version>-->
             <version>${msgpack.version}</version>
             <exclusions>
                 <exclusion>
@@ -508,17 +483,7 @@
         </dependency>
 
 
-
-
-
-
-
-
-
-
-
-
-<!--        Screw 、database-doc表结构导出-->
+        <!--        Screw 、database-doc表结构导出-->
         <!-- https://mvnrepository.com/artifact/cn.smallbun.screw/screw-core -->
         <dependency>
             <groupId>cn.smallbun.screw</groupId>
@@ -536,11 +501,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
-
-
-
-
 
 
     </dependencies>
@@ -585,9 +545,9 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-<!--                    JAR文件缺少主清单属性解决方法-->
+                    <!--                    JAR文件缺少主清单属性解决方法-->
                     <mainClass>gs.com.gses.WmsEsApplication</mainClass>
-<!--                    不打包-->
+                    <!--                    不打包-->
                     <!--                    <skip>true</skip>-->
                 </configuration>
                 <executions>
@@ -603,42 +563,40 @@
     </build>
 
 
-
-
-<!--    <build>-->
-<!--        <plugins>-->
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-shade-plugin</artifactId>-->
-<!--                <version>3.6.0</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <phase>package</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>shade</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <filters>-->
-<!--                                <filter>-->
-<!--                                    <artifact>*:*</artifact>-->
-<!--                                    <excludes>-->
-<!--                                        <exclude>META-INF/*.SF</exclude>-->
-<!--                                        <exclude>META-INF/*.DSA</exclude>-->
-<!--                                        <exclude>META-INF/*.RSA</exclude>-->
-<!--                                    </excludes>-->
-<!--                                </filter>-->
-<!--                            </filters>-->
-<!--                            <transformers>-->
-<!--                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">-->
-<!--                                    <mainClass>gs.com.gses.WmsEsApplication</mainClass>-->
-<!--                                </transformer>-->
-<!--                            </transformers>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
-<!--        </plugins>-->
-<!--    </build>-->
+    <!--    <build>-->
+    <!--        <plugins>-->
+    <!--            <plugin>-->
+    <!--                <groupId>org.apache.maven.plugins</groupId>-->
+    <!--                <artifactId>maven-shade-plugin</artifactId>-->
+    <!--                <version>3.6.0</version>-->
+    <!--                <executions>-->
+    <!--                    <execution>-->
+    <!--                        <phase>package</phase>-->
+    <!--                        <goals>-->
+    <!--                            <goal>shade</goal>-->
+    <!--                        </goals>-->
+    <!--                        <configuration>-->
+    <!--                            <filters>-->
+    <!--                                <filter>-->
+    <!--                                    <artifact>*:*</artifact>-->
+    <!--                                    <excludes>-->
+    <!--                                        <exclude>META-INF/*.SF</exclude>-->
+    <!--                                        <exclude>META-INF/*.DSA</exclude>-->
+    <!--                                        <exclude>META-INF/*.RSA</exclude>-->
+    <!--                                    </excludes>-->
+    <!--                                </filter>-->
+    <!--                            </filters>-->
+    <!--                            <transformers>-->
+    <!--                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">-->
+    <!--                                    <mainClass>gs.com.gses.WmsEsApplication</mainClass>-->
+    <!--                                </transformer>-->
+    <!--                            </transformers>-->
+    <!--                        </configuration>-->
+    <!--                    </execution>-->
+    <!--                </executions>-->
+    <!--            </plugin>-->
+    <!--        </plugins>-->
+    <!--    </build>-->
 
 
 </project>

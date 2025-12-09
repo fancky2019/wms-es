@@ -1,6 +1,7 @@
 package gs.com.gses.service.api;
 
 import gs.com.gses.model.request.authority.CheckPermissionRequest;
+import gs.com.gses.model.request.authority.LoginRequest;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.response.wms.WmsResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -19,5 +20,7 @@ public interface AuthorityService {
     @PostMapping("/GSUser/checkPermissionRet")
     WmsResponse checkPermissionRet(@RequestBody CheckPermissionRequest request , @RequestHeader("Authorization") String token);
 
+    @PostMapping("/GSUser/Login")
+    WmsResponse login(@RequestBody LoginRequest request);
 
 }

@@ -2,6 +2,7 @@ package gs.com.gses.handler;
 
 
 import feign.FeignException;
+import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.model.response.MessageResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
@@ -40,6 +41,7 @@ public class GlobalExceptionHandler {
     private HttpServletRequest httpServletRequest;
     @Autowired
     private HttpServletRequest request;
+
     /**
      * 处理404 Not Found异常
      * 需配合ErrorController使用
@@ -48,7 +50,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public MessageResult<String> handle404(NoHandlerFoundException ex) {
         log.error("404异常 - 请求URL: {}", request.getRequestURL());
-        String  errorMsg=  "资源不存在: " + request.getRequestURI();
+        String errorMsg = "资源不存在: " + request.getRequestURI();
         MessageResult<Void> result = new MessageResult<>();
         result.setCode(HttpStatus.NOT_FOUND.value());
         result.setMessage(errorMsg);
@@ -107,22 +109,20 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<MessageResult<Void>> handleFeignException(FeignException ex) {
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        String errorMsg = "服务调用异常:"+ex.getMessage();
+        String errorMsg = "服务调用异常:" + ex.getMessage();
 
         // 根据具体异常类型细化处理
         if (ex instanceof FeignException.Unauthorized) {
             status = HttpStatus.UNAUTHORIZED;
             errorMsg = "认证失败，请检查访问凭证";
-        }
-        else if (ex instanceof FeignException.Forbidden) {
+        } else if (ex instanceof FeignException.Forbidden) {
             status = HttpStatus.FORBIDDEN;
             errorMsg = "权限不足，禁止访问";
-        }
-        else if (ex instanceof FeignException.NotFound) {
+        } else if (ex instanceof FeignException.NotFound) {
             status = HttpStatus.NOT_FOUND;
             errorMsg = "请求资源不存在: " + ex.request().url();
         }
-
+        UserInfoHolder.clearUser();
         // 统一响应构造
         MessageResult<Void> result = new MessageResult<>();
         result.setCode(status.value());

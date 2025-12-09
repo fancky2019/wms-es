@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.config.DebitConfig;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
 import gs.com.gses.listener.event.EwmsEventTopic;
@@ -18,6 +19,7 @@ import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.enums.MqMessageStatus;
 import gs.com.gses.model.enums.TruckOrderStausEnum;
 import gs.com.gses.model.request.Sort;
+import gs.com.gses.model.request.authority.LoginRequest;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
@@ -31,6 +33,7 @@ import gs.com.gses.rabbitMQ.mqtt.MqttProduce;
 import gs.com.gses.rabbitMQ.mqtt.Topics;
 import gs.com.gses.service.*;
 import gs.com.gses.mapper.TruckOrderItemMapper;
+import gs.com.gses.service.api.AuthorityService;
 import gs.com.gses.service.api.WmsService;
 import gs.com.gses.sse.ISseEmitterService;
 import gs.com.gses.utility.LambdaFunctionHelper;
@@ -116,6 +119,11 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     private ISseEmitterService sseEmitterService;
     @Autowired
     private WmsService wmsService;
+    @Autowired
+    private WmsAuthorityService wmsAuthorityService;
+    @Autowired
+    private DebitConfig debitConfig;
+
 
     @Override
     public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
@@ -614,28 +622,34 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
             LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrderItem.getCreatorId());
             if (userTokenDto == null) {
-                throw new Exception("Get token fail.");
+                LoginRequest request = new LoginRequest();
+                request.setAccountName(debitConfig.getAccountName());
+                request.setPassword(debitConfig.getPassword());
+                userTokenDto = wmsAuthorityService.login(request);
+                if (userTokenDto == null) {
+                    throw new Exception("Get debit user fail.");
+                }
+
             }
 
-
-            String token = "";
-//            String token = "Bearer " + userTokenDto.getAccessToken();
-//            WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
-//            String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
-//            log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
-//            if (wmsResponse.getResult()) {
-//                try {
-//                    log.info("ThreadId - {}", Thread.currentThread().getId());
-//                    EwmsEvent event = new EwmsEvent(this, "debit");
-//                    event.setData(truckOrderItem.getTruckOrderId().toString());
-//                    event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
-//                    eventPublisher.publishEvent(event);
-//                } catch (Exception ex) {
-//                    log.error("Publish event error", ex);
-//                }
-//            } else {
-//                throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
-//            }
+//            String token = "";
+            String token = "Bearer " + userTokenDto.getAccessToken();
+            WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
+            String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
+            log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
+            if (wmsResponse.getResult()) {
+                try {
+                    log.info("ThreadId - {}", Thread.currentThread().getId());
+                    EwmsEvent event = new EwmsEvent(this, "debit");
+                    event.setData(truckOrderItem.getTruckOrderId().toString());
+                    event.setMsgTopic(EwmsEventTopic.TRUCK_ORDER_COMPLETE);
+                    eventPublisher.publishEvent(event);
+                } catch (Exception ex) {
+                    log.error("Publish event error", ex);
+                }
+            } else {
+                throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
+            }
 
 //            int n=Integer.parseInt("n");
             truckOrderItem.setStatus(TruckOrderStausEnum.DEBITED.getValue());
