@@ -8,8 +8,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 /**
  * 
@@ -323,12 +325,16 @@ public class ShipOrder implements Serializable {
     /**
      * 完成时间
      */
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  // 用于 Spring 接收前端传入的字符串日期
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")  // 用于返回给前端时格式化 JSON 输出
     @TableField(value = "CompleteTime")
     private LocalDateTime completeTime;
 
     /**
      * 生效时间
      */
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  // 用于 Spring 接收前端传入的字符串日期
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")  // 用于返回给前端时格式化 JSON 输出
     @TableField(value = "EffectTime")
     private LocalDateTime effectTime;
 

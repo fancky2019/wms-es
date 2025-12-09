@@ -137,13 +137,6 @@ public class DirectExchangeConsumer extends BaseRabbitMqHandler {
                         break;
                 }
             } catch (Exception e) {
-                String json = null;
-                try {
-                    json = objectMapper.writeValueAsString(msg);
-                } catch (JsonProcessingException ex) {
-                    throw new RuntimeException(ex);
-                }
-                log.error("DataChangeInfo:{}", json);
                 throw new RuntimeException(e);
             }
 

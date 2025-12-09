@@ -944,6 +944,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
             //do business
             try {
+                //调用方法要开启新事物，不然一个事务报错：Unexpected exception occurred invoking async method: public void
                 //rabbitmq 消费失败兜底重试
                 if (dbMessage.getSendMq()) {
                     switch (dbMessage.getQueue()) {
@@ -957,6 +958,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                     }
                 } else {
                     //事件消息
+                    //调用方法要开启新事物，不然一个事务报错：Unexpected exception occurred invoking async method: public void
                     switch (dbMessage.getTopic()) {
                         case UtilityConst.TRUCK_ORDER_ITEM_DEBIT:
                             truckOrderItemService.debit(mqMessage);
@@ -978,6 +980,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
                 updateStaus(dbMessage.getId(), MqMessageStatus.CONSUMED);
             } catch (Exception ex) {
+                //调用方法要开启新事物，不然一个事务报错：Unexpected exception occurred invoking async method: public void
                 //这样每次处理都会打异常信息
                 log.error("", ex);
                 setRetryInfo(dbMessage);
