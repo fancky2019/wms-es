@@ -1,18 +1,24 @@
 package gs.com.gses.utility;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.LambdaUtils;
+import com.baomidou.mybatisplus.core.toolkit.support.LambdaMeta;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.core.toolkit.support.SerializedLambda;
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.ShipOrderItem;
 import gs.com.gses.model.request.Sort;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.reflection.property.PropertyNamer;
+import org.apache.poi.ss.formula.functions.T;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -141,4 +147,48 @@ public class LambdaFunctionHelper {
             }
         };
     }
+
+
+    /**
+     * 获取字段上的 TableField 注解
+     * @param func Lambda 表达式
+     * @return TableField 注解
+     */
+//    public static <T> String getColumnName(SFunction<T, ?> func, Class<T> entityClass)
+    public static <T> String getColumnName(SFunction<T, ?> func) {
+        try {
+            // 1. 获取 Lambda 表达式的字段名
+            LambdaMeta meta = LambdaUtils.extract(func);
+            String fieldName = PropertyNamer.methodToProperty(meta.getImplMethodName());
+
+//            // 2. 获取实体类 Class
+            Class<?> entityClass = meta.getInstantiatedClass();
+
+            // 3. 获取字段对象
+            Field field = entityClass.getDeclaredField(fieldName);
+
+            // 4. 获取 TableField 注解
+            TableField annotation = field.getAnnotation(TableField.class);
+            String columnName = fieldName;
+            if (annotation != null) {
+                // 获取列名
+                columnName = annotation.value();
+            }
+            return columnName;
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException("字段不存在", e);
+        }
+    }
+
+
+    /**
+     * 获取字段名,cong getter 截取后首字母小写
+     */
+    public static <T> String getFieldName(SFunction<T, ?> func) {
+        LambdaMeta meta = LambdaUtils.extract(func);
+        String fieldName = PropertyNamer.methodToProperty(meta.getImplMethodName());
+        return fieldName;
+    }
+
+
 }

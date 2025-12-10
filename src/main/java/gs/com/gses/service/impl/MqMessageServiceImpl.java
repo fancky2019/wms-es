@@ -104,19 +104,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Autowired
     private TruckOrderService truckOrderService;
     //12次
-    private int[] retryPeriod = new int[]{
-            5,
-            10,
-            20,
-            40,
-            60,
-            2 * 60,
-            4 * 60,
-            8 * 60,
-            16 * 60,
-            32 * 60,
-            1 * 60 * 60,
-            2 * 60 * 60};
+    private int[] retryPeriod = new int[]{5, 10, 20, 40, 60, 2 * 60, 4 * 60, 8 * 60, 16 * 60, 32 * 60, 1 * 60 * 60, 2 * 60 * 60};
 
 
     @Override
@@ -510,7 +498,6 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //        rePublish(unPushList);
 //        reConsume(consumerFailList);
 
-
         log.info("start executing mqOperation");
 
         ValueOperations<String, String> valueOperations = redisTemplate.opsForValue();
@@ -558,13 +545,14 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //                    queryWrapper.ge(MqMessage::getLastModificationTime, startQueryMillis);
                 }
 //                queryWrapper.lt(MqMessage::getNextRetryTime, LocalDateTime.now());
-                queryWrapper.and(p -> p.lt(MqMessage::getNextRetryTime, LocalDateTime.now())
-                        .or()
-                        .isNull(MqMessage::getNextRetryTime));
+                queryWrapper.and(p -> p.lt(MqMessage::getNextRetryTime, LocalDateTime.now()).or().isNull(MqMessage::getNextRetryTime));
 //                queryWrapper.ne(MqMessage::getStatus, 2);
                 queryWrapper.and(p -> p.isNull(MqMessage::getStatus).or(m -> m.ne(MqMessage::getStatus, 2)));
-                queryWrapper.and(p -> p.isNull(MqMessage::getMaxRetryCount)
-                        .or(m -> m.apply("RetryCount < MaxRetryCount")));
+                String fieldName = LambdaFunctionHelper.getFieldName(MqMessage::getRetryCount);
+                String retryCountColName = LambdaFunctionHelper.getColumnName(MqMessage::getRetryCount);
+                String maxRetryCountColName = LambdaFunctionHelper.getColumnName(MqMessage::getMaxRetryCount);
+                String applyStr = MessageFormat.format("{0} < {1}", retryCountColName, maxRetryCountColName);
+                queryWrapper.and(p -> p.isNull(MqMessage::getMaxRetryCount).or(m -> m.apply(applyStr)));
 
 
                 List<MqMessage> mqMessageList = this.list(queryWrapper);
@@ -578,8 +566,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 //未推送消息(未推送，推送失败
                 List<MqMessage> unPushList = mqMessageList.stream().filter(p -> p.getSendMq() != null && p.getSendMq() && (p.getStatus() == null || p.getStatus().equals(MqMessageStatus.NOT_PRODUCED.getValue()))).collect(Collectors.toList());
                 //可设计单独的job 处理消费失败.消费失败的，才走定时任务补偿处理
-                List<MqMessage> consumerFailList = mqMessageList.stream().filter(p -> p.getStatus() != null &&
-                        (p.getStatus().equals(MqMessageStatus.CONSUME_FAIL.getValue()))).collect(Collectors.toList());
+                List<MqMessage> consumerFailList = mqMessageList.stream().filter(p -> p.getStatus() != null && (p.getStatus().equals(MqMessageStatus.CONSUME_FAIL.getValue()))).collect(Collectors.toList());
                 rePublish(unPushList);
                 Object object = selfProxy;
                 // 从 ApplicationContext 获取代理对象
@@ -618,7 +605,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         if (CollectionUtils.isEmpty(mqMessageList)) {
             return;
         }
-        log.info("rePublish mqMessageList size {}",mqMessageList.size());
+        log.info("rePublish mqMessageList size {}", mqMessageList.size());
         executor.execute(() -> {
             publish(mqMessageList);
 //            // 模拟耗时操作
@@ -661,7 +648,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         if (CollectionUtils.isEmpty(mqMessageList)) {
             return;
         }
-        log.info("reConsume mqMessageList size {}",mqMessageList.size());
+        log.info("reConsume mqMessageList size {}", mqMessageList.size());
 //        CompletableFuture.runAsync(() ->
 //        {
 //            consume(mqMessageList);

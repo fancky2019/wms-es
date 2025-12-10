@@ -75,8 +75,8 @@ public class ScheduledTasks {
      * 5分钟一次
      * @throws Exception
      */
-//    @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
-    @Scheduled(cron = "0 */5 * * * ?") //5min 一次
+    @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
+//    @Scheduled(cron = "0 */5 * * * ?") //5min 一次
     public void beanMethodJobHandler() throws Exception {
 
         try {
