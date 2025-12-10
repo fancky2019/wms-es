@@ -105,7 +105,7 @@ public class MqMessageRequest  extends RequestPage{
     /**
      *
      */
-    private Integer maxRetryCount;
+    private Integer maxRetryCount=12;
 
     /**
      *

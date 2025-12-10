@@ -27,6 +27,7 @@ import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.MDC;
@@ -138,6 +139,12 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
     @Override
     public MqMessage addMessage(MqMessageRequest request) throws Exception {
+        MqMessage mqMessage = createMessageByRequest(request);
+        return this.add(mqMessage);
+    }
+
+    @NotNull
+    private static MqMessage createMessageByRequest(MqMessageRequest request) {
         String msgId = UUID.randomUUID().toString().replaceAll("-", "");
         MqMessage mqMessage = new MqMessage();
         mqMessage.setMsgId(msgId);
@@ -148,6 +155,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         mqMessage.setRouteKey(request.getRouteKey());
         mqMessage.setQueue(request.getQueue());
         mqMessage.setTopic(request.getTopic());
+        mqMessage.setMaxRetryCount(request.getMaxRetryCount());
         mqMessage.setRetry(true);
         mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
         mqMessage.setTraceId(MDC.get("traceId"));
@@ -159,34 +167,36 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
         mqMessage.setCreationTime(localDateTimeMillis);
         mqMessage.setLastModificationTime(localDateTimeMillis);
-        return this.add(mqMessage);
+        return mqMessage;
     }
 
     @Override
     public List<MqMessage> addMessageBatch(List<MqMessageRequest> requestList) throws Exception {
         List<MqMessage> mqMessageList = new ArrayList<>();
         for (MqMessageRequest request : requestList) {
-            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
-            MqMessage mqMessage = new MqMessage();
-            mqMessage.setMsgId(msgId);
-            mqMessage.setBusinessId(request.getBusinessId());
-            mqMessage.setBusinessKey(request.getBusinessKey());
-            mqMessage.setMsgContent(request.getMsgContent());
-            mqMessage.setExchange(request.getExchange());
-            mqMessage.setRouteKey(request.getRouteKey());
-            mqMessage.setQueue(request.getQueue());
-            mqMessage.setTopic(request.getTopic());
-            mqMessage.setRetry(true);
-            mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
-            mqMessage.setTraceId(MDC.get("traceId"));
-
-            mqMessage.setDeleted(0);
-            mqMessage.setVersion(1);
-            mqMessage.setSendMq(request.getSendMq());
-            //13位  毫秒时间戳，不是秒9位  转时间戳
-            long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-            mqMessage.setCreationTime(localDateTimeMillis);
-            mqMessage.setLastModificationTime(localDateTimeMillis);
+//            String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+//            MqMessage mqMessage = new MqMessage();
+//            mqMessage.setMsgId(msgId);
+//            mqMessage.setBusinessId(request.getBusinessId());
+//            mqMessage.setBusinessKey(request.getBusinessKey());
+//            mqMessage.setMsgContent(request.getMsgContent());
+//            mqMessage.setExchange(request.getExchange());
+//            mqMessage.setRouteKey(request.getRouteKey());
+//            mqMessage.setQueue(request.getQueue());
+//            mqMessage.setTopic(request.getTopic());
+//            mqMessage.setMaxRetryCount(request.getMaxRetryCount());
+//            mqMessage.setRetry(true);
+//            mqMessage.setStatus(MqMessageStatus.NOT_PRODUCED.getValue());
+//            mqMessage.setTraceId(MDC.get("traceId"));
+//
+//            mqMessage.setDeleted(0);
+//            mqMessage.setVersion(1);
+//            mqMessage.setSendMq(request.getSendMq());
+//            //13位  毫秒时间戳，不是秒9位  转时间戳
+//            long localDateTimeMillis = LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+//            mqMessage.setCreationTime(localDateTimeMillis);
+//            mqMessage.setLastModificationTime(localDateTimeMillis);
+            MqMessage mqMessage = createMessageByRequest(request);
             mqMessageList.add(mqMessage);
         }
         return this.addBatch(mqMessageList);
@@ -553,6 +563,10 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                         .isNull(MqMessage::getNextRetryTime));
 //                queryWrapper.ne(MqMessage::getStatus, 2);
                 queryWrapper.and(p -> p.isNull(MqMessage::getStatus).or(m -> m.ne(MqMessage::getStatus, 2)));
+                queryWrapper.and(p -> p.isNull(MqMessage::getMaxRetryCount)
+                        .or(m -> m.apply("RetryCount < MaxRetryCount")));
+
+
                 List<MqMessage> mqMessageList = this.list(queryWrapper);
                 if (CollectionUtils.isEmpty(mqMessageList)) {
                     return;
@@ -604,7 +618,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         if (CollectionUtils.isEmpty(mqMessageList)) {
             return;
         }
-
+        log.info("rePublish mqMessageList size {}",mqMessageList.size());
         executor.execute(() -> {
             publish(mqMessageList);
 //            // 模拟耗时操作
@@ -647,6 +661,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         if (CollectionUtils.isEmpty(mqMessageList)) {
             return;
         }
+        log.info("reConsume mqMessageList size {}",mqMessageList.size());
 //        CompletableFuture.runAsync(() ->
 //        {
 //            consume(mqMessageList);
@@ -898,7 +913,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Override
     public void MqMessageEventHandler(MqMessage mqMessage, MqMessageSourceEnum sourceEnum) throws Exception {
         log.info("MqMessageEventHandler MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
-      //getCurrentTransactionName() 当前事务的名字（默认是 null）
+        //getCurrentTransactionName() 当前事务的名字（默认是 null）
         String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
 //isActualTransactionActive() 最重要、最准：真正有无事务
 //        它代表：
