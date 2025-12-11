@@ -503,7 +503,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         List<AllocateModel> allAllocateModelList = new ArrayList<>();
         this.truckOrderItemService.checkAvailableBatch(request.getTruckOrderItemRequestList(), allMatchedShipOrderItemResponseList, allAllocateModelList);
         int n = 0;
-
+//        if (true) {
+//            return;
+//        }
 
         stopWatch.stop();
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());

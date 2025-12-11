@@ -738,9 +738,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
 
         // 对应 MyBatis Plus 中的：wrapper.and(qw -> { for(...) { qw.or(...) } })
-        if (CollectionUtils.isNotEmpty(request.getInventoryItemDetailIdList())) {
+        if (CollectionUtils.isNotEmpty(request.getInventoryItemDetailRequestList())) {
+           //should 数组
             BoolQueryBuilder orConditionsQuery = QueryBuilders.boolQuery();
-
             for (InventoryItemDetailRequest query : request.getInventoryItemDetailRequestList()) {
                 // 每个 query 对象构建一个 AND 条件组
                 BoolQueryBuilder singleConditionGroup = QueryBuilders.boolQuery();
@@ -1420,7 +1420,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         inventoryInfoRequest.setFieldMap(EsRequestPage.setFieldMapByField(sourceFieldList));
 
         inventoryInfoRequest.setPageIndex(0);
-        inventoryInfoRequest.setPageSize(50);
+        inventoryInfoRequest.setPageSize(50000);
 
 
         PageData<InventoryInfo> pageData = getInventoryInfoPage(inventoryInfoRequest);
