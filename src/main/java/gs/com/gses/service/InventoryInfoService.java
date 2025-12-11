@@ -4,6 +4,7 @@ import gs.com.gses.flink.DataChangeInfo;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.request.DemoProductRequest;
 import gs.com.gses.model.request.wms.InventoryInfoRequest;
+import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 
@@ -16,15 +17,21 @@ import java.util.List;
 public interface InventoryInfoService {
 
     PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception;
+
     PageData<Long> getInventoryInfoIdList(InventoryInfoRequest request) throws Exception;
+
     PageData<InventoryInfo> getInventoryInfoDefaultList(InventoryInfoRequest request) throws Exception;
+
+    boolean checkDetailExistEs(List<InventoryItemDetailRequest> requestList) throws Exception;
 
     void initInventoryInfoFromDb() throws Exception;
 
     HashMap<Long, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 
     HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
-    void sink(DataChangeInfo dataChangeInfo) throws Exception ;
+
+    void sink(DataChangeInfo dataChangeInfo) throws Exception;
+
     void updateByInventoryItemDetail(DataChangeInfo dataChangeInfo) throws Exception;
 
     void updateByInventoryItem(DataChangeInfo dataChangeInfo) throws Exception;
@@ -39,12 +46,15 @@ public interface InventoryInfoService {
 
 
     void updateByInventoryItemDetailDb(Long id) throws InterruptedException;
+
     void updateByInventoryItemDb(Long id) throws InterruptedException;
+
     void updateByInventoryDb(Long id) throws InterruptedException;
 
     String allocatedReason(ShipOrderItemRequest request) throws Exception;
 
     void addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception;
+
     void exportByPage(HttpServletResponse response, InventoryInfoRequest request) throws Exception;
 
     List<Long> detailDifference() throws Exception;

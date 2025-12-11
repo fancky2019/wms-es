@@ -405,7 +405,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         long createTime = Instant.now().toEpochMilli();
         splitRequest.getTruckOrderRequest().setCreationTime(LocalDateTime.now());
         String addTruckOrderRequestJson = objectMapper.writeValueAsString(splitRequest);
-        log.info("addTruckOrderRequestJson -:{}", addTruckOrderRequestJson);
+        log.info("addTruckOrderOnly-addTruckOrderRequestJson -:{}", addTruckOrderRequestJson);
         //未登录会得到全局异常
         String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequestList);
         log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
@@ -452,6 +452,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItemAsync(AddTruckOrderRequest request, String token) throws Throwable {
+        log.info("addTruckOrderAndItemAsync");
         String currentTaskName = "validateParameter";
         StopWatch stopWatch = new StopWatch("addTruckOrderAndItem");
         stopWatch.start(currentTaskName);
@@ -706,21 +707,23 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         }
         List<TruckOrderItem> truckOrderItemList = truckOrderItemService.addBatch(request.getTruckOrderItemRequestList());
-        List<MqMessageRequest> mqMessageRequestList = new ArrayList<>();
-        for (TruckOrderItem truckOrderItem : truckOrderItemList) {
-            String content = objectMapper.writeValueAsString(truckOrderItem.getId());
-            MqMessageRequest mqMessage = new MqMessageRequest();
-            mqMessage.setBusinessId(truckOrder.getId());
-            mqMessage.setBusinessKey(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
-            mqMessage.setMsgContent(content);
-            mqMessage.setQueue(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
-            mqMessage.setTopic(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
-            mqMessage.setSendMq(false);
-            mqMessageRequestList.add(mqMessage);
-        }
-        List<MqMessage> mqMessageList = mqMessageService.addMessageBatch(mqMessageRequestList);
 
-        publishMsg(mqMessageList);
+        if (request.getAsync()) {
+            List<MqMessageRequest> mqMessageRequestList = new ArrayList<>();
+            for (TruckOrderItem truckOrderItem : truckOrderItemList) {
+                String content = objectMapper.writeValueAsString(truckOrderItem.getId());
+                MqMessageRequest mqMessage = new MqMessageRequest();
+                mqMessage.setBusinessId(truckOrderItem.getId());
+                mqMessage.setBusinessKey(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+                mqMessage.setMsgContent(content);
+                mqMessage.setQueue(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+                mqMessage.setTopic(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+                mqMessage.setSendMq(false);
+                mqMessageRequestList.add(mqMessage);
+            }
+            List<MqMessage> mqMessageList = mqMessageService.addMessageBatch(mqMessageRequestList);
+            publishMsg(mqMessageList);
+        }
         return truckOrder;
     }
 

@@ -79,6 +79,9 @@ import java.util.stream.Collectors;
 public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper, TruckOrderItem> implements TruckOrderItemService {
 
     @Autowired
+    private InventoryInfoService inventoryInfoService;
+
+    @Autowired
     private ShipOrderItemService shipOrderItemService;
 
     @Autowired
@@ -230,6 +233,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
         currentTaskName = "checkItemExistBatch";
         stopWatch.start(currentTaskName);
+        Boolean detailExist1 = inventoryInfoService.checkDetailExistEs(inventoryItemDetailRequestList);
+
         Boolean shipOrderItemExist = shipOrderItemService.checkItemExistBatch(shipOrderItemRequestList, matchedShipOrderItemResponseList);
 
         stopWatch.stop();
@@ -463,11 +468,11 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
 
         // 执行分页查询, sqlserver 使用通用表达式 WITH selectTemp AS
-        IPage<TruckOrderItem> truckOrderPage = this.baseMapper.selectPage(page, truckOrderItemQueryWrapper);
+        IPage<TruckOrderItem> truckOrderItemPage = this.baseMapper.selectPage(page, truckOrderItemQueryWrapper);
 
         // 获取当前页数据
-        List<TruckOrderItem> records = truckOrderPage.getRecords();
-        long total = truckOrderPage.getTotal();
+        List<TruckOrderItem> records = truckOrderItemPage.getRecords();
+        long total = truckOrderItemPage.getTotal();
 
         List<TruckOrderItemResponse> truckOrderItemResponseResponseList = records.stream().map(p -> {
             TruckOrderItemResponse response = new TruckOrderItemResponse();
@@ -475,8 +480,15 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             return response;
         }).collect(Collectors.toList());
 
+        if (total == 0) {
+            log.info("No records found");
+            return new PageData<>();
+        }
 
         List<Long> truckOrderIdList = records.stream().map(p -> p.getTruckOrderId()).distinct().collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(truckOrderIdList)) {
+            throw new Exception("truckOrderIdList empty");
+        }
         List<TruckOrder> truckOrderList = this.truckOrderService.listByIds(truckOrderIdList);
         for (TruckOrderItemResponse response : truckOrderItemResponseResponseList) {
             TruckOrder truckOrder = truckOrderList.stream().filter(p -> p.getId().equals(response.getTruckOrderId())).findFirst().orElse(null);
@@ -542,7 +554,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         PageData<TruckOrderItemResponse> pageData = this.getTruckOrderItemPage(truckOrderItemRequest);
         List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
         for (TruckOrderItemResponse item : truckOrderItemResponseList) {
-            log.info("{},{},{}", item.getId(), item.getTruckOrderId(), retainId);
+            log.info("mergeTruckOrder- {},{},{}", item.getId(), item.getTruckOrderId(), retainId);
         }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
         LambdaUpdateWrapper<TruckOrderItem> truckOrderItemLambdaUpdateWrapper = new LambdaUpdateWrapper<>();

@@ -23,10 +23,7 @@ import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.request.EsRequestPage;
 import gs.com.gses.model.request.Sort;
-import gs.com.gses.model.request.wms.InventoryInfoRequest;
-import gs.com.gses.model.request.wms.ShipOrderItemRequest;
-import gs.com.gses.model.request.wms.ShipOrderRequest;
-import gs.com.gses.model.request.wms.ShipPickOrderItemRequest;
+import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
@@ -739,6 +736,40 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     public PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception {
         log.info("getInventoryInfoPage - {}", objectMapper.writeValueAsString(request));
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+
+        // 对应 MyBatis Plus 中的：wrapper.and(qw -> { for(...) { qw.or(...) } })
+        if (CollectionUtils.isNotEmpty(request.getInventoryItemDetailIdList())) {
+            BoolQueryBuilder orConditionsQuery = QueryBuilders.boolQuery();
+
+            for (InventoryItemDetailRequest query : request.getInventoryItemDetailRequestList()) {
+                // 每个 query 对象构建一个 AND 条件组
+                BoolQueryBuilder singleConditionGroup = QueryBuilders.boolQuery();
+
+                // 必须条件：m_Str7
+                singleConditionGroup.must(QueryBuilders.termQuery("m_Str7", query.getM_Str7()));
+
+                // 可选条件：m_Str12
+                if (StringUtils.isNotEmpty(query.getM_Str12())) {
+                    singleConditionGroup.must(QueryBuilders.termQuery("m_Str12", query.getM_Str12()));
+                }
+
+                // 可选条件：materialId
+                if (query.getMaterialId() != null) {
+                    singleConditionGroup.must(QueryBuilders.termQuery("materialId", query.getMaterialId()));
+                }
+
+                // 将这个条件组添加到 OR 查询中
+                orConditionsQuery.should(singleConditionGroup);
+            }
+
+            // 至少匹配一个 should 条件
+            orConditionsQuery.minimumShouldMatch(1);
+
+            // 将 OR 条件组作为 MUST 条件添加到主查询
+            boolQueryBuilder.must(orConditionsQuery);
+        }
+
+
         if (request.getDeleted() != null) {
             boolQueryBuilder.must(QueryBuilders.termQuery("deleted", request.getDeleted()));
         }
@@ -1349,6 +1380,54 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         pageData.setData(idList);
         return pageData;
     }
+
+    @Override
+    public boolean checkDetailExistEs(List<InventoryItemDetailRequest> requestList) throws Exception {
+
+
+        // ==================== 第二部分：处理单个 request 的 AND 条件 ====================
+        // 对应您提供的代码片段
+        InventoryInfoRequest inventoryInfoRequest = new InventoryInfoRequest();
+        inventoryInfoRequest.setDeleted(0);
+        inventoryInfoRequest.setInventoryXStatus(0);
+        inventoryInfoRequest.setInventoryIsExpired(false);
+        inventoryInfoRequest.setInventoryIsLocked(false);
+
+        inventoryInfoRequest.setInventoryItemIsLocked(false);
+        inventoryInfoRequest.setInventoryItemXStatus(0);
+        inventoryInfoRequest.setInventoryItemIsExpired(false);
+
+        inventoryInfoRequest.setXStatus(0);
+        inventoryInfoRequest.setIsLocked(false);
+        inventoryInfoRequest.setIsExpired(false);
+
+        inventoryInfoRequest.setLocationXStatus(1);
+        inventoryInfoRequest.setForbidOutbound(false);
+        inventoryInfoRequest.setLocationIsLocked(false);
+        inventoryInfoRequest.setIsCountLocked(false);
+        //平库也可以分配，默认只能立库
+//        request.setLocationXType(1);
+
+        inventoryInfoRequest.setLanewayXStatus(1);
+        inventoryInfoRequest.setInventoryItemDetailRequestList(requestList);
+        List<String> sourceFieldList = new ArrayList<>();
+        sourceFieldList.add("inventoryId");
+        sourceFieldList.add("inventoryItemId");
+        sourceFieldList.add("inventoryItemDetailId");
+        sourceFieldList.add("packageQuantity");
+        sourceFieldList.add("allocatedPackageQuantity");
+        sourceFieldList.add("pallet");
+        inventoryInfoRequest.setFieldMap(EsRequestPage.setFieldMapByField(sourceFieldList));
+
+        inventoryInfoRequest.setPageIndex(0);
+        inventoryInfoRequest.setPageSize(50);
+
+
+        PageData<InventoryInfo> pageData = getInventoryInfoPage(inventoryInfoRequest);
+        int nn = 0;
+        return true;
+    }
+
 
     @Override
     public HashMap<Long, List<InventoryInfo>> getAllocatedInventoryInfoList(InventoryInfoRequest request) throws

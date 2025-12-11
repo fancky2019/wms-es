@@ -26,6 +26,7 @@ import gs.com.gses.utility.MqSendUtil;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
@@ -43,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.print.DocFlavor;
 import javax.swing.*;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
@@ -948,7 +950,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             try {
                 //调用方法要开启新事物，不然一个事务报错：Unexpected exception occurred invoking async method: public void
                 //rabbitmq 消费失败兜底重试
-                if (dbMessage.getSendMq()) {
+
+                if (BooleanUtils.isTrue(dbMessage.getSendMq())) {
                     switch (dbMessage.getQueue()) {
                         case RabbitMQConfig.DIRECT_QUEUE_NAME:
                             break;
@@ -961,7 +964,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 } else {
                     //事件消息
                     //调用方法要开启新事物，不然一个事务报错：Unexpected exception occurred invoking async method: public void
-                    switch (dbMessage.getTopic()) {
+                    String queueTopic = "";
+                    queueTopic = StringUtils.isNotEmpty(dbMessage.getTopic()) ? dbMessage.getTopic() : dbMessage.getQueue();
+                    switch (queueTopic) {
                         case UtilityConst.TRUCK_ORDER_ITEM_DEBIT:
                             truckOrderItemService.debit(mqMessage);
                             break;

@@ -1,5 +1,6 @@
 package gs.com.gses.model.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -97,7 +98,7 @@ public class MqMessage implements Serializable {
     /**
      * 创建时间戳13位   代码赋值，没有走MetaObjectHandlerImp
      */
-    @TableField(value = "CreationTime")
+    @TableField(value = "CreationTime",fill = FieldFill.INSERT_UPDATE)
     private Long creationTime;
 
     /**

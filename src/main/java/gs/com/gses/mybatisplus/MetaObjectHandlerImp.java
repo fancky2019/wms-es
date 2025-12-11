@@ -2,6 +2,7 @@ package gs.com.gses.mybatisplus;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.entity.TruckOrderItem;
 import lombok.extern.slf4j.Slf4j;
@@ -56,13 +57,14 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
         //  这里只能处理非ID字段的填充
         Object originalObject = metaObject.getOriginalObject();
         if (originalObject instanceof TruckOrder) {
-            TruckOrder truckOrder=(TruckOrder)originalObject;
-           log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {}",truckOrder.getId(),truckOrder.getTruckOrderCode());
-        }
-        else if(originalObject instanceof TruckOrderItem)
-        {
-            TruckOrderItem truckOrderItem=(TruckOrderItem)originalObject;
-            log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}",truckOrderItem.getTruckOrderId(),truckOrderItem.getId());
+            TruckOrder truckOrder = (TruckOrder) originalObject;
+            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {}", truckOrder.getId(), truckOrder.getTruckOrderCode());
+        } else if (originalObject instanceof TruckOrderItem) {
+            TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
+            log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
+        } else if (originalObject instanceof MqMessage) {
+            MqMessage message = (MqMessage) originalObject;
+            log.info("MqMessageInsert:BusinessId {} MsgContent {}", message.getBusinessId(), message.getMsgContent());
         }
         int n = 0;
     }
@@ -98,14 +100,12 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
 
         Object originalObject = metaObject.getOriginalObject();
         if (originalObject instanceof TruckOrder) {
-            TruckOrder truckOrder=(TruckOrder)originalObject;
+            TruckOrder truckOrder = (TruckOrder) originalObject;
 
-            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {}",truckOrder.getId(),truckOrder.getTruckOrderCode());
-        }
-        else if(originalObject instanceof TruckOrderItem)
-        {
-            TruckOrderItem truckOrderItem=(TruckOrderItem)originalObject;
-            log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}",truckOrderItem.getTruckOrderId(),truckOrderItem.getId());
+            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {}", truckOrder.getId(), truckOrder.getTruckOrderCode());
+        } else if (originalObject instanceof TruckOrderItem) {
+            TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
+            log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
         }
         int n = 0;
     }
