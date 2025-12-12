@@ -389,7 +389,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
                 List<Long> truckOrderIdList = truckOrderList.stream().map(TruckOrder::getId).distinct().collect(Collectors.toList());
                 truckOrderItemQueryWrapper.in(TruckOrderItem::getTruckOrderId, truckOrderIdList);
             } else {
-                return new PageData<>();
+                return PageData.getDefault();
             }
         }
 
@@ -479,10 +479,14 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             BeanUtils.copyProperties(p, response);
             return response;
         }).collect(Collectors.toList());
+        if (true) {
+            return PageData.getDefault();
+        }
 
-        if (total == 0) {
+        //searchCount 可能false
+        if (truckOrderItemResponseResponseList.size() == 0) {
             log.info("No records found");
-            return new PageData<>();
+            return PageData.getDefault();
         }
 
         List<Long> truckOrderIdList = records.stream().map(p -> p.getTruckOrderId()).distinct().collect(Collectors.toList());

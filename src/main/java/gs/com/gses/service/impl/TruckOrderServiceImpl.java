@@ -1093,7 +1093,6 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
         PageData<TruckOrderItemResponse> itemPage = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
         List<TruckOrderItemResponse> itemList = itemPage.getData();
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
         String sendTimeStr = LocalDateTime.now().format(formatter);
 
