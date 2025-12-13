@@ -479,9 +479,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             BeanUtils.copyProperties(p, response);
             return response;
         }).collect(Collectors.toList());
-        if (true) {
-            return PageData.getDefault();
-        }
+//        if (true) {
+//            return PageData.getDefault();
+//        }
 
         //searchCount 可能false
         if (truckOrderItemResponseResponseList.size() == 0) {
