@@ -327,6 +327,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
         log.info("allocate complete {} ms", mills);
     }
 
+    //待优化
     @Override
     public HashMap<String, String> allocateDesignatedShipOrders(ShipOrderRequest request) throws Exception {
 

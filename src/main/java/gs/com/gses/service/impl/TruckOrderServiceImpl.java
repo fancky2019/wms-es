@@ -931,7 +931,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             String directory = uploadDirectory + "\\" + truckOrder.getTruckOrderCode() + "\\";
 
             Path startPath = Paths.get(directory);
-
+            if (!Files.exists(startPath)) {
+                String fullPath = startPath.toAbsolutePath().normalize().toString();
+                log.info("directory {} doesn't exist", fullPath);
+                return;
+            }
             // 获取所有文件（包括子目录）
             List<Path> allFiles = Files.walk(startPath)
                     .filter(Files::isRegularFile)
