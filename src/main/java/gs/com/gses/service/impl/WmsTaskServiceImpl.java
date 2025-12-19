@@ -2,12 +2,11 @@ package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import gs.com.gses.model.entity.TruckOrderItem;
 import gs.com.gses.model.entity.WmsTask;
 import gs.com.gses.model.request.wms.UpdateWmsTaskStatusRequest;
 import gs.com.gses.model.response.wms.WmsResponse;
 import gs.com.gses.service.WmsTaskService;
-import gs.com.gses.mapper.WmsTaskMapper;
+import gs.com.gses.mapper.wms.WmsTaskMapper;
 import gs.com.gses.service.api.WmsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;

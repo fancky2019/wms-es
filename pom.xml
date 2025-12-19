@@ -41,6 +41,7 @@
         <debezium.version>2.7.4.Final</debezium.version>
         <msgpack.version>0.9.10</msgpack.version>
         <jackson.version>2.18.4</jackson.version>
+        <mysql.connector.version>8.0.16</mysql.connector.version>
     </properties>
     <dependencies>
         <dependency>
@@ -93,18 +94,19 @@
             <version>${jackson.version}</version>
         </dependency>
 
-
-        <!--        <dependency>-->
-        <!--            <groupId>com.microsoft.sqlserver</groupId>-->
-        <!--            <artifactId>mssql-jdbc</artifactId>-->
-        <!--            <scope>runtime</scope>-->
-        <!--        </dependency>-->
-
         <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
             <version>${mssql-jdbc.version}</version>
+        </dependency>
+
+        <!--        mysql-->
+        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.connector.version}</version>
         </dependency>
 
         <dependency>

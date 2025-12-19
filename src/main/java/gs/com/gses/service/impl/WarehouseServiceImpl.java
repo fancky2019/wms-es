@@ -3,7 +3,7 @@ package gs.com.gses.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.Warehouse;
 import gs.com.gses.service.WarehouseService;
-import gs.com.gses.mapper.WarehouseMapper;
+import gs.com.gses.mapper.wms.WarehouseMapper;
 import org.springframework.stereotype.Service;
 
 /**

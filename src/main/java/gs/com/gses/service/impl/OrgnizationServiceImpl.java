@@ -3,7 +3,7 @@ package gs.com.gses.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.Orgnization;
 import gs.com.gses.service.OrgnizationService;
-import gs.com.gses.mapper.OrgnizationMapper;
+import gs.com.gses.mapper.wms.OrgnizationMapper;
 import org.springframework.stereotype.Service;
 
 /**

@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import gs.com.gses.mapper.MqMessageMapper;
+import gs.com.gses.mapper.wms.MqMessageMapper;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.enums.MqMessageStatus;
@@ -44,8 +44,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import javax.print.DocFlavor;
-import javax.swing.*;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;

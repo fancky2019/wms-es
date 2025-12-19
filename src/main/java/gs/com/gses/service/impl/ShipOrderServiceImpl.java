@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.flink.DataChangeInfo;
-import gs.com.gses.mapper.ShipOrderMapper;
+import gs.com.gses.mapper.wms.ShipOrderMapper;
 import gs.com.gses.model.elasticsearch.InventoryInfo;
 import gs.com.gses.model.entity.BillType;
 import gs.com.gses.model.entity.ShipOrder;

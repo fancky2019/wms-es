@@ -1,28 +1,20 @@
 package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import gs.com.gses.model.elasticsearch.DemoProduct;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.enums.OutboundOrderXStatus;
 import gs.com.gses.model.request.Sort;
-import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
-import gs.com.gses.model.request.wms.ShipOrderRequest;
-import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
-import gs.com.gses.model.response.ShipOrderResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.MaterialService;
 import gs.com.gses.service.ShipOrderItemService;
-import gs.com.gses.mapper.ShipOrderItemMapper;
+import gs.com.gses.mapper.wms.ShipOrderItemMapper;
 import gs.com.gses.service.ShipOrderService;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import gs.com.gses.utility.SnowFlake;
@@ -34,11 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**

@@ -6,14 +6,11 @@ import gs.com.gses.utility.ApplicationContextAwareImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.Resource;
 
 @Slf4j
 @Component
@@ -21,8 +18,8 @@ public class MqttConsumerCallBack implements MqttCallback {
 
     //    @Autowired
 //    private MqttConsume mqttConsume;
-    @Autowired
-    private OutBoundOrderService outBoundOrderService;
+//    @Autowired
+//    private OutBoundOrderService outBoundOrderService;
     @Autowired
     ApplicationContext applicationContext;
 
@@ -60,8 +57,8 @@ public class MqttConsumerCallBack implements MqttCallback {
             log.info(String.format("接收消息内容 : %s", msg));
             log.info(String.format("接收消息retained : %b", message.isRetained()));
 
-//        ApplicationContext applicationContext = this.applicationContextImpl.getApplicationContext();
-//        OutBoundOrderService  outBoundOrderService =(OutBoundOrderService) applicationContext.getBean("outBoundOrderService");
+        ApplicationContext applicationContext = ApplicationContextAwareImpl.getApplicationContext();
+        OutBoundOrderService  outBoundOrderService =(OutBoundOrderService) applicationContext.getBean("outBoundOrderService");
             switch (topic) {
                 case Topics.OUT_BOUND_TASK_COMPLETE:
                     long wmsTaskId = Long.parseLong(msg);

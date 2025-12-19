@@ -1,8 +1,10 @@
 package gs.com.gses;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.redisson.spring.starter.RedissonAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -13,9 +15,16 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 //        exposeProxy = true,        // 必须为true
 //        proxyTargetClass = true    // 使用CGLIB代理
 //)
+
+//@MapperScan({
+//        "gs.com.gses.mapper",
+//        "gs.com.gses.**.mapper"   // 递归扫描所有层级的mapper包
+//})
 @EnableScheduling
 @EnableFeignClients
-@SpringBootApplication(exclude = {RedissonAutoConfiguration.class})
+//@SpringBootApplication(exclude = {RedissonAutoConfiguration.class})
+
+@SpringBootApplication(exclude = {RedissonAutoConfiguration.class,DataSourceAutoConfiguration.class})
 public class WmsEsApplication {
 
     public static void main(String[] args) {

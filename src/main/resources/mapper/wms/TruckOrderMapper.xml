@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gs.com.gses.mapper.wms.TruckOrderMapper">
+
+    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.TruckOrder">
+            <id property="id" column="Id" jdbcType="BIGINT"/>
+            <result property="truckOrderCode" column="TruckOrderCode" jdbcType="VARCHAR"/>
+            <result property="senderAddress" column="SenderAddress" jdbcType="VARCHAR"/>
+            <result property="receiverAddress" column="ReceiverAddress" jdbcType="VARCHAR"/>
+            <result property="senderPhone" column="SenderPhone" jdbcType="VARCHAR"/>
+            <result property="receiverPhone" column="ReceiverPhone" jdbcType="VARCHAR"/>
+            <result property="sendTime" column="SendTime" jdbcType="TIMESTAMP"/>
+            <result property="trunkType" column="TrunkType" jdbcType="VARCHAR"/>
+            <result property="driverPhone" column="DriverPhone" jdbcType="VARCHAR"/>
+            <result property="trunkNo" column="TrunkNo" jdbcType="VARCHAR"/>
+            <result property="deleted" column="Deleted" jdbcType="TINYINT"/>
+            <result property="version" column="Version" jdbcType="INTEGER"/>
+            <result property="status" column="Status" jdbcType="INTEGER"/>
+            <result property="creatorId" column="CreatorId" jdbcType="VARCHAR"/>
+            <result property="creatorName" column="CreatorName" jdbcType="VARCHAR"/>
+            <result property="lastModifierId" column="LastModifierId" jdbcType="VARCHAR"/>
+            <result property="lastModifierName" column="LastModifierName" jdbcType="VARCHAR"/>
+            <result property="creationTime" column="CreationTime" jdbcType="TIMESTAMP"/>
+            <result property="lastModificationTime" column="LastModificationTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        Id,TruckOrderCode,SenderAddress,
+        ReceiverAddress,SenderPhone,ReceiverPhone,
+        SendTime,TrunkType,DriverPhone,
+        TrunkNo,Deleted,Version,Status,
+        CreatorId,CreatorName,LastModifierId,
+        LastModifierName,CreationTime,LastModificationTime
+    </sql>
+</mapper>

@@ -3,7 +3,7 @@ package gs.com.gses.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.InventoryAchieved;
 import gs.com.gses.service.InventoryAchievedService;
-import gs.com.gses.mapper.InventoryAchievedMapper;
+import gs.com.gses.mapper.wms.InventoryAchievedMapper;
 import org.springframework.stereotype.Service;
 
 /**

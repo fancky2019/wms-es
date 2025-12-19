@@ -3,7 +3,7 @@ package gs.com.gses.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.Location;
 import gs.com.gses.service.LocationService;
-import gs.com.gses.mapper.LocationMapper;
+import gs.com.gses.mapper.wms.LocationMapper;
 import org.springframework.stereotype.Service;
 
 /**

@@ -2,7 +2,7 @@ package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import gs.com.gses.mapper.BillTypeMapper;
+import gs.com.gses.mapper.wms.BillTypeMapper;
 import gs.com.gses.model.entity.BillType;
 import gs.com.gses.service.BillTypeService;
 import org.apache.commons.collections4.CollectionUtils;

@@ -6,17 +6,13 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.ShipPickOrder;
-import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.request.wms.ShipPickOrderRequest;
-import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.ShipPickOrderResponse;
-import gs.com.gses.model.response.wms.TruckOrderResponse;
 import gs.com.gses.service.ShipPickOrderService;
-import gs.com.gses.mapper.ShipPickOrderMapper;
+import gs.com.gses.mapper.wms.ShipPickOrderMapper;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 

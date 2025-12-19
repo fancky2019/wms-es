@@ -2,11 +2,10 @@ package gs.com.gses.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.WaveShipOrderItemRelation;
 import gs.com.gses.service.WaveShipOrderItemRelationService;
-import gs.com.gses.mapper.WaveShipOrderItemRelationMapper;
+import gs.com.gses.mapper.wms.WaveShipOrderItemRelationMapper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

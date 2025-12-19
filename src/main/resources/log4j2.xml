@@ -64,9 +64,9 @@
 <!--        日志继承链-->
 <!--        包名层级会逐层查找。-->
 <!--        例如：-->
-<!--        gs.com.gses.mapper.MqMessageMapper-->
+<!--        gs.com.gses.mapper.wms.MqMessageMapper-->
 <!--        会按以下顺序查找：-->
-<!--        logger: gs.com.gses.mapper.MqMessageMapper-->
+<!--        logger: gs.com.gses.mapper.wms.MqMessageMapper-->
 <!--        logger: gs.com.gses.mapper-->
 <!--        logger: gs.com.gses-->
 <!--        logger: gs.com-->

@@ -3,7 +3,7 @@ package gs.com.gses.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.ConveyorLaneway;
 import gs.com.gses.service.ConveyorLanewayService;
-import gs.com.gses.mapper.ConveyorLanewayMapper;
+import gs.com.gses.mapper.wms.ConveyorLanewayMapper;
 import org.springframework.stereotype.Service;
 
 /**

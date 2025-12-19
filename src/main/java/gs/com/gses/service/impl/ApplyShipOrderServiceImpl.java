@@ -3,7 +3,7 @@ package gs.com.gses.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import gs.com.gses.model.entity.ApplyShipOrder;
 import gs.com.gses.service.ApplyShipOrderService;
-import gs.com.gses.mapper.ApplyShipOrderMapper;
+import gs.com.gses.mapper.wms.ApplyShipOrderMapper;
 import org.springframework.stereotype.Service;
 
 /**
