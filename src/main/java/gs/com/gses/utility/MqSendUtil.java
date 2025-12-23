@@ -167,6 +167,8 @@ public class MqSendUtil {
                 } catch (Exception e) {
                     log.error("doReleaseLock failed: ", e);
                 }
+            } else {
+                log.error("doReleaseLock failed: lock is null");
             }
         }
     }

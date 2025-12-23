@@ -58,4 +58,10 @@ public interface MqMessageService extends IService<MqMessage> {
     void redissonLockReleaseTransactionalUnCommit(int i) throws InterruptedException;
 
     void MqMessageEventHandler(MqMessage message, MqMessageSourceEnum sourceEnum) throws Exception;
+
+
+    void syncMethod();
+
+    void asyncMethod();
+    void TranMethod();
 }

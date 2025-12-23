@@ -77,7 +77,7 @@ public class ScheduledTasks {
      */
 //    @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
     @Scheduled(cron = "0 */5 * * * ?") //5min 一次
-    public void beanMethodJobHandler() throws Exception {
+    public void mqOperation() throws Exception {
 
         try {
 
@@ -90,6 +90,30 @@ public class ScheduledTasks {
             boolean isCglibProxy = AopUtils.isCglibProxy(mqMessageService);
             boolean isJdkProxy = AopUtils.isJdkDynamicProxy(mqMessageService);
             mqMessageService.mqOperation();
+        } catch (Exception ex) {
+            log.error("", ex);
+        }
+    }
+
+    /**
+     * 5分钟一次
+     * @throws Exception
+     */
+    @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
+//    @Scheduled(cron = "0 */5 * * * ?") //5min 一次
+    public void mysqlAsyncTran() throws Exception {
+
+        try {
+
+            log.info("mysqlAsyncTran mqOperation");
+            //定时任务内不要使用AopContext.currentProxy()，使用注册自身
+            boolean proxy = AopUtils.isAopProxy(mqMessageService);
+
+            // 1. 检查代理类型
+            boolean isAopProxy = AopUtils.isAopProxy(mqMessageService);
+            boolean isCglibProxy = AopUtils.isCglibProxy(mqMessageService);
+            boolean isJdkProxy = AopUtils.isJdkDynamicProxy(mqMessageService);
+            mqMessageService.syncMethod();
         } catch (Exception ex) {
             log.error("", ex);
         }

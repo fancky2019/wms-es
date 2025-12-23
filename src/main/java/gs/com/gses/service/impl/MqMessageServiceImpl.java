@@ -17,6 +17,8 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MqMessageResponse;
 import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.model.utility.RedisKeyConfigConst;
+import gs.com.gses.multipledatasource.DataSource;
+import gs.com.gses.multipledatasource.DataSourceType;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.service.MqMessageService;
 import gs.com.gses.service.TruckOrderItemService;
@@ -32,6 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.MDC;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -1049,5 +1052,44 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Transactional(rollbackFor = Exception.class)
     public void selfInvocationTransactional() {
 
+    }
+
+
+    @Override
+    public void syncMethod() {
+        selfProxy.asyncMethod();
+    }
+
+    @Async("mqFailHandlerExecutor")
+    @Override
+    public void asyncMethod() {
+//        selfProxy.TranMethod();
+//        MqMessageService proxyService = applicationContext.getBean(MqMessageService.class);
+//        proxyService.TranMethod();
+
+
+        //避免在@Async方法中调用@Transactional方法
+//        Exception e = transactionTemplate.execute(transactionStatus -> {
+//            try {
+//                selfProxy.TranMethod();
+//                return null;
+//            } catch (Exception ex) {
+//                log.error("", ex);
+//                // 如果操作失败，抛出异常，事务将回滚
+//                transactionStatus.setRollbackOnly();
+//                return ex;
+//            }
+//        });
+
+
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @DataSource(DataSourceType.SLAVE)
+    @Override
+    public void TranMethod() {
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        boolean isSynchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
+        int n = 0;
     }
 }
