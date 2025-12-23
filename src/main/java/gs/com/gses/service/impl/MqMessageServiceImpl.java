@@ -35,6 +35,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.MDC;
 import org.springframework.aop.framework.AopContext;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -1063,7 +1064,13 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Async("mqFailHandlerExecutor")
     @Override
     public void asyncMethod() {
-//        selfProxy.TranMethod();
+        boolean proxy = AopUtils.isAopProxy(selfProxy);
+
+        // 1. 检查代理类型
+        boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
+        boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
+        boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
+        selfProxy.TranMethod();
 //        MqMessageService proxyService = applicationContext.getBean(MqMessageService.class);
 //        proxyService.TranMethod();
 
