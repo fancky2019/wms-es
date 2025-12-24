@@ -22,8 +22,8 @@ import javax.sql.DataSource;
 /**
  * 会覆盖yml 中的mybatis-plus配置
  */
-@Configuration
-@EnableConfigurationProperties(MybatisPlusProperties.class)
+//@Configuration
+//@EnableConfigurationProperties(MybatisPlusProperties.class)
 public class MybatisPlusDataSourceConfig {
     @Autowired
     private MybatisPlusProperties mybatisPlusProperties;

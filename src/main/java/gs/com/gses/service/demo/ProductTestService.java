@@ -15,4 +15,12 @@ import gs.com.gses.model.entity.demo.ProductTest;
 public interface ProductTestService extends IService<ProductTest> {
 
     ProductTest getProductTestById(int id);
+
+    void mssqlSlaveTranTest1();
+
+    void mssqlSlaveTranTest2();
+
+    void mysqlSlaveTranTest1();
+
+    void mysqlSlaveTranTest2();
 }

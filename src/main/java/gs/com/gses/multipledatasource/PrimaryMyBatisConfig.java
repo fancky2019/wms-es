@@ -12,6 +12,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import javax.sql.DataSource;
 
+//用PrimaryMyBatisPlusConfig 配置
 //@Configuration
 //@MapperScan(
 //        basePackages = "gs.com.gses.mapper",

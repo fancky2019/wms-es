@@ -28,80 +28,80 @@ spring:
       enabled: true
       max-file-size: 100MB       # Spring特定配置  -1 #不做限制
       max-request-size: 100MB
-  datasource:
-    #    # sqlserver  装车单 liku  GensongWms3DB 质检 wms_liku
-    #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
-    #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
-    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    username: sa
-    password: gen@song123
-
-    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-    #    driver-class-name: com.mysql.cj.jdbc.Driver
-    #    username: root
-    #    password: 123456
-    #    #mysql
-    #    #具体参见类DynamicDataSourceAspect 说明
-    #    #不用此默认，默认就是写库,多数据源用jdbcUrl，不是url,spring 默认用的是url，用多数据源用url会报错。
-    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-    #    driver-class-name: com.mysql.cj.jdbc.Driver
-    #    username: root
-    #    password: 123456
-
-
-    #要引入mybatis
-    type: com.zaxxer.hikari.HikariDataSource
-    # Hikari will use the above plus the following to setup connection pooling
-    hikari:
-      minimum-idle: 5
-      maximum-pool-size: 100
-      auto-commit: true #OrderManagerService 代码异常，spring自动回滚，或者手动回滚。否则正常自动提交
-      idle-timeout: 5000
-      #pool-name: HikariCP-Demo
-      max-lifetime: 1800000
-      connection-timeout: 5000
-      #connection-test-query: SELECT 1
-
-
-#  # 主数据源配置
 #  datasource:
-#    primary:
-#      jdbc-url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
-#      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-#      username: sa
-#      password: gen@song123
-#      # Hikari连接池配置
-#      hikari:
-#        pool-name: PrimaryHikariPool
-#        minimum-idle: 5
-#        maximum-pool-size: 20
-#        idle-timeout: 300000
-#        connection-timeout: 30000
-#        max-lifetime: 1800000
-#        connection-test-query: SELECT 1
-#        auto-commit: true
-#        validation-timeout: 5000
-#        leak-detection-threshold: 60000
+#    #    # sqlserver  装车单 liku  GensongWms3DB 质检 wms_liku
+#    #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
+#    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
+#    #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
+#    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+#    username: sa
+#    password: gen@song123
 #
-#    # 从数据源配置
-#    secondary:
-#      jdbc-url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-#      driver-class-name: com.mysql.cj.jdbc.Driver
-#      username: root
-#      password: 123456
-#      # Hikari连接池配置
-#      hikari:
-#        pool-name: SecondaryHikariPool
-#        minimum-idle: 3
-#        maximum-pool-size: 15
-#        idle-timeout: 300000
-#        connection-timeout: 30000
-#        max-lifetime: 1800000
-#        connection-test-query: SELECT 1
-#        auto-commit: true
-#        validation-timeout: 5000
-#        leak-detection-threshold: 60000
+#    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+#    #    driver-class-name: com.mysql.cj.jdbc.Driver
+#    #    username: root
+#    #    password: 123456
+#    #    #mysql
+#    #    #具体参见类DynamicDataSourceAspect 说明
+#    #    #不用此默认，默认就是写库,多数据源用jdbcUrl，不是url,spring 默认用的是url，用多数据源用url会报错。
+#    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+#    #    driver-class-name: com.mysql.cj.jdbc.Driver
+#    #    username: root
+#    #    password: 123456
+#
+#
+#    #要引入mybatis
+#    type: com.zaxxer.hikari.HikariDataSource
+#    # Hikari will use the above plus the following to setup connection pooling
+#    hikari:
+#      minimum-idle: 5
+#      maximum-pool-size: 100
+#      auto-commit: true #OrderManagerService 代码异常，spring自动回滚，或者手动回滚。否则正常自动提交
+#      idle-timeout: 5000
+#      #pool-name: HikariCP-Demo
+#      max-lifetime: 1800000
+#      connection-timeout: 5000
+#      #connection-test-query: SELECT 1
+
+
+  # 主数据源配置
+  datasource:
+    primary:
+      jdbc-url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
+      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+      username: sa
+      password: gen@song123
+      # Hikari连接池配置
+      hikari:
+        pool-name: PrimaryHikariPool
+        minimum-idle: 5
+        maximum-pool-size: 20
+        idle-timeout: 300000
+        connection-timeout: 30000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1
+        auto-commit: true
+        validation-timeout: 5000
+        leak-detection-threshold: 60000
+
+    # 从数据源配置
+    secondary:
+      jdbc-url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      username: root
+      password: 123456
+      # Hikari连接池配置
+      hikari:
+        pool-name: SecondaryHikariPool
+        minimum-idle: 3
+        maximum-pool-size: 15
+        idle-timeout: 300000
+        connection-timeout: 30000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1
+        auto-commit: true
+        validation-timeout: 5000
+        leak-detection-threshold: 60000
 
 
 
