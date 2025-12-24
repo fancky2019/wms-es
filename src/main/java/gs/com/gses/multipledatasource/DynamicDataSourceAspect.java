@@ -11,9 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 
-@Aspect
-@Component
-@Order(-10) // 保证在事务之前执行
+//@Aspect
+//@Component
+//@Order(-10) // 保证在事务之前执行
 public class DynamicDataSourceAspect {
 
     /**

@@ -41,7 +41,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
-
+ Advisors(增强器) :它组合了Advice（通知）和Pointcut（切点），是一个完整的切面单元。
+ Advisor = Advice + Pointcut
 
 <dependency>
 	<groupId>org.springframework.boot</groupId>

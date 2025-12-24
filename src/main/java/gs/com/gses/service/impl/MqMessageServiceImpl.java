@@ -72,9 +72,33 @@ import java.util.stream.Collectors;
 @Service
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
 
+    /**
+     *
+     默认jdk 动态代理：
+     Advisor 不全
+     selfProxy 触发了 early reference  先创建了一个“半成品代理”
+     不是 @Transactional 失效，而是你拿到的代理对象根本没有事务拦截器。
+     @Async + 自注入 + 提前代理暴露。
+     自注入selfProxy导致Spring在Bean创建过程中提前创建了一个不完整的代理（0 advisors）。
+
+     改成cglib 动态代理：从applicationContext获取bean可获取全部Advisor信息。
+
+
+     使用 @Lazy 后：aop 功能可能丢失
+     真实对象 ← CGLIB代理（包含Advisors） ← Lazy代理（没有Advisors） ← Spring容器Bean
+     */
     @Autowired
     @Lazy  // 防止循环依赖
     private MqMessageService selfProxy;
+
+//     通过setter方法注入，而不是字段注入
+//    @Autowired
+//    @Lazy
+//    public void setSelfProxy(MqMessageService selfProxy) {
+//        this.selfProxy = selfProxy;
+//    }
+
+
     @Autowired
     private ApplicationContext applicationContext;
     @Autowired
@@ -1058,23 +1082,46 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 
     @Override
     public void syncMethod() {
+        MqMessageService proxyMqMessageService = (MqMessageService) AopContext.currentProxy();
+
+        //从applicationContext 获取的bean 有完整的 Advisor ，selfProxy 是提前暴露的半成品Advisor不全
         selfProxy.asyncMethod();
+
+//        MqMessageService service = applicationContext.getBean(MqMessageService.class);
+//        service.asyncMethod();
+
     }
 
     @Async("mqFailHandlerExecutor")
     @Override
     public void asyncMethod() {
+//        异步方法内不能直接使用 AopContext.currentProxy()
+//        AopContext.currentProxy() 是线程绑定的，不能在异步线程中直接使用
+//        // AopContext内部使用ThreadLocal存储当前代理
+//        private static final ThreadLocal<Object> currentProxy = new ThreadLocal<>();
+//        异步方法内需要重新获取代理，通过 ApplicationContext.getBean()
+
+
+        String threadName = Thread.currentThread().getName();
         boolean proxy = AopUtils.isAopProxy(selfProxy);
 
         // 1. 检查代理类型
         boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
         boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
         boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
+        //自注入selfProxy导致Spring在Bean创建过程中提前创建了一个不完整的代理（0 advisors）。
         selfProxy.TranMethod();
-//        MqMessageService proxyService = applicationContext.getBean(MqMessageService.class);
-//        proxyService.TranMethod();
 
+//        //从applicationContext 获取的bean 有完整的 Advisor ，selfProxy 是提前暴露的半成品Advisor不全
+//        MqMessageService service = applicationContext.getBean(MqMessageService.class);
+//        service.TranMethod();
 
+        //@Async 切换了线程async 线程里：ThreadLocal 是空的，永远没有 currentProxy。 AopContext.currentProxy()=null 异常
+//        MqMessageService service = (MqMessageService) AopContext.currentProxy();
+//
+//        service.TranMethod();
+
+        int n = 0;
         //避免在@Async方法中调用@Transactional方法
 //        Exception e = transactionTemplate.execute(transactionStatus -> {
 //            try {
@@ -1095,8 +1142,19 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @DataSource(DataSourceType.SLAVE)
     @Override
     public void TranMethod() {
+        //从applicationContext 获取的bean 有完整的 Advisor ，selfProxy 是提前暴露的半成品Advisor不全
+        MqMessageService service = applicationContext.getBean(MqMessageService.class);
+
+        String threadName = Thread.currentThread().getName();
         boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
         boolean isSynchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
+        boolean proxy = AopUtils.isAopProxy(selfProxy);
+
+        // 1. 检查代理类型
+        boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
+        boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
+        boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
+
         int n = 0;
     }
 }

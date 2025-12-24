@@ -26,11 +26,11 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 //        "gs.com.gses.mapper",
 //        "gs.com.gses.**.mapper"   // 递归扫描所有层级的mapper包
 //})
-@EnableScheduling
+@EnableScheduling //quartz
 @EnableFeignClients
-//@SpringBootApplication(exclude = {RedissonAutoConfiguration.class})
+@SpringBootApplication(exclude = {RedissonAutoConfiguration.class})
 
-@SpringBootApplication(exclude = {RedissonAutoConfiguration.class,DataSourceAutoConfiguration.class})
+//@SpringBootApplication(exclude = {RedissonAutoConfiguration.class,DataSourceAutoConfiguration.class})
 public class WmsEsApplication {
 
     public static void main(String[] args) {

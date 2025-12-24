@@ -19,3 +19,5 @@ public class WmsEsApplication
   //        YAML配置（会创建默认的SqlSessionFactory）
           sqlSessionFactoryRef = "primarySqlSessionFactory"
   )
+
+  5、MybatisPlusDataSourceConfig 注释

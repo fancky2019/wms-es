@@ -2,15 +2,24 @@ package gs.com.gses.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.Ordered;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import java.util.concurrent.Executor;
 
 @Configuration
-@EnableAsync
+// 必须三处都配置
+//@EnableAspectJAutoProxy(proxyTargetClass = true)  // 1. AspectJ 代理.启动类已配置
+//@EnableTransactionManagement(order = Ordered.LOWEST_PRECEDENCE,proxyTargetClass = true)  // 事务最低优先级
+//@EnableAsync(order = Ordered.HIGHEST_PRECEDENCE,proxyTargetClass = true)  // 异步最高优先级，proxyTargetClass设置CGLIB代理
 //@Primary // 指定为默认实现
+//值越小优先级越高，越先生效：最大让事务等其他注解优先加载，不然只有Async
+@EnableAsync(order = Ordered.HIGHEST_PRECEDENCE)
+//@EnableAsync
 public class ThreadPoolExecutorConfig {
     //报错
 //public class ThreadPoolExecutorConfig implements AsyncConfigurer {

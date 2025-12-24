@@ -27,8 +27,8 @@ import org.springframework.stereotype.Service;
 public class ProductTestServiceImpl extends ServiceImpl<ProductTestMapper, ProductTest> implements ProductTestService {
 
     // 显式注入secondary的SqlSessionTemplate
-    @Autowired
-    @Qualifier("secondarySqlSessionTemplate")
+//    @Autowired
+//    @Qualifier("secondarySqlSessionTemplate")
     private SqlSessionTemplate secondarySqlSessionTemplate;
 
 
