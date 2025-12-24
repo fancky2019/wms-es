@@ -81,8 +81,8 @@ public class ProductTestServiceImpl extends ServiceImpl<ProductTestMapper, Produ
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void mssqlSlaveTranTest1() {
-        long id=1979085143561035777L;
-        MqMessage mqMessage=  mqMessageService.getById(id);
+        long id = 1979085143561035777L;
+        MqMessage mqMessage = mqMessageService.getById(id);
         LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.set(MqMessage::getFailureReason, "1");
         updateWrapper.eq(MqMessage::getId, mqMessage.getId());
@@ -96,8 +96,8 @@ public class ProductTestServiceImpl extends ServiceImpl<ProductTestMapper, Produ
 //    @Transactional(rollbackFor = Exception.class)
     @Override
     public void mssqlSlaveTranTest2() {
-        long id=1979085249085530113L;
-        MqMessage mqMessage=  mqMessageService.getById(id);
+        long id = 1979085249085530113L;
+        MqMessage mqMessage = mqMessageService.getById(id);
         LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.set(MqMessage::getFailureReason, "2");
         updateWrapper.eq(MqMessage::getId, mqMessage.getId());
@@ -131,5 +131,99 @@ public class ProductTestServiceImpl extends ServiceImpl<ProductTestMapper, Produ
         this.update(null, updateWrapper);
     }
 
+
+    /**
+     *
+     *
+     *
+     * 1. NESTED 的基本概念
+     * 定义：
+     * NESTED（嵌套事务）是一个 子事务，它：
+     * 依赖于外部事务（父事务）
+     * 可以独立回滚而不影响外部事务
+     * 外部事务回滚会导致所有嵌套事务回滚
+     *
+     * 条件：
+     * NESTED 事务的核心实现依赖于数据库的 Savepoint（保存点） 机制
+     *
+     *-- SQL 层面的 Savepoint 操作
+     *
+     * START TRANSACTION;          -- 开始事务
+     *
+     * INSERT INTO table1 VALUES (1);
+     * SAVEPOINT sp1;             -- 创建保存点
+     *
+     * INSERT INTO table2 VALUES (2);  -- 可以回滚这部分
+     * ROLLBACK TO SAVEPOINT sp1;      -- 回滚到保存点，table2的插入被撤销
+     *
+     * INSERT INTO table3 VALUES (3);  -- 继续执行
+     * COMMIT;                        -- 最终提交：table1和table3被保存
+     *
+     *
+     *
+     * 无事务方法调用	NESTED	新建事务（同REQUIRED）
+     * 有事务方法调用	NESTED	嵌套事务（使用保存点）
+     *
+     */
+    @DataSource(DataSourceType.SLAVE)
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void nestedTranTest1() {
+        ProductTest productTest = this.getById(1);
+        LambdaUpdateWrapper<ProductTest> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.set(ProductTest::getProductName, "11");
+        updateWrapper.eq(ProductTest::getId, productTest.getId());
+        this.update(null, updateWrapper);
+        ProductTestService productTestService = applicationContext.getBean(ProductTestService.class);
+
+        //要处理掉异常，不然抛出到父事务造成父事务回滚
+        try {
+            productTestService.nestedTranTest2();
+        } catch (Exception ex) {
+            log.error("", ex);
+        }
+
+
+        //父事务回滚：回滚整个事务包括NESTED（嵌套事务）
+//        int n = Integer.parseInt("n");
+
+        //nestedTranTest2 的异常不影响 tran3 平级的还原点
+        try {
+            productTestService.nestedTranTest3();
+        } catch (Exception ex) {
+            log.error("", ex);
+        }
+
+
+    }
+
+    @DataSource(DataSourceType.SLAVE)
+//    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.NESTED)
+    @Override
+    public void nestedTranTest2() {
+        ProductTest productTest = this.getById(2);
+        LambdaUpdateWrapper<ProductTest> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.set(ProductTest::getProductName, "22");
+        updateWrapper.eq(ProductTest::getId, productTest.getId());
+        this.update(null, updateWrapper);
+        //嵌套事务回滚：只回滚NESTED（嵌套事务）
+        int n = Integer.parseInt("n");
+    }
+
+
+    @DataSource(DataSourceType.SLAVE)
+//    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.NESTED)
+    @Override
+    public void nestedTranTest3() {
+        ProductTest productTest = this.getById(3);
+        LambdaUpdateWrapper<ProductTest> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.set(ProductTest::getProductName, "33");
+        updateWrapper.eq(ProductTest::getId, productTest.getId());
+        this.update(null, updateWrapper);
+        //嵌套事务回滚：只回滚NESTED（嵌套事务）
+//        int n = Integer.parseInt("n");
+    }
 
 }

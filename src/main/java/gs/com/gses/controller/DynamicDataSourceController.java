@@ -33,4 +33,10 @@ public class DynamicDataSourceController {
         productTestService.mysqlSlaveTranTest1();
         return MessageResult.success();
     }
+
+    @GetMapping("/nestedTranTest")
+    public MessageResult<Void> nestedTranTest() throws Exception {
+        productTestService.nestedTranTest1();
+        return MessageResult.success();
+    }
 }

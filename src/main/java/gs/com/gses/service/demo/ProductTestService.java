@@ -23,4 +23,12 @@ public interface ProductTestService extends IService<ProductTest> {
     void mysqlSlaveTranTest1();
 
     void mysqlSlaveTranTest2();
+
+
+    void nestedTranTest1();
+
+    void nestedTranTest2();
+
+    void nestedTranTest3();
+
 }
