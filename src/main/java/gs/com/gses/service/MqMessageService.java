@@ -65,7 +65,8 @@ public interface MqMessageService extends IService<MqMessage> {
 
     void syncMethod();
 
-    /*
+    /**
+     *     接口 添加@Async @Transactional  可解决 jdk 动态代理 selfProxy 解决异步事务问题。但是advisor (增强器) 信息仍为空，因为 默认只在实现类的方法上查找，不会去接口上查找，需要配置
     @Async @Transactional 注解的推荐用法是：加在具体实现类的方法上，而不是接口上
     代理机制限制：
     如果使用 JDK 动态代理，接口上的注解可以被读取
