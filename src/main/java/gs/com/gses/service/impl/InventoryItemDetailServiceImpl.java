@@ -311,7 +311,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
     }
 
     @NotNull
-    private  List<InventoryItemDetailResponse> sortInventoryItemDetailResponses(InventoryItemDetailRequest request, List<InventoryItemDetailResponse> detailResponseList) {
+    private List<InventoryItemDetailResponse> sortInventoryItemDetailResponses(InventoryItemDetailRequest request, List<InventoryItemDetailResponse> detailResponseList) {
         List<InventoryItemDetailResponse> exactlyMatchList = new ArrayList<>();
         List<InventoryItemDetailResponse> otherList = new ArrayList<>();
         if (StringUtils.isNotEmpty(request.getM_Str12())) {
@@ -873,6 +873,69 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             BeanUtils.copyProperties(p, response);
             return response;
         }).collect(Collectors.toList());
+
+        List<Long> inventoryItemIdList = inventoryItemDetailResponseList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
+        if (CollectionUtils.isNotEmpty(inventoryItemIdList)) {
+            List<InventoryItem> inventoryItemList = this.inventoryItemService.listByIds(inventoryItemIdList);
+            // 提取存在的ID
+            Set<Long> existingIds = inventoryItemList.stream()
+                    .map(InventoryItem::getId)
+                    .collect(Collectors.toSet());
+
+            // 找出不存在的ID
+            List<Long> notFoundInventoryItemIds = new ArrayList<>(CollectionUtils.subtract(
+                    inventoryItemIdList,
+                    existingIds
+            ));
+            if (CollectionUtils.isNotEmpty(notFoundInventoryItemIds)) {
+                String notFoundItemIdsStr = notFoundInventoryItemIds.stream()
+                        .map(String::valueOf)
+                        .collect(Collectors.joining(","));
+                throw new Exception("Inventory item data loss  " + notFoundItemIdsStr);
+            }
+
+            List<Long> inventoryIdList = inventoryItemList.stream().map(p -> p.getInventoryId()).distinct().collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(inventoryIdList)) {
+                List<Inventory> inventoryList = this.inventoryService.listByIds(inventoryIdList);
+                // 提取存在的ID
+                Set<Long> existinginventoryIds = inventoryList.stream()
+                        .map(Inventory::getId)
+                        .collect(Collectors.toSet());
+
+                // 找出不存在的ID
+                List<Long> notFoundInventoryIds = new ArrayList<>(CollectionUtils.subtract(
+                        inventoryIdList,
+                        existinginventoryIds
+                ));
+                if (CollectionUtils.isNotEmpty(notFoundInventoryIds)) {
+                    String notFoundInventoryIdsStr = notFoundInventoryIds.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(","));
+                    throw new Exception("Inventory data loss  " + notFoundInventoryIdsStr);
+                }
+                Map<Long, Long> inventoryItemInventoryMap = inventoryItemList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p.getInventoryId()));
+                Map<Long, String> inventoryPalletMap = inventoryList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p.getPallet()));
+                for (InventoryItemDetailResponse response : inventoryItemDetailResponseList) {
+                    long inventoryId = inventoryItemInventoryMap.get(response.getInventoryItemId());
+                    String pallet = inventoryPalletMap.get(inventoryId);
+                    response.setInventoryId(inventoryId);
+                    response.setPallet(pallet);
+                }
+            } else {
+                String inventoryIdStr = inventoryIdList.stream()
+                        .map(String::valueOf)
+                        .collect(Collectors.joining(","));
+                throw new Exception("Inventory item data loss  " + inventoryIdStr);
+            }
+
+        } else {
+
+            String inventoryItemIdStr = inventoryItemIdList.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+            throw new Exception("Inventory item data loss  " + inventoryItemIdStr);
+        }
+
 
         PageData<InventoryItemDetailResponse> pageData = new PageData<>();
         pageData.setData(inventoryItemDetailResponseList);

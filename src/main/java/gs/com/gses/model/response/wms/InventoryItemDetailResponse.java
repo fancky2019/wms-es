@@ -19,7 +19,8 @@ public class InventoryItemDetailResponse implements Serializable {
      * 库存明细表id
      */
     private Long inventoryItemId;
-
+    private Long inventoryId;
+    private String pallet;
     /**
      * 箱号
      */

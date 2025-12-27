@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.model.bo.wms.OutByAssignedInfoBo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.enums.OutboundOrderXStatus;
 import gs.com.gses.model.request.Sort;
+import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.MaterialRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.PageData;
@@ -27,6 +29,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
 import java.text.MessageFormat;
@@ -458,6 +461,17 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 
         }
         return result;
+    }
+
+    @Override
+    public void OutByAssignedInfo(OutByAssignedInfoBo outByAssignedInfoBo) throws Exception {
+        //判 字符串  null  ""  "   "
+//        Assert.hasText(outByAssignedInfoBo.getRemark(), "remark id cannot be empty");
+        for (InventoryItemDetailRequest detailRequest : outByAssignedInfoBo.getDetailRequest()) {
+            Assert.notNull(detailRequest.getId(), "Detail id cannot be empty");
+            Assert.notNull(detailRequest.getAllocatedPackageQuantity(), "AllocatedPackageQuantity cannot be empty");
+        }
+
     }
 
 }

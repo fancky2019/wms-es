@@ -1,5 +1,6 @@
 package gs.com.gses.service;
 
+import gs.com.gses.model.bo.wms.OutByAssignedInfoBo;
 import gs.com.gses.model.entity.ShipOrderItem;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
@@ -18,10 +19,16 @@ public interface ShipOrderItemService extends IService<ShipOrderItem> {
     List<ShipOrderItem> getByShipOrderIds(List<Long> shipOrderIdList);
 
     Boolean checkItemExist(ShipOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
+
     Boolean checkItemExistBatch(List<ShipOrderItemRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
 
     PageData<ShipOrderItemResponse> getShipOrderItemPage(ShipOrderItemRequest request) throws Exception;
 
     HashMap<Long, Long> copyShipOrderItem(long shipOrderId, long cloneShipOrderId) throws Exception;
+
     List<Long> nextId(List<Long> idList) throws Exception;
+
+    void OutByAssignedInfo(OutByAssignedInfoBo requestList) throws Exception;
+
+
 }
