@@ -28,9 +28,9 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 //})
 @EnableScheduling //quartz
 @EnableFeignClients
-//@SpringBootApplication(exclude = {RedissonAutoConfiguration.class})
+@SpringBootApplication(exclude = {RedissonAutoConfiguration.class})
 
-@SpringBootApplication(exclude = {RedissonAutoConfiguration.class,DataSourceAutoConfiguration.class})
+//@SpringBootApplication(exclude = {RedissonAutoConfiguration.class,DataSourceAutoConfiguration.class})
 public class WmsEsApplication {
 
     public static void main(String[] args) {

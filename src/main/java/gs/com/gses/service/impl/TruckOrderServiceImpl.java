@@ -159,10 +159,19 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         }
         log.info("TruckOrderItemRequestList size {} ", request.getTruckOrderItemRequestList().size());
         for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
+            if (StringUtils.isEmpty(itemRequest.getDeviceNo()) &&
+                    StringUtils.isEmpty(itemRequest.getMaterialCode()) &&
+                    StringUtils.isEmpty(itemRequest.getProjectNo())) {
+                request.getTruckOrderItemRequestList().remove(itemRequest);
+                continue;
+            }
             if (StringUtils.isNotEmpty(itemRequest.getDeviceNo())) {
                 if (itemRequest.getIgnoreDeviceNo()) {
-                    String msg = MessageFormat.format("DeviceNo - {0} is not empty,can not ignore DeviceNo ", itemRequest.getDeviceNo());
-                    throw new Exception(msg);
+//                    String msg = MessageFormat.format("DeviceNo - {0} is not empty,can not ignore DeviceNo ", itemRequest.getDeviceNo());
+//                    throw new Exception(msg);
+                    itemRequest.setDeviceNo(null);
+                    String msg = MessageFormat.format("DeviceNo - {0} ignore DeviceNo ", itemRequest.getDeviceNo());
+                    log.info(msg);
                 }
             }
             if (StringUtils.isEmpty(itemRequest.getMaterialCode())) {
@@ -172,6 +181,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 throw new Exception("ProjectNo fields contain blank values");
             }
         }
+
+        log.info("AddTruckOrderRequest - {}", objectMapper.writeValueAsString(request));
 
         //多个字段分组
         MultiKeyMap<MultiKey, List<TruckOrderItemRequest>> multiKeyMap = new MultiKeyMap<>();
@@ -412,7 +423,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         currentTaskName = "callWmsService";
         stopWatch.start(currentTaskName);
 
-        //        Integer.parseInt("m");
+//        Integer.parseInt("m");
         WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
         String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
         log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
@@ -618,7 +629,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         splitRequest.setTruckOrderItemRequestList(null);
         BeanUtils.copyProperties(request, splitRequest);
         splitRequest.setTruckOrderItemRequestList(splitTruckOrderItemRequestList);
-
+//        if (true) {
+//            return;
+//        }
 //        long createTime = LocalDateTime.now().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
         long createTime = Instant.now().toEpochMilli();
         splitRequest.getTruckOrderRequest().setCreationTime(LocalDateTime.now());

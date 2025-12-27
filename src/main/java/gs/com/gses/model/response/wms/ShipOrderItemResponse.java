@@ -46,7 +46,10 @@ public class ShipOrderItemResponse implements Serializable {
      * 物料id
      */
     private Long materialId;
-
+    /**
+     * 物料id
+     */
+    private String materialCode;
     /**
      * 批号
      */

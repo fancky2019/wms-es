@@ -9,8 +9,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.enums.OutboundOrderXStatus;
 import gs.com.gses.model.request.Sort;
+import gs.com.gses.model.request.wms.MaterialRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.wms.MaterialResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.MaterialService;
 import gs.com.gses.service.ShipOrderItemService;
@@ -110,8 +112,8 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
 //            throw new Exception("Get multiple  ShipOrderItem info by  m_Str7 ,m_Str12,materialCode");
                 throw new Exception("找到多个发货单");
             }
-            log.info("M_Str12 is not empty set RequiredPkgQuantity one");
-            request.setRequiredPkgQuantity(BigDecimal.ONE);
+//            log.info("M_Str12 is not empty set RequiredPkgQuantity one");
+//            request.setRequiredPkgQuantity(BigDecimal.ONE);
         }
         BigDecimal requiredPkgQuantity = request.getRequiredPkgQuantity();
         List<ShipOrderItemResponse> shipOrderItemResponseList = page.getData();
@@ -210,8 +212,8 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
                     String msg = MessageFormat.format("Match multiple ShipOrderItems by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
                     throw new Exception(msg);
                 }
-                log.info("M_Str12 is not empty set RequiredPkgQuantity one");
-                request.setRequiredPkgQuantity(BigDecimal.ONE);
+//                log.info("M_Str12 is not empty set RequiredPkgQuantity one");
+//                request.setRequiredPkgQuantity(BigDecimal.ONE);
             }
 
 
@@ -286,6 +288,16 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         if (request.getShipOrderId() != null && request.getShipOrderId() > 0) {
             queryWrapper.eq(ShipOrderItem::getShipOrderId, request.getShipOrderId());
         }
+        if (StringUtils.isNotEmpty(request.getMaterialCode())) {
+            List<MaterialResponse> materialList = this.materialService.getByMatchedCode(request.getMaterialCode());
+            if (CollectionUtils.isNotEmpty(materialList)) {
+                List<Long> materialIdList = materialList.stream().map(p -> p.getId()).collect(Collectors.toList());
+                queryWrapper.in(ShipOrderItem::getMaterialId, materialIdList);
+            } else {
+                PageData.getDefault();
+            }
+
+        }
         if (request.getMaterialId() != null && request.getMaterialId() > 0) {
             queryWrapper.eq(ShipOrderItem::getMaterialId, request.getMaterialId());
         }
@@ -295,12 +307,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         if (StringUtils.isNotEmpty(request.getM_Str12())) {
             queryWrapper.eq(ShipOrderItem::getM_Str12, request.getM_Str12());
         }
-        if (StringUtils.isNotEmpty(request.getMaterialCode())) {
-            Material material = materialService.getByCode(request.getMaterialCode());
-            if (material != null) {
-                queryWrapper.eq(ShipOrderItem::getMaterialId, material.getId());
-            }
-        }
+
 
         if (CollectionUtils.isNotEmpty(request.getXStatusList())) {
             queryWrapper.in(ShipOrderItem::getXStatus, request.getXStatusList());
@@ -372,7 +379,31 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             BeanUtils.copyProperties(p, response);
             return response;
         }).collect(Collectors.toList());
+        List<Long> shipOrderIdList = records.stream().map(p -> p.getShipOrderId()).distinct().collect(Collectors.toList());
+        List<ShipOrder> shipOrderList = new ArrayList<>();
+        Map<Long, ShipOrder> shipOrderMap = new HashMap<>();
+        if (CollectionUtils.isNotEmpty(shipOrderIdList)) {
+            shipOrderList = this.shipOrderService.listByIds(shipOrderIdList);
+            shipOrderMap = shipOrderList.stream().collect(Collectors.toMap(ShipOrder::getId, p -> p));
+        }
 
+        List<Long> materialIdList = records.stream().map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
+        List<Material> materialList = new ArrayList<>();
+        Map<Long, Material> materialMap = new HashMap<>();
+        if (CollectionUtils.isNotEmpty(shipOrderIdList)) {
+            materialList = this.materialService.listByIds(materialIdList);
+            materialMap = materialList.stream().collect(Collectors.toMap(Material::getId, p -> p));
+        }
+
+        for (ShipOrderItemResponse item : shipOrderItemResponseList) {
+            ShipOrder shipOrder = shipOrderMap.get(item.getShipOrderId());
+            if (shipOrder != null) {
+                item.setShipOrderCode(shipOrder.getXCode());
+            }
+            Optional.ofNullable(materialMap.get(item.getMaterialId()))
+                    .map(Material::getXCode)
+                    .ifPresent(item::setMaterialCode);
+        }
         PageData<ShipOrderItemResponse> pageData = new PageData<>();
         pageData.setData(shipOrderItemResponseList);
         pageData.setCount(total);

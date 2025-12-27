@@ -91,6 +91,17 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
     }
 
     @Override
+    public List<MaterialResponse> getByMatchedCode(String materialCode) throws Exception {
+        MaterialRequest materialRequest=new MaterialRequest();
+        materialRequest.setPageSize(Integer.MAX_VALUE);
+        materialRequest.setPageIndex(1);
+        materialRequest.setXCode(materialCode);
+        materialRequest.setSearchCount(false);
+       PageData<MaterialResponse> pageData= this.getMaterialPage(materialRequest);
+        return pageData.getData();
+    }
+
+    @Override
     public PageData<MaterialResponse> getMaterialPage(MaterialRequest request) {
         LambdaQueryWrapper<Material> queryWrapper = new LambdaQueryWrapper<>();
 

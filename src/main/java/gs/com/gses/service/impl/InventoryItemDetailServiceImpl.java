@@ -29,6 +29,7 @@ import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
+import gs.com.gses.model.response.wms.MaterialResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.BarcodeUtil;
@@ -37,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -133,43 +135,54 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         }
 
         InventoryItemDetailResponse inventoryItemDetailResponse = null;
-        if (size > 1) {
+//        if (size > 1) {
+//
+//            int count = 0;
+//            if (StringUtils.isNotEmpty(request.getM_Str12())) {
+//                for (InventoryItemDetailResponse detailResponse : detailResponseList) {
+//                    List<String> mStr12List = Arrays.stream(detailResponse.getM_Str12().split(",")).collect(Collectors.toList());
+//                    if (mStr12List.contains(request.getM_Str12())) {
+//                        count++;
+//                        inventoryItemDetailResponse = detailResponse;
+//                    }
+//                }
+//
+//                if (count > 1) {
+//                    throw new Exception("匹配多个库存");
+//                }
+//                request.setId(inventoryItemDetailResponse.getId());
+//                checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+//                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
+//                allocateModelList.addAll(currentAllocateModelList);
+//
+//            } else {
+//                //求和
+//                BigDecimal sum = detailResponseList.stream()
+//                        .map(InventoryItemDetailResponse::getPackageQuantity)
+//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+//                checkPackageQuantity(sum, request.getPackageQuantity());
+//                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
+//                allocateModelList.addAll(currentAllocateModelList);
+//                inventoryItemDetailResponse = detailResponseList.get(0);
+//            }
+//
+//        } else {
+//            inventoryItemDetailResponse = detailResponseList.get(0);
+//            checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+//            List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
+//            allocateModelList.addAll(currentAllocateModelList);
+//        }
 
-            int count = 0;
-            if (StringUtils.isNotEmpty(request.getM_Str12())) {
-                for (InventoryItemDetailResponse detailResponse : detailResponseList) {
-                    List<String> mStr12List = Arrays.stream(detailResponse.getM_Str12().split(",")).collect(Collectors.toList());
-                    if (mStr12List.contains(request.getM_Str12())) {
-                        count++;
-                        inventoryItemDetailResponse = detailResponse;
-                    }
-                }
+        detailResponseList = sortInventoryItemDetailResponses(request, detailResponseList);
 
-                if (count > 1) {
-                    throw new Exception("匹配多个库存");
-                }
-                request.setId(inventoryItemDetailResponse.getId());
-                checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
-                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
-                allocateModelList.addAll(currentAllocateModelList);
-
-            } else {
-                //求和
-                BigDecimal sum = detailResponseList.stream()
-                        .map(InventoryItemDetailResponse::getPackageQuantity)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                checkPackageQuantity(sum, request.getPackageQuantity());
-                List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
-                allocateModelList.addAll(currentAllocateModelList);
-                inventoryItemDetailResponse = detailResponseList.get(0);
-            }
-
-        } else {
-            inventoryItemDetailResponse = detailResponseList.get(0);
-            checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
-            List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList,null);
-            allocateModelList.addAll(currentAllocateModelList);
-        }
+        inventoryItemDetailResponse = detailResponseList.get(0);
+        //求和
+        BigDecimal sum = detailResponseList.stream()
+                .map(InventoryItemDetailResponse::getPackageQuantity)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        checkPackageQuantity(sum, request.getPackageQuantity());
+        List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList, null);
+        allocateModelList.addAll(currentAllocateModelList);
         request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
         return true;
     }
@@ -240,44 +253,54 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             }).collect(Collectors.toList());
 
             InventoryItemDetailResponse inventoryItemDetailResponse = null;
-            if (size > 1) {
+//            if (size > 1) {
+//
+//                int count = 0;
+//                if (StringUtils.isNotEmpty(request.getM_Str12())) {
+//                    for (InventoryItemDetailResponse detailResponse : detailResponseList) {
+//                        List<String> mStr12List = Arrays.stream(detailResponse.getM_Str12().split(",")).collect(Collectors.toList());
+//                        if (mStr12List.contains(request.getM_Str12())) {
+//                            count++;
+//                            inventoryItemDetailResponse = detailResponse;
+//                        }
+//                    }
+//
+//                    if (count > 1) {
+//                        String msg = MessageFormat.format("Match multiple InventoryItemDetails by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+//                        throw new Exception(msg);
+//                    }
+//                    request.setId(inventoryItemDetailResponse.getId());
+//                    checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+//                    List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList, palletMap);
+//                    allocateModelList.addAll(currentAllocateModelList);
+//
+//                } else {
+//                    //求和
+//                    BigDecimal sum = detailResponseList.stream()
+//                            .map(InventoryItemDetailResponse::getPackageQuantity)
+//                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+//                    checkPackageQuantity(sum, request.getPackageQuantity());
+//                    List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList, palletMap);
+//                    allocateModelList.addAll(currentAllocateModelList);
+//                    inventoryItemDetailResponse = detailResponseList.get(0);
+//                }
+//
+//            } else {
+//                inventoryItemDetailResponse = detailResponseList.get(0);
+//                checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
+//                List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList, palletMap);
+//                allocateModelList.addAll(currentAllocateModelList);
+//            }
 
-                int count = 0;
-                if (StringUtils.isNotEmpty(request.getM_Str12())) {
-                    for (InventoryItemDetailResponse detailResponse : detailResponseList) {
-                        List<String> mStr12List = Arrays.stream(detailResponse.getM_Str12().split(",")).collect(Collectors.toList());
-                        if (mStr12List.contains(request.getM_Str12())) {
-                            count++;
-                            inventoryItemDetailResponse = detailResponse;
-                        }
-                    }
+            detailResponseList = sortInventoryItemDetailResponses(request, detailResponseList);
 
-                    if (count > 1) {
-                        String msg = MessageFormat.format("Match multiple InventoryItemDetails by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
-                        throw new Exception(msg);
-                    }
-                    request.setId(inventoryItemDetailResponse.getId());
-                    checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
-                    List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList,palletMap);
-                    allocateModelList.addAll(currentAllocateModelList);
-
-                } else {
-                    //求和
-                    BigDecimal sum = detailResponseList.stream()
-                            .map(InventoryItemDetailResponse::getPackageQuantity)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    checkPackageQuantity(sum, request.getPackageQuantity());
-                    List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList,palletMap);
-                    allocateModelList.addAll(currentAllocateModelList);
-                    inventoryItemDetailResponse = detailResponseList.get(0);
-                }
-
-            } else {
-                inventoryItemDetailResponse = detailResponseList.get(0);
-                checkPackageQuantity(inventoryItemDetailResponse.getPackageQuantity(), request.getPackageQuantity());
-                List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList,palletMap);
-                allocateModelList.addAll(currentAllocateModelList);
-            }
+            inventoryItemDetailResponse = detailResponseList.get(0);
+            BigDecimal sum = detailResponseList.stream()
+                    .map(InventoryItemDetailResponse::getPackageQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            checkPackageQuantity(sum, request.getPackageQuantity());
+            List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList, palletMap);
+            allocateModelList.addAll(currentAllocateModelList);
             request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
         }
 
@@ -285,6 +308,34 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
         log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
         return true;
+    }
+
+    @NotNull
+    private  List<InventoryItemDetailResponse> sortInventoryItemDetailResponses(InventoryItemDetailRequest request, List<InventoryItemDetailResponse> detailResponseList) {
+        List<InventoryItemDetailResponse> exactlyMatchList = new ArrayList<>();
+        List<InventoryItemDetailResponse> otherList = new ArrayList<>();
+        if (StringUtils.isNotEmpty(request.getM_Str12())) {
+            // 使用一次遍历分离
+            for (InventoryItemDetailResponse item : detailResponseList) {
+                if (request.getM_Str12().equals(item.getM_Str12())) {
+                    exactlyMatchList.add(item);
+                } else {
+                    otherList.add(item);
+                }
+            }
+        } else {
+            for (InventoryItemDetailResponse item : detailResponseList) {
+                if (item.getM_Str12() == null) {
+                    exactlyMatchList.add(item);
+                } else {
+                    otherList.add(item);
+                }
+            }
+        }
+        // 合并结果
+        exactlyMatchList.addAll(otherList);
+        detailResponseList = exactlyMatchList;
+        return detailResponseList;
     }
 
     @Override
@@ -303,7 +354,9 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         }
         for (int i = 0; i < shipOrderItemList.size(); i++) {
             ShipOrderItemResponse shipOrderItem = shipOrderItemList.get(i);
-            BigDecimal itemNeedPackageQuantity = shipOrderItem.getRequiredPkgQuantity().subtract(shipOrderItem.getAlloactedPkgQuantity());
+//            BigDecimal itemNeedPackageQuantity = shipOrderItem.getRequiredPkgQuantity().subtract(shipOrderItem.getAlloactedPkgQuantity());
+            BigDecimal itemNeedPackageQuantity = shipOrderItem.getCurrentAllocatedPkgQuantity();
+
             if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
@@ -780,10 +833,14 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             }
         }
         if (StringUtils.isNotEmpty(request.getMaterialCode())) {
-            Material material = materialService.getByCode(request.getMaterialCode());
-            if (material != null) {
-                queryWrapper.eq(InventoryItemDetail::getMaterialId, material.getId());
+            List<MaterialResponse> materialList = this.materialService.getByMatchedCode(request.getMaterialCode());
+            if (CollectionUtils.isNotEmpty(materialList)) {
+                List<Long> materialIdList = materialList.stream().map(p -> p.getId()).collect(Collectors.toList());
+                queryWrapper.in(InventoryItemDetail::getMaterialId, materialIdList);
+            } else {
+                PageData.getDefault();
             }
+
         }
 
         if (request.getMaterialId() != null && request.getMaterialId() > 0) {
