@@ -34,6 +34,7 @@ import gs.com.gses.utility.ExcelUtils;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -595,7 +596,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //        如果文档 已存在：会执行更新操作（全量替换，不是部分更新）
         //elasticsearchTemplate.save(...)实际上是 PUT ，存在就覆盖  不存在就创建,要判断版本号，
         //不然覆盖成历史数据造成脏读
-        elasticsearchRestTemplate.save(inventoryInfos);
+        //同步调用
+        Iterable<InventoryInfo> response = elasticsearchRestTemplate.save(inventoryInfos);
+        log.info(" elasticsearchRestTemplate.save {} -- {}", inventoryInfos.size(), IterableUtils.size(response));
+
         return inventoryInfos.size();
     }
 
@@ -739,7 +743,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         // 对应 MyBatis Plus 中的：wrapper.and(qw -> { for(...) { qw.or(...) } })
         if (CollectionUtils.isNotEmpty(request.getInventoryItemDetailRequestList())) {
-           //should 数组
+            //should 数组
             BoolQueryBuilder orConditionsQuery = QueryBuilders.boolQuery();
             for (InventoryItemDetailRequest query : request.getInventoryItemDetailRequestList()) {
                 // 每个 query 对象构建一个 AND 条件组

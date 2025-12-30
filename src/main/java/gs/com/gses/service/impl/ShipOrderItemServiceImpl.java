@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gs.com.gses.listener.event.EwmsEvent;
+import gs.com.gses.listener.event.EwmsEventTopic;
 import gs.com.gses.model.bo.wms.OutByAssignedInfoBo;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.enums.OutboundOrderXStatus;
@@ -13,16 +15,21 @@ import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import gs.com.gses.model.request.wms.MaterialRequest;
 import gs.com.gses.model.request.wms.ShipOrderItemRequest;
+import gs.com.gses.model.request.wms.ShipOrderPalletRequest;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.wms.InventoryItemDetailResponse;
 import gs.com.gses.model.response.wms.MaterialResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
+import gs.com.gses.model.response.wms.WmsResponse;
 import gs.com.gses.service.MaterialService;
 import gs.com.gses.service.ShipOrderItemService;
 import gs.com.gses.mapper.wms.ShipOrderItemMapper;
 import gs.com.gses.service.ShipOrderService;
+import gs.com.gses.service.api.WmsService;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import gs.com.gses.utility.SnowFlake;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.asm.Advice;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -32,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -54,6 +62,8 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
     private ObjectMapper objectMapper;
     @Autowired
     private SnowFlake snowFlake;
+    @Autowired
+    private WmsService wmsService;
 
     @Override
     public List<ShipOrderItem> getByShipOrderIds(List<Long> shipOrderIdList) {
@@ -464,14 +474,70 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
     }
 
     @Override
-    public void OutByAssignedInfo(OutByAssignedInfoBo outByAssignedInfoBo) throws Exception {
+    public void outByAssignedInfo(OutByAssignedInfoBo outByAssignedInfoBo, String token) throws Exception {
         //判 字符串  null  ""  "   "
 //        Assert.hasText(outByAssignedInfoBo.getRemark(), "remark id cannot be empty");
         for (InventoryItemDetailRequest detailRequest : outByAssignedInfoBo.getDetailRequest()) {
             Assert.notNull(detailRequest.getId(), "Detail id cannot be empty");
             Assert.notNull(detailRequest.getAllocatedPackageQuantity(), "AllocatedPackageQuantity cannot be empty");
+            Assert.notNull(detailRequest.getMaterialCode(), "MaterialCode cannot be empty");
+            Assert.notNull(detailRequest.getPallet(), "Pallet cannot be empty");
         }
 
+        ShipOrderItem shipOrderItem = this.getById(outByAssignedInfoBo.getShipOrderItemId());
+        Assert.notNull(shipOrderItem, MessageFormat.format("ShipOrderItem - {0}  loss", outByAssignedInfoBo.getShipOrderItemId()));
+        ShipOrder shipOrder = this.shipOrderService.getById(shipOrderItem.getShipOrderId());
+        Assert.notNull(shipOrderItem, MessageFormat.format("ShipOrder - {0}  loss", shipOrderItem.getShipOrderId()));
+
+        BigDecimal needQuantity = shipOrderItem.getRequiredPkgQuantity().subtract(shipOrderItem.getAlloactedPkgQuantity());
+        BigDecimal outQuantity = outByAssignedInfoBo.getDetailRequest().stream()
+                .map(InventoryItemDetailRequest::getAllocatedPackageQuantity)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        checkPackageQuantity(needQuantity, outQuantity);
+
+        List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
+        ShipOrderPalletRequest shipOrderPalletRequest = null;
+        List<InventoryItemDetailRequest> inventoryItemDetailRequestList = null;
+        InventoryItemDetailRequest detailRequest = null;
+        for (InventoryItemDetailRequest item : outByAssignedInfoBo.getDetailRequest()) {
+            shipOrderPalletRequest = new ShipOrderPalletRequest();
+            shipOrderPalletRequest.setShipOrderCode(shipOrder.getXCode());
+            shipOrderPalletRequest.setShipOrderItemId(outByAssignedInfoBo.getShipOrderItemId());
+            inventoryItemDetailRequestList = new ArrayList<>();
+            detailRequest = new InventoryItemDetailRequest();
+            detailRequest.setPallet(item.getPallet());
+            detailRequest.setM_Str7(item.getM_Str7());
+            detailRequest.setM_Str12(item.getM_Str12());
+            detailRequest.setMovedPkgQuantity(item.getAllocatedPackageQuantity());
+            detailRequest.setId(item.getId());
+            detailRequest.setMaterialCode(item.getMaterialCode());
+            inventoryItemDetailRequestList.add(detailRequest);
+
+            shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
+            shipOrderPalletRequestList.add(shipOrderPalletRequest);
+        }
+
+//        Integer.parseInt("m");
+        String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequestList);
+        log.info("OutByAssignedInfo Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
+        WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
+        String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
+        log.info("OutByAssignedInfo After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
+        if (wmsResponse.getResult()) {
+
+        } else {
+            throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
+        }
+    }
+
+    private void checkPackageQuantity(BigDecimal needQuantity, BigDecimal outQuantity) throws Exception {
+        if (needQuantity.compareTo(outQuantity) < 0) {
+            DecimalFormat df = new DecimalFormat("#0.00");
+            String needQuantityFormatted = df.format(needQuantity);
+            String outQuantityFormatted = df.format(outQuantity);
+            String msg = MessageFormat.format("The quantity shipped out {0} exceeds the quantity required {1} .", outQuantityFormatted, needQuantityFormatted);
+            throw new Exception(msg);
+        }
     }
 
 }

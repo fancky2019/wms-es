@@ -58,7 +58,7 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
         Object originalObject = metaObject.getOriginalObject();
         if (originalObject instanceof TruckOrder) {
             TruckOrder truckOrder = (TruckOrder) originalObject;
-            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {}", truckOrder.getId(), truckOrder.getTruckOrderCode());
+            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(),truckOrder.getFilePath());
         } else if (originalObject instanceof TruckOrderItem) {
             TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
             log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
@@ -101,8 +101,7 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
         Object originalObject = metaObject.getOriginalObject();
         if (originalObject instanceof TruckOrder) {
             TruckOrder truckOrder = (TruckOrder) originalObject;
-
-            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {}", truckOrder.getId(), truckOrder.getTruckOrderCode());
+            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(),truckOrder.getFilePath());
         } else if (originalObject instanceof TruckOrderItem) {
             TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
             log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());

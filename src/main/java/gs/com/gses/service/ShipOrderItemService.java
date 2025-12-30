@@ -28,7 +28,7 @@ public interface ShipOrderItemService extends IService<ShipOrderItem> {
 
     List<Long> nextId(List<Long> idList) throws Exception;
 
-    void OutByAssignedInfo(OutByAssignedInfoBo requestList) throws Exception;
+    void outByAssignedInfo(OutByAssignedInfoBo requestList,String token) throws Exception;
 
 
 }

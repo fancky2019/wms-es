@@ -981,7 +981,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
             List<String> newPathList = existFilePathList.stream().map(p -> wmsFrontServer + PathUtils.removeDriveLetterAndNormalize(p)).collect(Collectors.toList());
             String newFilePath = String.join(",", newPathList);
-
+            log.info("TruckOrder {} newFilePath {}",truckOrder.getId(), newFilePath);
             LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.set(TruckOrder::getFilePath, newFilePath);
             updateWrapper.set(TruckOrder::getLastModificationTime, LocalDateTime.now());
