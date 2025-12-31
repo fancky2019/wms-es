@@ -495,7 +495,11 @@ public class InventoryItemDetail implements Serializable {
      */
     @TableField(value = "ImageFile")
     private String imageFile;
-
+    /**
+     *
+     */
+    @TableField(value = "Version")
+    private Integer version;
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }

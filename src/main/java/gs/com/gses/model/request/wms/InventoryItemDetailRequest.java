@@ -416,7 +416,7 @@ public class InventoryItemDetailRequest extends RequestPage {
      * 图片文件地址
      */
     private String imageFile;
-
+    private Integer version;
     private static final long serialVersionUID = 1L;
 
 }

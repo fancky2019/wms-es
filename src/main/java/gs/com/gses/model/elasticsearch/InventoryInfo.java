@@ -9,10 +9,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,11 +26,24 @@ import java.time.LocalDateTime;
 //@JsonIgnoreProperties(ignoreUnknown = true)
 public class InventoryInfo {
 //    @ExcelProperty({"${productStyle}"}) //模板动态替换列名
-////    @ExcelProperty(value = "产品型号")
+    ////    @ExcelProperty(value = "产品型号")
 //    @ExcelProperty(value = "图片路径")//指定列名
 
-
-
+//    /**
+//     *
+//     * 业务字段做主键@iD
+//     *  如果业务主键不存在：创建新文档
+//     * 如果业务主键已存在：更新（覆盖）现有文档
+//     *
+//     *
+//     *
+//     * 自己指定业务Id作为主键，但是不能为null
+//     * 自动生成这种字符串：
+//     * z_c1c5sBcuX6XnQbCR__
+//     */
+//    @Id
+//    @Field(type = FieldType.Keyword)
+//    private String id;
 
 
     //不加field 注解， @Transient 创建索引时候不会在mapping 中创建该字段
@@ -510,6 +525,10 @@ public class InventoryInfo {
 
     /**
      * #@Id es 默认 id  为keyword,es 会默认生成一个_id 字段值等于inventoryItemDetailId
+     *     * 业务字段做主键@iD
+     *      *  如果业务主键不存在：创建新文档
+     *      * 如果业务主键已存在：更新（覆盖）现有文档
+     * @Id 、@Version
      */
     @ExcelProperty(value = "inventoryItemDetailId")
     @Id
@@ -1018,4 +1037,46 @@ public class InventoryInfo {
     @ExcelProperty(value = "deleted")
     @Field(type = FieldType.Integer)
     private Integer deleted = 0; // 数值默认值
+
+    @ExcelProperty(value = "inventoryItemVersion")
+    @Field(type = FieldType.Integer)
+    private Integer inventoryItemVersion = 0;
+
+    @ExcelProperty(value = "inventoryVersion")
+    @Field(type = FieldType.Integer)
+    private Integer inventoryVersion = 0;
+
+    @ExcelProperty(value = "inventoryItemDetailVersion")
+    @Field(type = FieldType.Integer)
+    private Integer inventoryItemDetailVersion = 0;
+
+    /**
+     *插入时候1,修改+1
+     *    Elasticsearch 7+ 使用 seq_no 和 primary_term 替代了旧版的 _version 来跟踪文档变更
+     * 有 @Version 的情况： 保存时会：
+     *  1. 检查版本号
+     *  2. 如果版本不匹配，抛出 VersionConflictException
+     *  3. 成功保存后，version 字段会被更新
+     *
+     *无 @Version 的情况：
+     * 保存时：
+     * 1. 不检查版本
+     *2. 直接创建/覆盖文档
+     *  3. 不会更新版本字段（因为没有这个字段）
+     * 4. 返回值中的实体不会有版本信息变化
+     */
+    @Version  // 有版本控制
+    private Long version;
+//    类型必须是 Long
+//    不要加 @Field
+
+
+//            不要手动赋值
+
+    //springboot 3.0 提供 @SeqNo     @PrimaryTerm，2,7,18 客户端不提供这两个注解
+//    @SeqNo
+//    private Long seqNo;
+//
+//    @PrimaryTerm
+//    private Long primaryTerm;
 }

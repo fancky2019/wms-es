@@ -42,6 +42,7 @@
             <result property="orginLocationCode" column="OrginLocationCode" jdbcType="VARCHAR"/>
             <result property="palletType" column="PalletType" jdbcType="VARCHAR"/>
             <result property="volume" column="Volume" jdbcType="VARCHAR"/>
+            <result property="version" column="Version" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -57,6 +58,6 @@
         LastModificationTime,PackageQuantity,SmallUnitQuantity,
         LevelCount,ConveyorCode,ApplyOrOrderCode,
         OrginAGVID,OrginLocationCode,PalletType,
-        Volume
+        Volume,Version
     </sql>
 </mapper>

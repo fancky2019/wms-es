@@ -84,10 +84,12 @@
             <result property="materialRackId" column="MaterialRackId" jdbcType="BIGINT"/>
             <result property="days" column="Days" jdbcType="INTEGER"/>
             <result property="imageFile" column="ImageFile" jdbcType="VARCHAR"/>
+            <result property="version" column="Version" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        Id,InventoryItemId,Carton,
+        Id
+        ,InventoryItemId,Carton,
         SerialNo,MaterialId,BatchNo,
         BatchNo2,BatchNo3,PackageUnitId,
         SmallUnitQuantity,PackageQuantity,AllocatedSmallUnitQuantity,
@@ -113,7 +115,7 @@
         PositionCode,PositionLevel,PackageMethod,
         ForbidOutboundRemark,IsForbidOutbound,IsBonded,
         InboundDate,MaterialRackId,Days,
-        ImageFile
+        ImageFile,Version
     </sql>
 
     <select id="getAllIdList" resultType="java.lang.Long">

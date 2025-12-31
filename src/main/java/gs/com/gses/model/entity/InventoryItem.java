@@ -192,7 +192,11 @@ public class InventoryItem implements Serializable {
      */
     @TableField(value = "OrganiztionSupplierId")
     private Long organiztionSupplierId;
-
+    /**
+     *
+     */
+    @TableField(value = "Version")
+    private Integer version;
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }

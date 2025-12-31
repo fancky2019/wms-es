@@ -408,7 +408,7 @@ public class InventoryItemDetailResponse implements Serializable {
      * 图片文件地址
      */
     private String imageFile;
-
+    private Integer version;
     private static final long serialVersionUID = 1L;
 
 }

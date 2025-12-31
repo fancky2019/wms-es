@@ -34,6 +34,7 @@
             <result property="lastModificationTime" column="LastModificationTime" jdbcType="BIGINT"/>
             <result property="organiztionId" column="OrganiztionId" jdbcType="BIGINT"/>
             <result property="organiztionSupplierId" column="OrganiztionSupplierId" jdbcType="BIGINT"/>
+            <result property="version" column="Version" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -46,6 +47,6 @@
         Str3,Str4,Str5,
         CreatorId,CreatorName,LastModifierId,
         LastModifierName,CreationTime,LastModificationTime,
-        OrganiztionId,OrganiztionSupplierId
+        OrganiztionId,OrganiztionSupplierId,Version
     </sql>
 </mapper>

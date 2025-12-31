@@ -439,7 +439,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setOrginLocationCode(inventory.getOrginLocationCode());
             inventoryInfo.setPalletType(inventory.getPalletType());
             inventoryInfo.setVolume(inventory.getVolume());
-
+            inventoryInfo.setInventoryVersion(inventory.getVersion());
             //inventoryItem
             inventoryInfo.setInventoryItemId(inventoryItem.getId());
             //1592409600000  过滤不合法的时间
@@ -458,7 +458,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setInventoryItemStr3(inventoryItem.getStr3());
             inventoryInfo.setInventoryItemStr4(inventoryItem.getStr4());
             inventoryInfo.setInventoryItemStr5(inventoryItem.getStr5());
-
+            inventoryInfo.setInventoryItemVersion(inventoryItem.getVersion());
 
             if (inventoryItem.getOrganiztionId() != null) {
                 Orgnization orgnization = orgnizationMap.get(inventoryItem.getOrganiztionId());
@@ -512,7 +512,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setIsSealed(inventoryItemDetail.getIsSealed());
             inventoryInfo.setIsScattered(inventoryItemDetail.getIsScattered());
             inventoryInfo.setIsExpired(inventoryItemDetail.getIsExpired());
-
+            inventoryInfo.setInventoryItemDetailVersion(inventoryItemDetail.getVersion());
             if (inventoryItemDetail.getExpiredTime() != null && inventoryItem.getExpiredTime().compareTo(1592409600000L) > 0) {
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getExpiredTime()), ZoneOffset.of("+8"));
                 inventoryInfo.setExpiredTime(localDateTime);
@@ -598,7 +598,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         //不然覆盖成历史数据造成脏读
         //同步调用
         Iterable<InventoryInfo> response = elasticsearchRestTemplate.save(inventoryInfos);
-        log.info(" elasticsearchRestTemplate.save {} -- {}", inventoryInfos.size(), IterableUtils.size(response));
+        log.info("addByInventoryItemDetailInfoSave {} -- {}", inventoryInfos.size(), IterableUtils.size(response));
 
         return inventoryInfos.size();
     }
@@ -2066,17 +2066,28 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
         InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
 
-        if (inventoryItemDetail.getLastModificationTime() != null) {
-            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
-            if (inventoryInfo != null) {
-                if (inventoryInfo.getLastModificationTime() != null && localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
-                    Map<String, Object> updatedMap = prepareInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
-                    updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, dataChangeInfo.getTableName());
-                }
-            } else {
-                //新增
+        if (inventoryItemDetail.getVersion() != null && inventoryInfo.getVersion() != null) {
+            if (inventoryItemDetail.getVersion().compareTo(inventoryInfo.getVersion().intValue()) > 0) {
+                Map<String, Object> updatedMap = prepareInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
+                updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, dataChangeInfo.getTableName());
             }
+            else {
+                log.info("inventoryItemDetailVersionOld {} {} inventoryInfoVersion {}",inventoryItemDetail.getId(),inventoryItemDetail.getVersion(),inventoryItemDetail.getVersion());
+            }
+        } else {
+            if (inventoryItemDetail.getLastModificationTime() != null) {
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(inventoryItemDetail.getLastModificationTime()), ZoneOffset.of("+8"));
+                if (inventoryInfo != null) {
+                    if (inventoryInfo.getLastModificationTime() != null && localDateTime.isAfter(inventoryInfo.getLastModificationTime())) {
+                        Map<String, Object> updatedMap = prepareInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
+                        updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, dataChangeInfo.getTableName());
+                    }
+                } else {
+                    //新增
+                    log.info("updateInventoryInfoOfDetail inventoryInfoIsNull");
+                }
 
+            }
         }
 
     }
@@ -2364,11 +2375,35 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //                    .withRetryOnConflict(3) // 冲突时重试3次
                     .withIfSeqNo(null)  // 忽略 seq_no
                     .withIfPrimaryTerm(null) // 忽略 primary_term
-                    .withDocAsUpsert(true)// 如果文档不存在则创建
+                    .withDocAsUpsert(true)// 如果文档不存在则创建,默认是 false
                     .build();
+            /*
+            if_seq_no / if_primary_term 不会被带到 ES 请求里
+            等价于：完全不使用乐观锁
+            doc_as_upsert = true：
+            文档不存在 → 新增
+            文档存在 → 更新
+
+            Spring Boot 2.7.18（Spring Data Elasticsearch 4.4.x）中：
+             不存在 @SeqNo
+             不存在 @PrimaryTerm
+             无法在实体 / 仓储（Repository）里声明这两个字段
+             Spring Data 无法帮你把 _seq_no / _primary_term 传给 Elasticsearch
+             也无法从 save() / update() 的返回值中回填
+
+             不起作用
+             withIfSeqNo(...)
+             withIfPrimaryTerm(...)
+
+             要升级到springboot 3
+             或者 用 @Version，就要 .withDocAsUpsert(false).  // .withDocAsUpsert(true) // 如果不设置，默认是 false
+             */
+
+
             //InventoryInfo
             //此处要根据版本号判断是否更新
 //            elasticsearchRestTemplate 实现了接口  elasticsearchOperations
+//同步调用
             UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
             log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
 
@@ -2680,6 +2715,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         updatedMap.put("positionCode", inventoryItemDetail.getPositionCode());
         updatedMap.put("positionLevel", inventoryItemDetail.getPositionLevel());
         updatedMap.put("packageMethod", inventoryItemDetail.getPackageMethod());
+        updatedMap.put("inventoryItemDetailVersion", inventoryItemDetail.getVersion());
         return updatedMap;
     }
 

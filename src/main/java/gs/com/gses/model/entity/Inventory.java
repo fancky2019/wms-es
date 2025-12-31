@@ -240,7 +240,11 @@ public class Inventory implements Serializable {
      */
     @TableField(value = "Volume")
     private String volume;
-
+    /**
+     *
+     */
+    @TableField(value = "Version")
+    private Integer version;
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }
