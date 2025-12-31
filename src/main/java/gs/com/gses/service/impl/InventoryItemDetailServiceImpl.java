@@ -412,20 +412,24 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         if (StringUtils.isEmpty(detail.getM_Str7())) {
             throw new Exception("InventoryItemDetail " + id + " projectNo is empty");
         }
-        if (StringUtils.isEmpty(detail.getM_Str12())) {
-            throw new Exception("InventoryItemDetail " + id + " deviceNo is empty");
-        }
+//        if (StringUtils.isEmpty(detail.getM_Str12())) {
+//            throw new Exception("InventoryItemDetail " + id + " deviceNo is empty");
+//        }
         Material material = this.materialService.getById(detail.getMaterialId());
         if (material == null) {
             throw new Exception("Material " + detail.getMaterialId() + " doesn't exist");
         }
         List<String> barCodeList = new ArrayList<>();
-
-        String[] projectNoArray = detail.getM_Str12().split(",");
-        for (String projectNo : projectNoArray) {
-            //XM0801,DYH001,P0002043508
-            String barCode = "";
-            barCode = MessageFormat.format("{0},{1},{2}", detail.getM_Str7(), projectNo, material.getXCode());
+        if (StringUtils.isNotEmpty(detail.getM_Str12())) {
+            String[] deviceNoArray = detail.getM_Str12().split(",");
+            for (String deviceNo : deviceNoArray) {
+                //XM0801,DYH001,P0002043508
+                String barCode = "";
+                barCode = MessageFormat.format("{0},{1},{2}", detail.getM_Str7(), deviceNo, material.getXCode());
+                barCodeList.add(barCode);
+            }
+        } else {
+            String  barCode = MessageFormat.format("{0},{1},{2}", detail.getM_Str7(), "", material.getXCode());
             barCodeList.add(barCode);
         }
         List<Map<String, String>> result = BarcodeUtil.getMultipleBarcodes(barCodeList, 0, 0, null);
