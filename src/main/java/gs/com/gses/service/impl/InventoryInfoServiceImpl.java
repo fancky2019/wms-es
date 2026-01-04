@@ -295,6 +295,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         }
         List<Inventory> inventoryList = this.inventoryService.listByIds(inventoryIdList);
 
+        Map<Long, InventoryItem> inventoryItemMap = inventoryItemList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
+        Map<Long, Inventory> inventoryMap = inventoryList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
+
 
         if (inventoryList.size() == 1) {
             locationMap = new HashMap<>();
@@ -365,8 +368,20 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         List<Long> materialIdList = inventoryItemDetailList.stream().map(p -> p.getMaterialId()).distinct().collect(Collectors.toList());
         for (InventoryItemDetail inventoryItemDetail : inventoryItemDetailList) {
             inventoryInfo = new InventoryInfo();
-            InventoryItem inventoryItem = inventoryItemList.stream().filter(p -> p.getId().equals(inventoryItemDetail.getInventoryItemId())).findFirst().orElse(null);
-            Inventory inventory = inventoryList.stream().filter(p -> p.getId().equals(inventoryItem.getInventoryId())).findFirst().orElse(null);
+//            InventoryItem inventoryItem = inventoryItemList.stream().filter(p -> p.getId().equals(inventoryItemDetail.getInventoryItemId())).findFirst().orElse(null);
+//            Inventory inventory = inventoryList.stream().filter(p -> p.getId().equals(inventoryItem.getInventoryId())).findFirst().orElse(null);
+//
+            //map.get(key) 在 key 不存在时总是返回 null，不会抛出异常。
+            InventoryItem inventoryItem = inventoryItemMap.get(inventoryItemDetail.getInventoryItemId());
+            if (inventoryItem == null) {
+                log.info("InventoryItem - {} loss ", inventoryItemDetail.getInventoryItemId());
+                continue;
+            }
+            Inventory inventory = inventoryMap.get(inventoryItem.getInventoryId());
+            if (inventory == null) {
+                log.info("Inventory - {} loss ", inventoryItem.getInventoryId());
+                continue;
+            }
             Location location = locationMap.get(inventory.getLocationId().toString());
             Laneway laneway = lanewayMap.get(location.getLanewayId().toString());
             Zone zone = zoneMap.get(laneway.getZoneId().toString());
@@ -2070,9 +2085,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             if (inventoryItemDetail.getVersion().compareTo(inventoryInfo.getVersion().intValue()) > 0) {
                 Map<String, Object> updatedMap = prepareInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
                 updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, dataChangeInfo.getTableName());
-            }
-            else {
-                log.info("inventoryItemDetailVersionOld {} {} inventoryInfoVersion {}",inventoryItemDetail.getId(),inventoryItemDetail.getVersion(),inventoryItemDetail.getVersion());
+            } else {
+                log.info("inventoryItemDetailVersionOld {} {} inventoryInfoVersion {}", inventoryItemDetail.getId(), inventoryItemDetail.getVersion(), inventoryItemDetail.getVersion());
             }
         } else {
             if (inventoryItemDetail.getLastModificationTime() != null) {
