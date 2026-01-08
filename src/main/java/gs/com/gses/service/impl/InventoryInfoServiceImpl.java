@@ -1,5 +1,7 @@
 package gs.com.gses.service.impl;
 
+import co.elastic.clients.elasticsearch.core.BulkResponse;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.annotation.ExcelIgnore;
@@ -71,6 +73,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.URLEncoder;
 import java.text.MessageFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -108,12 +111,15 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Autowired
     private ConveyorLanewayMapper conveyorLanewayMapper;
-
+    /**
+     * ElasticsearchRestTemplate 内部封装了RestHighLevelClient,
+     * ElasticsearchRestTemplate 实现接口ElasticsearchOperations
+     */
     @Autowired
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
 
-    @Autowired
-    private ElasticsearchOperations elasticsearchOperations;
+//    @Autowired
+//    private ElasticsearchOperations elasticsearchOperations;
 
     @Autowired
     private InventoryService inventoryService;
@@ -280,6 +286,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                                                  Map<String, Zone> zoneMap,
                                                  Map<String, Warehouse> warehouseMap,
                                                  Map<String, Orgnization> orgnizationMap) throws InterruptedException {
+        log.info("inventoryItemDetailList size {}", inventoryItemDetailList.size());
         List<InventoryInfo> inventoryInfos = new ArrayList<>();
         List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
         log.info("inventoryItemIdList {}", inventoryItemIdList.size());
@@ -374,12 +381,12 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             //map.get(key) 在 key 不存在时总是返回 null，不会抛出异常。
             InventoryItem inventoryItem = inventoryItemMap.get(inventoryItemDetail.getInventoryItemId());
             if (inventoryItem == null) {
-                log.info("InventoryItem - {} loss ", inventoryItemDetail.getInventoryItemId());
+                log.info("inventoryItemDetail - {} InventoryItem - {} loss ", inventoryItemDetail.getId(), inventoryItemDetail.getInventoryItemId());
                 continue;
             }
             Inventory inventory = inventoryMap.get(inventoryItem.getInventoryId());
             if (inventory == null) {
-                log.info("Inventory - {} loss ", inventoryItem.getInventoryId());
+                log.info("inventoryItemDetail - {} Inventory - {} loss ", inventoryItemDetail.getId(), inventoryItem.getInventoryId());
                 continue;
             }
             Location location = locationMap.get(inventory.getLocationId().toString());
@@ -400,7 +407,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             }
 
             if (location == null) {
-                log.error("ignoreIncrement location is null " + inventory.getLocationId().toString());
+                log.error("inventoryItemDetail - {} ignoreIncrement location {} is null ", inventoryItemDetail.getId(), inventory.getLocationId().toString());
                 continue;
             }
             inventoryInfo.setLocationId(location.getId());
@@ -497,7 +504,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             inventoryInfo.setCarton(inventoryItemDetail.getCarton());
             inventoryInfo.setSerialNo(inventoryItemDetail.getSerialNo());
             if (material == null) {
-                log.error("ignoreIncrement material is null " + inventoryItemDetail.getMaterialId().toString());
+                log.error("inventoryItemDetail - {} ignoreIncrement material {} is null ", inventoryItemDetail.getId(), inventoryItemDetail.getMaterialId().toString());
                 continue;
             }
 
@@ -611,9 +618,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 //        如果文档 已存在：会执行更新操作（全量替换，不是部分更新）
         //elasticsearchTemplate.save(...)实际上是 PUT ，存在就覆盖  不存在就创建,要判断版本号，
         //不然覆盖成历史数据造成脏读
-        //同步调用
+        //同步调用,并不能保证数据全部写入es
         Iterable<InventoryInfo> response = elasticsearchRestTemplate.save(inventoryInfos);
-        log.info("addByInventoryItemDetailInfoSave {} -- {}", inventoryInfos.size(), IterableUtils.size(response));
+        log.info("addByInventoryItemDetailInfoSave:inventoryItemDetailList {} inventoryInfos --> {} --> response {}", inventoryItemDetailList.size(), inventoryInfos.size(), IterableUtils.size(response));
 
         return inventoryInfos.size();
     }
@@ -1838,6 +1845,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             throw new Exception("库存详情不存在 - " + inventoryItemDetailId);
         }
 
+        addByInventoryItemDetailInfo(Arrays.asList(inventoryItemDetail), null, null, null, null, null, null, null);
 
     }
 
@@ -2079,9 +2087,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     private void updateInventoryInfoOfDetail(InventoryItemDetail inventoryItemDetail, DataChangeInfo dataChangeInfo) throws
             InterruptedException {
 
-        InventoryInfo inventoryInfo = elasticsearchOperations.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
+        InventoryInfo inventoryInfo = elasticsearchRestTemplate.get(inventoryItemDetail.getId().toString(), InventoryInfo.class, IndexCoordinates.of("inventory_info"));
 
-        if (inventoryItemDetail.getVersion() != null && inventoryInfo.getVersion() != null) {
+        if (inventoryInfo != null && inventoryItemDetail.getVersion() != null && inventoryInfo.getVersion() != null) {
             if (inventoryItemDetail.getVersion().compareTo(inventoryInfo.getVersion().intValue()) > 0) {
                 Map<String, Object> updatedMap = prepareInventoryItemDetailUpdatedInfo(inventoryInfo, inventoryItemDetail);
                 updateInventoryInfo(inventoryItemDetail.getId().toString(), updatedMap, dataChangeInfo.getTableName());
@@ -2098,7 +2106,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     }
                 } else {
                     //新增
-                    log.info("updateInventoryInfoOfDetail inventoryInfoIsNull");
+                    log.info("updateInventoryInfoOfDetail inventoryInfoIsNull updateByInventoryDb");
+                    addByInventoryItemDetailInfo(Arrays.asList(inventoryItemDetail), null, null, null, null, null, null, null);
+
                 }
 
             }
@@ -2113,7 +2123,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         Criteria criteria = new Criteria("inventoryItemId").is(inventoryItem.getId());
 
         CriteriaQuery query = new CriteriaQuery(criteria);
-        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
+        SearchHits<InventoryInfo> searchHits = elasticsearchRestTemplate.search(query, InventoryInfo.class);
         List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(inventoryInfoList)) {
             log.info("can't get InventoryInfo by inventoryItemId - {} ", inventoryItem.getId());
@@ -2235,7 +2245,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 log.info("time - {} prepareUpdatedInfo complete", times);
                 if (updateQueries.size() > 0) {
                     // 执行批量更新
-                    elasticsearchOperations.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
+                    elasticsearchRestTemplate.bulkUpdate(updateQueries, IndexCoordinates.of("inventory_info"));
                     log.info("time - {} bulkUpdate complete", times);
                 }
                 times--;
@@ -2269,7 +2279,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         Criteria criteria = new Criteria("inventoryId").is(inventory.getId());
 
         CriteriaQuery query = new CriteriaQuery(criteria);
-        SearchHits<InventoryInfo> searchHits = elasticsearchOperations.search(query, InventoryInfo.class);
+        SearchHits<InventoryInfo> searchHits = elasticsearchRestTemplate.search(query, InventoryInfo.class);
         List<InventoryInfo> inventoryInfoList = searchHits.getSearchHits().stream().map(SearchHit::getContent).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(inventoryInfoList)) {
             log.info("can't get InventoryInfo by inventoryId - {} ", inventory.getId());
@@ -2306,7 +2316,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 .withObject(inventoryInfo)
                 .build();
 
-        elasticsearchOperations.index(indexQuery, IndexCoordinates.of("inventory_info"));
+        elasticsearchRestTemplate.index(indexQuery, IndexCoordinates.of("inventory_info"));
     }
 
     // 更新方法2：使用字段映射
@@ -2418,7 +2428,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             //此处要根据版本号判断是否更新
 //            elasticsearchRestTemplate 实现了接口  elasticsearchOperations
 //同步调用
-            UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
+            UpdateResponse response = elasticsearchRestTemplate.update(updateQuery, IndexCoordinates.of("inventory_info"));
             log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
 
 
@@ -2515,7 +2525,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 .withDocument(document)
                 .build();
         //InventoryInfo
-        UpdateResponse response = elasticsearchOperations.update(updateQuery, IndexCoordinates.of("inventory_info"));
+        UpdateResponse response = elasticsearchRestTemplate.update(updateQuery, IndexCoordinates.of("inventory_info"));
         log.info("updateInventoryInfo complete  table - {} id - {} result - {}", table, id, response.getResult().toString());
 
         int n = 0;

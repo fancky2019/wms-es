@@ -144,7 +144,7 @@ public class InventoryController {
      */
     @PostMapping("/addByInventoryItemDetailInfo")
     public MessageResult<Void> addByInventoryItemDetailInfo(Long inventoryItemDetailId) throws Exception {
-        inventoryInfoService.updateByInventoryDb(inventoryItemDetailId);
+        inventoryInfoService.addByInventoryItemDetailInfo(inventoryItemDetailId);
         return MessageResult.success();
     }
 

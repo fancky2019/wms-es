@@ -165,13 +165,13 @@ public class TruckOrderController {
      * @return
      * @throws Exception
      */
-    @GetMapping(value = "/sseConnect/")
+    @GetMapping(value = "/sseConnect")
     public SseEmitter sseConnect() throws Exception {
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         return sseEmitterService.createSseConnect(userTokenDto.getId());
     }
 
-    @GetMapping(value = "/pushTest/")
+    @GetMapping(value = "/pushTest")
     public void pushTest() {
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         sseEmitterService.pushTest(userTokenDto.getId());
