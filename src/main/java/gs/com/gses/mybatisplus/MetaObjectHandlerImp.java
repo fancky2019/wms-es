@@ -101,10 +101,10 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
         Object originalObject = metaObject.getOriginalObject();
         if (originalObject instanceof TruckOrder) {
             TruckOrder truckOrder = (TruckOrder) originalObject;
-            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(),truckOrder.getFilePath());
+            log.info("TruckOrderUpdate:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(),truckOrder.getFilePath());
         } else if (originalObject instanceof TruckOrderItem) {
             TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
-            log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
+            log.info("TruckOrderItemUpdate:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
         }
         int n = 0;
     }

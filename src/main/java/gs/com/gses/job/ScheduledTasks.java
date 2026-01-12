@@ -76,7 +76,7 @@ public class ScheduledTasks {
      * @throws Exception
      */
 //    @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
-    @Scheduled(cron = "0 */5 * * * ?") //5min 一次
+    @Scheduled(cron = "0 */1 * * * ?") //1min 一次
     public void mqOperation() throws Exception {
 
         try {

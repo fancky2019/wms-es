@@ -210,19 +210,25 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         Map<Long, ShipOrder> shipOrderMap = shipOrderList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
 
         for (ShipOrderItemRequest request : requestList) {
+            log.info("MaterialId {} by ProjectNo {} MaterialCode {} DeviceNo {}",  request.getMaterialId(),request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
             List<ShipOrderItem> currentShipOrderItemList = shipOrderItemList.stream().filter(p ->
                     request.getMaterialId().equals(p.getMaterialId()) && request.getM_Str7().equals(p.getM_Str7())
             ).collect(Collectors.toList());
+
             if (StringUtils.isNotEmpty(request.getM_Str12())) {
-                currentShipOrderItemList = shipOrderItemList.stream().filter(p ->
+                log.info("Match DeviceNo {}",request.getM_Str12());
+                currentShipOrderItemList = currentShipOrderItemList.stream().filter(p ->
                         request.getM_Str12().equals(p.getM_Str12())
                 ).collect(Collectors.toList());
+                currentShipOrderItemList = currentShipOrderItemList.stream().distinct().collect(Collectors.toList());
                 int size = currentShipOrderItemList.size();
                 if (size == 0) {
                     String msg = MessageFormat.format("Can't Match ShipOrderItems by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
                     throw new Exception(msg);
                 } else if (size > 1) {
-                    String msg = MessageFormat.format("Match multiple ShipOrderItems by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+                    List<String> shipOrderItemIdList = currentShipOrderItemList.stream().map(p -> p.getId().toString()).distinct().collect(Collectors.toList());
+                    String idListStr = String.join(",", shipOrderItemIdList);
+                    String msg = MessageFormat.format("Match multiple ShipOrderItems {0} by ProjectNo {1} MaterialCode {2} DeviceNo {3}", idListStr,request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
                     throw new Exception(msg);
                 }
 //                log.info("M_Str12 is not empty set RequiredPkgQuantity one");

@@ -7,6 +7,7 @@ import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.rabbitMQ.RabbitMqMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.core.ReturnedMessage;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -54,7 +55,7 @@ public class DirectExchangeProducer {
         messageProperties.setHeader("retry", mqMessage.getRetry());
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
-
+        message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
         CorrelationData correlationData = new CorrelationData(msgId);
         //设置消息内容
         ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
@@ -84,7 +85,7 @@ public class DirectExchangeProducer {
         messageProperties.setHeader("queueName", mqMessage.getQueue());
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
-
+        message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
         CorrelationData correlationData = new CorrelationData(msgId);
         //设置消息内容
         ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
@@ -111,9 +112,9 @@ public class DirectExchangeProducer {
         messageProperties.setHeader("traceId", mqMessage.getTraceId());
         messageProperties.setHeader("retry", mqMessage.getRetry());
         messageProperties.setHeader("queueName", mqMessage.getQueue());
+        messageProperties.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
-
         CorrelationData correlationData = new CorrelationData(msgId);
         //设置消息内容
         ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");

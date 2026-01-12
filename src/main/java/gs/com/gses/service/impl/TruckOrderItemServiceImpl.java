@@ -199,6 +199,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             }
             Material material = materialMap.get(request.getMaterialCode());
             request.setMaterialId(material.getId());
+            request.setDeviceName(material.getXName());
             ShipOrderItemRequest shipOrderItemRequest = new ShipOrderItemRequest();
             shipOrderItemRequest.setM_Str7(request.getProjectNo());
             shipOrderItemRequest.setM_Str12(request.getDeviceNo());
@@ -556,7 +557,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
         LambdaUpdateWrapper<TruckOrderItem> truckOrderItemLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList).set(TruckOrderItem::getTruckOrderId, retainId);
+        truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
+                .set(TruckOrderItem::getTruckOrderId, retainId);
         boolean re1 = this.update(null, truckOrderItemLambdaUpdateWrapper);
         if (!re1) {
             throw new Exception("Update TruckOrderItem truckOrderId fail");
