@@ -226,7 +226,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                     request.getMaterialId().equals(p.getMaterialId()) && request.getM_Str7().equals(p.getM_Str7())
             ).collect(Collectors.toList());
             if (StringUtils.isNotEmpty(request.getM_Str12())) {
-                currentInventoryItemDetailList = inventoryItemDetailList.stream().filter(p ->
+                currentInventoryItemDetailList = currentInventoryItemDetailList.stream().filter(p ->
                         request.getM_Str12().equals(p.getM_Str12())
                 ).collect(Collectors.toList());
             }

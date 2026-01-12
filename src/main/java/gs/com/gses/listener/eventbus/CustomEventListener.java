@@ -1,6 +1,7 @@
 package gs.com.gses.listener.eventbus;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.service.MqMessageService;
@@ -43,6 +44,9 @@ public class CustomEventListener {
     private TransactionTemplate transactionTemplate;
 
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * @Async 线程中：当前线程没有任何事务同步器 → Spring 认为“无法开事务”
      *@Async 异步线程：
@@ -78,12 +82,12 @@ public class CustomEventListener {
         //此处简单设计，失败了落表重试处理。或者重新设计本地消息表
         //ApplicationEventPublisher eventPublisher;
         //  eventPublisher.publishEvent(event);
-        log.info("Received custom event: " + event);
+        log.info("Received custom event: {}" ,objectMapper.writeValueAsString(event));
 //        Spring Retry 在最后一次重试失败后才会抛出异常
 //        int m = Integer.parseInt("m");
         //处理完更新本地消息表，处理完成
         List<MqMessage> messageList = event.getMsg();
-
+        log.info("messageList size : {}" ,messageList.size());
         for (MqMessage message : messageList) {
             try {
 

@@ -981,7 +981,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
             List<String> newPathList = existFilePathList.stream().map(p -> wmsFrontServer + PathUtils.removeDriveLetterAndNormalize(p)).collect(Collectors.toList());
             String newFilePath = String.join(",", newPathList);
-            log.info("TruckOrder {} newFilePath {}",truckOrder.getId(), newFilePath);
+            log.info("TruckOrder {} newFilePath {}", truckOrder.getId(), newFilePath);
             LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.set(TruckOrder::getFilePath, newFilePath);
             updateWrapper.set(TruckOrder::getLastModificationTime, LocalDateTime.now());
@@ -1250,23 +1250,23 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //                default:
 //                    break;
 //            }
-            if (maxStatus != TruckOrderStausEnum.DEBITED.getValue()) {
-                if (truckOrderStatus < maxStatus) {
+
+            log.info("Before TruckOrderStaus {}", TruckOrderStausEnum.getDescription(truckOrderStatus));
+            if (statusList.size() == 1) {
+                if (maxStatus == TruckOrderStausEnum.DEBITED.getValue()) {
                     updateTruckOrder = true;
-                    truckOrder.setStatus(maxStatus);
-                    log.info("truckOrderUpdateStatus {} set status {}", truckOrder.getId(), maxStatus);
+                    truckOrder.setStatus(TruckOrderStausEnum.DEBITED.getValue());
+                    log.info("truckOrderUpdateStatus {} set status {}", truckOrder.getId(), TruckOrderStausEnum.getDescription(truckOrder.getStatus()));
                 }
+
             } else {
-                //只有一种状态（完成）
-                if (statusList.size() == 1) {
-                    //不是完成更新为完成
-                    if (truckOrderStatus != maxStatus) {
-                        updateTruckOrder = true;
-                        truckOrder.setStatus(maxStatus);
-                        log.info("truckOrderUpdateStatus {} set status {}", truckOrder.getId(), maxStatus);
-                    }
+                if (truckOrderStatus != TruckOrderStausEnum.DEBITING.getValue()) {
+                    updateTruckOrder = true;
+                    truckOrder.setStatus(TruckOrderStausEnum.DEBITING.getValue());
+                    log.info("truckOrderUpdateStatus {} set status {}", truckOrder.getId(), TruckOrderStausEnum.getDescription(truckOrder.getStatus()));
                 }
             }
+
             if (!updateTruckOrder) {
                 return;
             }

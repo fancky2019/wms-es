@@ -630,9 +630,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
             shipOrderPalletRequestList.add(shipOrderPalletRequest);
             //未登录会得到全局异常
-            String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequest);
-            log.info("Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
-            LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrderItem.getCreatorId());
+           LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrderItem.getCreatorId());
             if (userTokenDto == null) {
                 LoginRequest request = new LoginRequest();
                 request.setAccountName(debitConfig.getAccountName());
@@ -646,9 +644,11 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
 //            String token = "";
             String token = "Bearer " + userTokenDto.getAccessToken();
+            String jsonParam = objectMapper.writeValueAsString(shipOrderPalletRequest);
+            log.info("Debit Before request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonParam);
             WmsResponse wmsResponse = wmsService.subAssignPalletsByShipOrderBatch(shipOrderPalletRequestList, token);
             String jsonResponse = objectMapper.writeValueAsString(wmsResponse);
-            log.info("After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
+            log.info("Debit After request WmsService subAssignPalletsByShipOrderBatch - json:{}", jsonResponse);
             if (wmsResponse.getResult()) {
                 try {
                     log.info("ThreadId - {}", Thread.currentThread().getId());
