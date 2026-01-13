@@ -23,6 +23,7 @@ import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOrderBarCode;
+import gs.com.gses.model.response.wms.MqMessageResponse;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;
 import gs.com.gses.model.response.wms.WmsResponse;
@@ -54,6 +55,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.Assert;
 import org.springframework.util.StopWatch;
 
 import java.text.MessageFormat;
@@ -120,7 +122,6 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     private WmsAuthorityService wmsAuthorityService;
     @Autowired
     private DebitConfig debitConfig;
-
 
     @Override
     public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
@@ -630,7 +631,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
             shipOrderPalletRequestList.add(shipOrderPalletRequest);
             //未登录会得到全局异常
-           LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrderItem.getCreatorId());
+            LoginUserTokenDto userTokenDto = UserInfoHolder.getUser(truckOrderItem.getCreatorId());
             if (userTokenDto == null) {
                 LoginRequest request = new LoginRequest();
                 request.setAccountName(debitConfig.getAccountName());
@@ -725,6 +726,26 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         //发送消息的时候可能崩溃，不能保证消息被消费。如果发送成功了，还要设计消息表兜底失败的消息
 //        MyCustomEvent event = new MyCustomEvent(busProperties.getId());
         eventPublisher.publishEvent(event);
+    }
+
+
+    @Override
+    public String failureReason(Long truckOrderItemId) throws Exception {
+        Assert.notNull(truckOrderItemId, " field value must not be null.");
+        MqMessageRequest request = new MqMessageRequest();
+        request.setBusinessId(truckOrderItemId);
+        request.setPageIndex(1);
+        request.setPageSize(Integer.MAX_VALUE);
+        request.setSearchCount(false);
+        PageData<MqMessageResponse> pageData = mqMessageService.getMqMessagePage(request);
+        String failureReason = "";
+        if (CollectionUtils.isEmpty(pageData.getData())) {
+            failureReason = "No relevant records found.";
+        } else {
+            MqMessageResponse response = pageData.getData().get(pageData.getData().size() - 1);
+            failureReason = response.getFailureReason();
+        }
+        return failureReason;
     }
 }
 

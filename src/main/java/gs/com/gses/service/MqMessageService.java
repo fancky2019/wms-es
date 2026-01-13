@@ -23,11 +23,11 @@ import java.util.List;
 public interface MqMessageService extends IService<MqMessage> {
     MqMessage add(MqMessage mqMessage);
 
-    List<MqMessage>  addBatch(List<MqMessage> mqMessageList);
+    List<MqMessage> addBatch(List<MqMessage> mqMessageList);
 
     MqMessage addMessage(MqMessageRequest mqMessage) throws Exception;
 
-    List<MqMessage>  addMessageBatch(List<MqMessageRequest> requestList) throws Exception;
+    List<MqMessage> addMessageBatch(List<MqMessageRequest> requestList) throws Exception;
 
     void delete(MqMessage mqMessage);
 
@@ -41,7 +41,7 @@ public interface MqMessageService extends IService<MqMessage> {
 
     PageData<MqMessageResponse> list(MqMessageRequest mqMessage) throws Exception;
 
-    void page(MqMessageRequest mqMessage);
+    PageData<MqMessageResponse> getMqMessagePage(MqMessageRequest mqMessage);
 
     void count(MqMessageRequest mqMessage);
 
@@ -67,19 +67,20 @@ public interface MqMessageService extends IService<MqMessage> {
 
     /**
      *     接口 添加@Async @Transactional  可解决 jdk 动态代理 selfProxy 解决异步事务问题。但是advisor (增强器) 信息仍为空，因为 默认只在实现类的方法上查找，不会去接口上查找，需要配置
-    @Async @Transactional 注解的推荐用法是：加在具体实现类的方法上，而不是接口上
-    代理机制限制：
-    如果使用 JDK 动态代理，接口上的注解可以被读取
-    但如果使用 CGLIB 代理（类代理），接口上的注解可能无法被识别
-    Java 注解继承：
-    接口上的 @Transactional 默认不会被实现类继承（除非使用 @Inherited，但该注解对接口无效）
-    配置混乱：
-    如果接口和实现类都有 @Transactional，以实现类的为准，容易造成混淆
-//    如果接口和实现类都有 @Transactional，以实现类的为准，容易造成混淆
-//
-*/
+     @Async @Transactional 注解的推荐用法是：加在具体实现类的方法上，而不是接口上
+     代理机制限制：
+     如果使用 JDK 动态代理，接口上的注解可以被读取
+     但如果使用 CGLIB 代理（类代理），接口上的注解可能无法被识别
+     Java 注解继承：
+     接口上的 @Transactional 默认不会被实现类继承（除非使用 @Inherited，但该注解对接口无效）
+     配置混乱：
+     如果接口和实现类都有 @Transactional，以实现类的为准，容易造成混淆
+     //    如果接口和实现类都有 @Transactional，以实现类的为准，容易造成混淆
+     //
+     */
 //    @Async("mqFailHandlerExecutor")
     void asyncMethod();
-//    @Transactional(rollbackFor = Exception.class)
+
+    //    @Transactional(rollbackFor = Exception.class)
     void TranMethod();
 }

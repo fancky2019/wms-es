@@ -24,7 +24,9 @@ public interface TruckOrderItemService extends IService<TruckOrderItem> {
     Boolean checkAvailableBatch(List<TruckOrderItemRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
 
     Boolean add(TruckOrderItemRequest request);
+
     void update(TruckOrderItem truckOrderItem) throws Exception;
+
     List<TruckOrderItem> addBatch(List<TruckOrderItemRequest> requestList);
 
     void trunkBarCodeMq(TruckOrderItemRequest truckOrderItemRequest) throws Exception;
@@ -36,5 +38,8 @@ public interface TruckOrderItemService extends IService<TruckOrderItem> {
     void auditFieldTest(Long id);
 
     void debit(MqMessage messagae) throws Exception;
+
+    String failureReason(Long truckOrderItemId) throws Exception;
+
 
 }

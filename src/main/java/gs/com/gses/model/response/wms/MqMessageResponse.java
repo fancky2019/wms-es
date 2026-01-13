@@ -1,7 +1,10 @@
 package gs.com.gses.model.response.wms;
 
+import lombok.Data;
+
 import java.time.LocalDateTime;
 
+@Data
 public class MqMessageResponse {
     /**
      *

@@ -60,4 +60,9 @@ public class TruckOrderItemController {
         truckOrderItemService.auditFieldTest(id);
         return MessageResult.success();
     }
+
+    @GetMapping("/failureReason/{id}")
+    public MessageResult<String> failureReason(@PathVariable("id") Long id) throws Exception {
+        return MessageResult.success(truckOrderItemService.failureReason(id));
+    }
 }

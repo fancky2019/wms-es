@@ -9,12 +9,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.mapper.wms.MqMessageMapper;
-import gs.com.gses.model.entity.MqMessage;
+import gs.com.gses.model.entity.*;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.enums.MqMessageStatus;
+import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.MqMessageRequest;
+import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MqMessageResponse;
+import gs.com.gses.model.response.wms.TruckOrderItemResponse;
 import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.model.utility.RedisKeyConfigConst;
 import gs.com.gses.multipledatasource.DataSource;
@@ -493,8 +496,68 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     }
 
     @Override
-    public void page(MqMessageRequest mqMessage) {
+    public PageData<MqMessageResponse> getMqMessagePage(MqMessageRequest request) {
+        LambdaQueryWrapper<MqMessage> messageQueryWrapper = new LambdaQueryWrapper<>();
+        messageQueryWrapper.eq(MqMessage::getDeleted, 0);
 
+        if (request.getId() != null && request.getId() > 0) {
+            messageQueryWrapper.eq(MqMessage::getId, request.getId());
+        }
+        if (request.getBusinessId() != null && request.getBusinessId() > 0) {
+            messageQueryWrapper.eq(MqMessage::getBusinessId, request.getBusinessId());
+        }
+
+        if (StringUtils.isNotEmpty(request.getBusinessKey())) {
+            messageQueryWrapper.eq(MqMessage::getBusinessKey, request.getBusinessKey());
+        }
+
+        // 创建分页对象 (当前页, 每页大小)
+        Page<MqMessage> page = new Page<>(request.getPageIndex(), request.getPageSize());
+        if (CollectionUtils.isEmpty(request.getSortFieldList())) {
+            List<Sort> sortFieldList = new ArrayList<>();
+            Sort sort = new Sort();
+            sort.setSortField("id");
+            sort.setSortType("desc");
+            sortFieldList.add(sort);
+            request.setSortFieldList(sortFieldList);
+        }
+        if (CollectionUtils.isNotEmpty(request.getSortFieldList())) {
+            List<OrderItem> orderItems = LambdaFunctionHelper.getWithDynamicSort(request.getSortFieldList());
+            page.setOrders(orderItems);
+        }
+
+        if (request.getSearchCount() != null) {
+            // 关键设置：不执行 COUNT 查询
+            page.setSearchCount(request.getSearchCount());
+        }
+
+        // 执行分页查询, sqlserver 使用通用表达式 WITH selectTemp AS
+        IPage<MqMessage> truckOrderItemPage = this.baseMapper.selectPage(page, messageQueryWrapper);
+
+        // 获取当前页数据
+        List<MqMessage> records = truckOrderItemPage.getRecords();
+        long total = truckOrderItemPage.getTotal();
+
+        List<MqMessageResponse> messageResponseResponseList = records.stream().map(p -> {
+            MqMessageResponse response = new MqMessageResponse();
+            BeanUtils.copyProperties(p, response);
+            return response;
+        }).collect(Collectors.toList());
+//        if (true) {
+//            return PageData.getDefault();
+//        }
+
+        //searchCount 可能false
+        if (messageResponseResponseList.size() == 0) {
+            log.info("No records found");
+            return PageData.getDefault();
+        }
+
+
+        PageData<MqMessageResponse> pageData = new PageData<>();
+        pageData.setData(messageResponseResponseList);
+        pageData.setCount(total);
+        return pageData;
     }
 
     @Override
