@@ -734,6 +734,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         Assert.notNull(truckOrderItemId, " field value must not be null.");
         MqMessageRequest request = new MqMessageRequest();
         request.setBusinessId(truckOrderItemId);
+        request.setBusinessKey(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
         request.setPageIndex(1);
         request.setPageSize(Integer.MAX_VALUE);
         request.setSearchCount(false);

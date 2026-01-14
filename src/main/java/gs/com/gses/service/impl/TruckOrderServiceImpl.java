@@ -159,9 +159,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         }
         log.info("TruckOrderItemRequestList size {} ", request.getTruckOrderItemRequestList().size());
         for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
-            if (StringUtils.isEmpty(itemRequest.getDeviceNo()) &&
-                    StringUtils.isEmpty(itemRequest.getMaterialCode()) &&
-                    StringUtils.isEmpty(itemRequest.getProjectNo())) {
+            if (StringUtils.isEmpty(itemRequest.getDeviceNo()) && StringUtils.isEmpty(itemRequest.getMaterialCode()) && StringUtils.isEmpty(itemRequest.getProjectNo())) {
                 request.getTruckOrderItemRequestList().remove(itemRequest);
                 continue;
             }
@@ -233,53 +231,45 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //            而 MDC 是基于 ThreadLocal 实现的，不同线程之间无法自动共享 MDC 上下文，导致 traceId 丢失。
         // 在主线程中捕获当前 MDC 上下文  contextMap:  traceId -> ddb27e1d921e6f97  spanId -> ddb27e1d921e6f97
         Map<String, String> contextMap = MDC.getCopyOfContextMap();
-        List<CompletableFuture<Void>> futures = request.getTruckOrderItemRequestList()
-                .parallelStream()
-                .map(itemRequest -> CompletableFuture.runAsync(() -> {
-                    // 在异步线程中恢复 MDC 上下文
-                    if (contextMap != null) {
-                        MDC.setContextMap(contextMap);
-                    }
-                    log.info("ThreadId:" + Thread.currentThread().getId());
+        List<CompletableFuture<Void>> futures = request.getTruckOrderItemRequestList().parallelStream().map(itemRequest -> CompletableFuture.runAsync(() -> {
+            // 在异步线程中恢复 MDC 上下文
+            if (contextMap != null) {
+                MDC.setContextMap(contextMap);
+            }
+            log.info("ThreadId:" + Thread.currentThread().getId());
 
-                    List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
-                    List<AllocateModel> allocateModelList = new ArrayList<>();
+            List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
+            List<AllocateModel> allocateModelList = new ArrayList<>();
 
-                    try {
-                        Boolean result = truckOrderItemService.checkAvailable(itemRequest,
-                                matchedShipOrderItemResponseList, allocateModelList);
+            try {
+                Boolean result = truckOrderItemService.checkAvailable(itemRequest, matchedShipOrderItemResponseList, allocateModelList);
 
-                        // 统一异常处理逻辑
-                        if (!result) {
-                            String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.",
-                                    itemRequest.getProjectNo(), itemRequest.getDeviceNo(), itemRequest.getMaterialCode());
-                            throw new RuntimeException(str);
-                        }
+                // 统一异常处理逻辑
+                if (!result) {
+                    String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.", itemRequest.getProjectNo(), itemRequest.getDeviceNo(), itemRequest.getMaterialCode());
+                    throw new RuntimeException(str);
+                }
 
-                        // 处理成功逻辑
-                        List<String> shipOrderCodeList = matchedShipOrderItemResponseList.stream()
-                                .map(p -> p.getShipOrderCode())
-                                .distinct()
-                                .collect(Collectors.toList());
-                        shipOrderCodeSet.addAll(shipOrderCodeList);
+                // 处理成功逻辑
+                List<String> shipOrderCodeList = matchedShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
+                shipOrderCodeSet.addAll(shipOrderCodeList);
 
-                        synchronized (allMatchedShipOrderItemResponseList) {
-                            allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
-                        }
-                        synchronized (allAllocateModelList) {
-                            allAllocateModelList.addAll(allocateModelList);
-                        }
+                synchronized (allMatchedShipOrderItemResponseList) {
+                    allMatchedShipOrderItemResponseList.addAll(matchedShipOrderItemResponseList);
+                }
+                synchronized (allAllocateModelList) {
+                    allAllocateModelList.addAll(allocateModelList);
+                }
 
-                    } catch (Exception e) {
-                        // 统一捕获所有异常（包括RuntimeException）
-                        if (e instanceof RuntimeException) {
-                            throw (RuntimeException) e;
-                        } else {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }, threadPoolExecutor))
-                .collect(Collectors.toList());
+            } catch (Exception e) {
+                // 统一捕获所有异常（包括RuntimeException）
+                if (e instanceof RuntimeException) {
+                    throw (RuntimeException) e;
+                } else {
+                    throw new RuntimeException(e);
+                }
+            }
+        }, threadPoolExecutor)).collect(Collectors.toList());
 
         // 等待所有任务完成并收集异常
         try {
@@ -434,7 +424,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             currentTaskName = "saveTruckOrderAndItem";
             stopWatch.start(currentTaskName);
 
-            TruckOrder truckOrder = saveTruckOrderAndItem(splitRequest, createTime);
+            TruckOrder truckOrder = saveTruckOrderAndItem(splitRequest, createTime, TruckOrderStausEnum.DEBITED.getValue());
             stopWatch.stop();
             log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
             currentTaskName = "TruckOrderCompleteMqtt";
@@ -643,7 +633,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
         currentTaskName = "saveTruckOrderAndItem";
         stopWatch.start(currentTaskName);
-        TruckOrder truckOrder = saveTruckOrderAndItem(splitRequest, createTime);
+        TruckOrder truckOrder = saveTruckOrderAndItem(splitRequest, createTime, null);
         stopWatch.stop();
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
         log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
@@ -661,7 +651,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         return detailRequest;
     }
 
-    private TruckOrder saveTruckOrderAndItem(AddTruckOrderRequest request, long createTime) throws Exception {
+    private TruckOrder saveTruckOrderAndItem(AddTruckOrderRequest request, long createTime, Integer status) throws Exception {
 
         if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
             throw new Exception("TruckOrderItem is empty");
@@ -692,14 +682,16 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //        }
 //        ShipPickOrderResponse shipPickOrderResponse = shipPickOrderResponseList.get(0);
 
-
+        if (status == null) {
+            status = TruckOrderStausEnum.NOT_DEBITED.getValue();
+        }
         LoginUserTokenDto user = UserInfoHolder.getUser();
         TruckOrderRequest truckOrderRequest = request.getTruckOrderRequest();
         LocalDateTime creationTime = LocalDateTime.now();
         if (request.getTruckOrderRequest().getCreationTime() != null) {
             creationTime = request.getTruckOrderRequest().getCreationTime();
         }
-        truckOrderRequest.setStatus(TruckOrderStausEnum.NOT_DEBITED.getValue());
+        truckOrderRequest.setStatus(status);
         truckOrderRequest.setCreationTime(creationTime);
         truckOrderRequest.setLastModificationTime(creationTime);
         truckOrderRequest.setCreatorId(user.getId());
@@ -709,7 +701,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         TruckOrder truckOrder = add(request.getTruckOrderRequest());
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
-            truckOrderItemRequest.setStatus(TruckOrderStausEnum.NOT_DEBITED.getValue());
+            truckOrderItemRequest.setStatus(status);
             truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
             truckOrderItemRequest.setCreationTime(LocalDateTime.now());
             truckOrderItemRequest.setLastModificationTime(LocalDateTime.now());
@@ -811,7 +803,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             throw new Exception("creationTime is null");
         }
         long createTime = request.getTruckOrderRequest().getCreationTime().toInstant(ZoneOffset.of("+08:00")).toEpochMilli();
-        saveTruckOrderAndItem(request, createTime);
+        saveTruckOrderAndItem(request, createTime, TruckOrderStausEnum.DEBITED.getValue());
     }
 
     @Override
@@ -948,9 +940,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 return;
             }
             // 获取所有文件（包括子目录）
-            List<Path> allFiles = Files.walk(startPath)
-                    .filter(Files::isRegularFile)
-                    .collect(Collectors.toList());
+            List<Path> allFiles = Files.walk(startPath).filter(Files::isRegularFile).collect(Collectors.toList());
             List<String> truckOrderAttachmentList = new ArrayList<>();
             if (StringUtils.isNotEmpty(truckOrder.getFilePath())) {
                 truckOrderAttachmentList = Arrays.asList(truckOrder.getFilePath().split(","));
@@ -1221,9 +1211,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
                 throw new Exception("Can't get TruckOrderItem by TruckOrderId " + truckOrderId);
             }
-            List<Integer> statusList = truckOrderItemResponseList.stream().map(p -> p.getStatus())
-                    .sorted(Collections.reverseOrder())
-                    .distinct().collect(Collectors.toList());
+            List<Integer> statusList = truckOrderItemResponseList.stream().map(p -> p.getStatus()).sorted(Collections.reverseOrder()).distinct().collect(Collectors.toList());
 
 
             TruckOrder truckOrder = this.getById(truckOrderId);

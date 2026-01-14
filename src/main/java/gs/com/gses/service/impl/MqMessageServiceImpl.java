@@ -506,6 +506,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         if (request.getBusinessId() != null && request.getBusinessId() > 0) {
             messageQueryWrapper.eq(MqMessage::getBusinessId, request.getBusinessId());
         }
+        if (StringUtils.isNotEmpty(request.getBusinessKey())) {
+            messageQueryWrapper.eq(MqMessage::getBusinessKey, request.getBusinessKey());
+        }
 
         if (StringUtils.isNotEmpty(request.getBusinessKey())) {
             messageQueryWrapper.eq(MqMessage::getBusinessKey, request.getBusinessKey());
