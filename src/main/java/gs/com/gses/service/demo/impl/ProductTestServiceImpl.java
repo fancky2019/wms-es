@@ -33,8 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductTestServiceImpl extends ServiceImpl<ProductTestMapper, ProductTest> implements ProductTestService {
 
     // 显式注入secondary的SqlSessionTemplate
-    @Autowired
-    @Qualifier("secondarySqlSessionTemplate")
+//    @Autowired
+//    @Qualifier("secondarySqlSessionTemplate")
     private SqlSessionTemplate secondarySqlSessionTemplate;
 
     @Autowired

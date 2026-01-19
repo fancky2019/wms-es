@@ -11,6 +11,8 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -20,6 +22,11 @@ import javax.sql.DataSource;
 //public class ThirdMybatisPlusConfig {
 //}
 @Configuration
+@ConditionalOnProperty(
+        prefix = "spring.datasource.third",
+        name = "jdbc-url"
+)
+//@ConditionalOnExpression("'${spring.datasource.third.jdbc-url:}' != ''") // 配置了secondary.url才生效
 @MapperScan(basePackages = {
         //mapper及mapper.xml要分包放，不然sqlSessionFactoryRef无法选择
         "gs.com.gses.mapper.erp"

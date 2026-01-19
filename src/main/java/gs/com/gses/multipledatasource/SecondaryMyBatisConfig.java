@@ -15,6 +15,8 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -58,8 +60,13 @@ import javax.sql.DataSource;
 
 
 
-
+//
 @Configuration
+//@ConditionalOnExpression("'${spring.datasource.secondary.jdbc-url:}' != ''") // 配置了secondary.url才生效
+@ConditionalOnProperty(
+        prefix = "spring.datasource.secondary",
+        name = "jdbc-url"
+)
 @MapperScan(basePackages = {
         //mapper及mapper.xml要分包放，不然sqlSessionFactoryRef无法选择
         "gs.com.gses.mapper.demo"

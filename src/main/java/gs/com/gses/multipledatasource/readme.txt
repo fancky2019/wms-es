@@ -48,7 +48,12 @@ public class WmsEsApplication
   TransactionConfig
 
 
+
   ProductTestServiceImpl 注释
       @Autowired
       @Qualifier("secondarySqlSessionTemplate")
       private SqlSessionTemplate secondarySqlSessionTemplate;
+
+
+
+    ThirdMybatisPlusConfig

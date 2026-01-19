@@ -84,24 +84,24 @@ spring:
         validation-timeout: 5000
         leak-detection-threshold: 60000
 
-    # 从数据源配置  mysql
-    secondary:
-      jdbc-url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-      driver-class-name: com.mysql.cj.jdbc.Driver
-      username: root
-      password: 123456
-      # Hikari连接池配置
-      hikari:
-        pool-name: SecondaryHikariPool
-        minimum-idle: 3
-        maximum-pool-size: 15
-        idle-timeout: 300000
-        connection-timeout: 30000
-        max-lifetime: 1800000
-        connection-test-query: SELECT 1
-        auto-commit: true
-        validation-timeout: 5000
-        leak-detection-threshold: 60000
+#    # 从数据源配置  mysql
+#    secondary:
+#      jdbc-url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+#      driver-class-name: com.mysql.cj.jdbc.Driver
+#      username: root
+#      password: 123456
+#      # Hikari连接池配置
+#      hikari:
+#        pool-name: SecondaryHikariPool
+#        minimum-idle: 3
+#        maximum-pool-size: 15
+#        idle-timeout: 300000
+#        connection-timeout: 30000
+#        max-lifetime: 1800000
+#        connection-test-query: SELECT 1
+#        auto-commit: true
+#        validation-timeout: 5000
+#        leak-detection-threshold: 60000
 
     # 从数据源配置 oracle
     third:
