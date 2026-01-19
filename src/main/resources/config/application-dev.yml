@@ -352,7 +352,7 @@ logging:
 
 #注意密码过期，用户组了设置
 ftp:
-  host: 10.100.201.8
+  host: 10.100.202.113
   port: 21
   username: fancky
   password: Abc!123456

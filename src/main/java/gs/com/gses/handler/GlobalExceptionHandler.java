@@ -9,7 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -18,6 +20,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 /**
  * 该类放在单独一个文件夹
@@ -60,14 +63,33 @@ public class GlobalExceptionHandler {
 
 
     /**
+     * ResponseEntity<MessageResult<Void>> 前端收到后端返回的json  和 MessageResult<Void>一样
      * 404无法进入此方法。404被tomcat拦截了
      * 自定义返回数据格式
+     *
+     * ResponseEntity:
+     * 需要精确控制HTTP状态码
+     * 需要设置自定义响应头
+     * RESTful API设计严格遵循HTTP语义
      */
     @ExceptionHandler(Exception.class)
     @ResponseBody
-    public MessageResult<Void> exceptionHandler(Exception ex, WebRequest request) {
+    public ResponseEntity<MessageResult<Void>> exceptionHandler(Exception ex, WebRequest request) {
 
+        String requestURI = httpServletRequest.getRequestURI();
+        String acceptHeader = httpServletRequest.getHeader("Accept");
 
+        log.error("全局异常处理器捕获异常: uri={}, accept={}, error={}",
+                requestURI, acceptHeader, ex.getMessage(), ex);
+
+        //用此重载，打印异常的所有信息
+        logger.error("", ex);
+        // 检查响应是否已经被提交,AuthenticationFilter 异常已返回
+        if (httpServletResponse.isCommitted()) {
+            logger.warn("Response already committed, cannot handle exception properly", ex);
+            // 返回一个空对象
+            return null;
+        }
         //        response.setStatus(HttpServletResponse.SC_ACCEPTED); // 202
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 //
@@ -96,8 +118,82 @@ public class GlobalExceptionHandler {
         //   messageResult.setTraceId(MDC.get("traceId"));
 //        return ResponseEntity.ok(messageResult);
 //        logger.error(ex.toString());// 不会打出异常的堆栈信息
-        logger.error("", ex);//用此重载，打印异常的所有信息
-        return messageResult;
+
+        return handleNormalException(ex, acceptHeader);
+    }
+
+
+    private ResponseEntity<MessageResult<Void>> handleNormalException(Exception ex, String acceptHeader) {
+        MessageResult<Void> result = new MessageResult<>();
+
+        // 根据异常类型设置状态码
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+
+        if (ex instanceof IllegalArgumentException) {
+            status = HttpStatus.BAD_REQUEST;
+            result.setCode(400);
+        }
+//        else if (ex instanceof AuthenticationException) {
+//            status = HttpStatus.UNAUTHORIZED;
+//            result.setCode(401);
+//        } else if (ex instanceof AccessDeniedException) {
+//            status = HttpStatus.FORBIDDEN;
+//            result.setCode(403);
+//        }
+        else if (ex instanceof HttpMediaTypeNotAcceptableException) {
+            status = HttpStatus.NOT_ACCEPTABLE;
+            result.setCode(406);
+        } else {
+            result.setCode(500);
+        }
+
+        result.setMessage(ex.getMessage());
+        result.setSuccess(false);
+
+        // 根据 Accept 头决定返回类型
+        MediaType mediaType = determineMediaType(acceptHeader);
+/*
+ResponseEntity
+     * ResponseEntity:
+     * 需要精确控制HTTP状态码
+     * 需要设置自定义响应头
+     * RESTful API设计严格遵循HTTP语义
+ */
+        return ResponseEntity
+                .status(status)
+                .contentType(mediaType)
+                .body(result);
+    }
+
+    /**
+     * 根据 Accept 头确定返回类型
+     */
+    private MediaType determineMediaType(String acceptHeader) {
+        if (acceptHeader == null || acceptHeader.isEmpty()) {
+            return MediaType.APPLICATION_JSON; // 默认 JSON
+        }
+
+        // 解析 Accept 头
+        List<MediaType> acceptTypes = MediaType.parseMediaTypes(acceptHeader);
+
+        // 按优先级检查支持的媒体类型
+        for (MediaType acceptType : acceptTypes) {
+            if (acceptType.includes(MediaType.APPLICATION_JSON)) {
+                return MediaType.APPLICATION_JSON;
+            }
+            if (acceptType.includes(MediaType.APPLICATION_XML)) {
+                return MediaType.APPLICATION_XML;
+            }
+            if (acceptType.includes(MediaType.TEXT_PLAIN)) {
+                return MediaType.TEXT_PLAIN;
+            }
+            if (acceptType.includes(MediaType.TEXT_EVENT_STREAM)) {
+                return MediaType.TEXT_EVENT_STREAM;
+            }
+        }
+
+        // 默认返回 JSON
+        return MediaType.APPLICATION_JSON;
     }
 
 
@@ -108,6 +204,9 @@ public class GlobalExceptionHandler {
             FeignException.NotFound.class  // 新增404处理
     })
     public ResponseEntity<MessageResult<Void>> handleFeignException(FeignException ex) {
+
+        //用此重载，打印异常的所有信息
+        logger.error("", ex);
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String errorMsg = "服务调用异常:" + ex.getMessage();
 

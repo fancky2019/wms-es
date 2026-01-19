@@ -9,6 +9,7 @@ import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.wms.WmsResponse;
 import gs.com.gses.service.api.AuthorityService;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.jce.exception.ExtIOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
@@ -55,7 +56,10 @@ public class AuthenticationFilter implements Filter {
         // 转换为HttpServletRequest
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String requestURI = httpServletRequest.getRequestURI();
-        log.info("RequestURI:{}", httpServletRequest.getRequestURI());
+//        log.info("RequestURI:{}", httpServletRequest.getRequestURI());
+        // 获取客户端IP地址
+        String clientIp = getClientIpAddress(httpServletRequest);
+        log.info("Request from IP: {}, URI: {}", clientIp, requestURI);
 
         // 放行 Swagger 相关路径,不校验
         if (requestURI.contains("/swagger-ui") ||
@@ -76,9 +80,11 @@ public class AuthenticationFilter implements Filter {
             //  LoginUserTokenDto dto = authorityService.checkPermission(request, token);
 
             String token = httpServletRequest.getHeader("Authorization");
+            log.info("token {}", token);
             try {
                 log.info("Start checkPermission");
                 WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
+                log.info("WmsResponse {}", dto);
                 LoginUserTokenDto userInfo = null;
                 if (dto.getResult()) {
                     log.info("Complete checkPermission success");
@@ -90,18 +96,28 @@ public class AuthenticationFilter implements Filter {
 //            LoginUserTokenDto pojoJacksonPojo = objectMapper.readValue(jsonStr, LoginUserTokenDto.class);
                     UserInfoHolder.setUser(userInfo);
                     UserInfoHolder.setUser(userInfo.getId(), userInfo);
-                    int m = 0;
+                    log.info("UserInfoHolder set complete {}", dto);
+                } else {
+
+                    String msg = "checkPermission fail";
+                    log.info(msg);
+                    httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    authenticationFail(httpServletRequest, httpServletResponse, messageResult, msg);
+
                 }
 
+                log.info("Authentication complete");
+                chain.doFilter(request, response);
+                log.info("doFilter completed");
+
             } catch (FeignException ex) {
-                log.info("CheckPermission fail");
+                log.error("CheckPermission fail", ex);
                 if (httpServletResponse.getStatus() == HttpStatus.UNAUTHORIZED.value()) {
 
                     // 401处理逻辑
                     //  return new UnauthorizedException("服务调用未授权，请检查认证信息");
                 }
-                messageResult.setMessage(ex.getMessage());
-                messageResult.setCode(HttpServletResponse.SC_UNAUTHORIZED);
+
                 if (ex instanceof FeignException.Unauthorized) {
                     // 401特殊处理
                     httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -110,11 +126,12 @@ public class AuthenticationFilter implements Filter {
                     // 401特殊处理
                     httpServletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 }
-
-                String msg = objectMapper.writeValueAsString(messageResult);
+//                messageResult.setMessage(ex.getMessage());
+//                messageResult.setCode(HttpServletResponse.SC_UNAUTHORIZED);
+//                String msg = objectMapper.writeValueAsString(messageResult);
 
                 try {
-                    returnJson(httpServletRequest, httpServletResponse, msg);
+                    authenticationFail(httpServletRequest, httpServletResponse, messageResult, ex.getMessage());
                 } catch (Exception e) {
                     log.error("returnJson ", e);
                 }
@@ -129,8 +146,6 @@ public class AuthenticationFilter implements Filter {
                 }
             }
 
-            chain.doFilter(request, response);
-            log.info("doFilter completed");
         } catch (Exception ex) {
             log.error("", ex);
         } finally {
@@ -138,6 +153,20 @@ public class AuthenticationFilter implements Filter {
         }
 //        int statusCode = responseWrapper.getStatus();
 //        System.out.println("Final status code: " + statusCode);
+    }
+
+    private void authenticationFail(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, MessageResult<Void> messageResult, String msg) throws Exception {
+
+
+        messageResult.setMessage(msg);
+        messageResult.setCode(httpServletResponse.getStatus());
+        String json = objectMapper.writeValueAsString(messageResult);
+
+        try {
+            returnJson(httpServletRequest, httpServletResponse, json);
+        } catch (Exception e) {
+            log.error("returnJson ", e);
+        }
     }
 
     private void returnJson(HttpServletRequest httpServletRequest, HttpServletResponse response, String json) throws Exception {
@@ -164,7 +193,7 @@ public class AuthenticationFilter implements Filter {
             writer = response.getWriter();
             writer.print(json);
         } catch (IOException e) {
-            // logger.error("response error",e);
+            log.error("returnJson error", e);
         } finally {
             if (writer != null) {
                 writer.close();
@@ -172,4 +201,71 @@ public class AuthenticationFilter implements Filter {
 
         }
     }
+
+    //region ip
+
+    /**
+     * 获取客户端真实IP地址
+     * 考虑了代理、负载均衡等情况
+     */
+    public String getClientIpAddress(HttpServletRequest request) {
+        String ip = null;
+
+        // 1. 尝试从X-Forwarded-For获取
+        ip = request.getHeader("X-Forwarded-For");
+        if (isValidIp(ip)) {
+            // 如果有多个IP，取第一个（客户端真实IP）
+            if (ip.contains(",")) {
+                ip = ip.split(",")[0].trim();
+            }
+            return ip;
+        }
+
+        // 2. 尝试从Proxy-Client-IP获取
+        ip = request.getHeader("Proxy-Client-IP");
+        if (isValidIp(ip)) {
+            return ip;
+        }
+
+        // 3. 尝试从WL-Proxy-Client-IP获取
+        ip = request.getHeader("WL-Proxy-Client-IP");
+        if (isValidIp(ip)) {
+            return ip;
+        }
+
+        // 4. 尝试从HTTP_CLIENT_IP获取
+        ip = request.getHeader("HTTP_CLIENT_IP");
+        if (isValidIp(ip)) {
+            return ip;
+        }
+
+        // 5. 尝试从HTTP_X_FORWARDED_FOR获取
+        ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        if (isValidIp(ip)) {
+            return ip;
+        }
+
+        // 6. 最后使用request.getRemoteAddr()
+        ip = request.getRemoteAddr();
+
+        // 处理IPv6本地地址
+        if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
+            return "127.0.0.1";
+        }
+
+        return ip;
+    }
+
+    /**
+     * 验证IP地址是否有效
+     */
+    private boolean isValidIp(String ip) {
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+            return false;
+        }
+        return true;
+    }
+
+
+    //endregion
 }

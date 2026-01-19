@@ -148,7 +148,10 @@ public class TruckOrderItem implements Serializable {
     @TableField(value = "LastModificationTime")
     private LocalDateTime lastModificationTime;
     /**
-     *
+     *    NOT_DEBITED(0, "新建"),
+     *     DEBITING(1, "扣账中"),
+     *     DEBITED(2, "扣账完成"),
+     *     DEBIT_FAIL(3, "扣账失败");
      */
     @TableField(value = "Status")
     private Integer status;

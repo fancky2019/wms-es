@@ -64,6 +64,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      */
     @Override
     public SseEmitter createSseConnect(String userId) throws Exception {
+        log.info("createSseConnect userId {}",userId);
         // 设置超时时间，0表示不过期。默认30秒，超过时间未完成会抛出异常：AsyncRequestTimeoutException
         SseEmitter sseEmitter = new SseEmitter(0L);//建议和会话时长保持一致
         // 是否需要给客户端推送ID

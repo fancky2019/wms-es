@@ -1,5 +1,6 @@
 package gs.com.gses.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -46,4 +47,7 @@ public interface TruckOrderService extends IService<TruckOrder> {
     void synchronizeStatus(MqMessage message) throws Exception;
 
     void updateTruckOrder(TruckOrder truckOrder) throws Exception;
+
+
+    void printTest() throws JsonProcessingException;
 }

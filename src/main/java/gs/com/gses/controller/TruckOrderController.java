@@ -1,6 +1,7 @@
 package gs.com.gses.controller;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.filter.UserInfoHolder;
@@ -15,7 +16,9 @@ import gs.com.gses.service.TruckOrderService;
 import gs.com.gses.sse.ISseEmitterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -34,6 +37,7 @@ import java.util.List;
  * @Schema：字段说明（description、example）。
  *  @group 发车单
  */
+@Slf4j
 @RestController
 @Tag(name = "发车单", description = "发车单管理")
 @RequestMapping("/api/truckOrder")
@@ -155,6 +159,13 @@ public class TruckOrderController {
         this.truckOrderService.exportTrunkOrderExcel(id, httpServletResponse);
     }
 
+    @GetMapping(value = "/printTest")
+    public MessageResult<Void> printTest() throws JsonProcessingException {
+        truckOrderService.printTest();
+        return MessageResult.success();
+    }
+
+
     //region sse (sever-sent event)
     @Autowired
     private ISseEmitterService sseEmitterService;
@@ -167,25 +178,37 @@ public class TruckOrderController {
      */
     @GetMapping(value = "/sseConnect")
     public SseEmitter sseConnect() throws Exception {
+        //SseEmitter
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
-        return sseEmitterService.createSseConnect(userTokenDto.getId());
+        //此处返回SseEmitter类型，全局异常返回MessageResult，类型冲突
+//        Assert.notNull(userTokenDto, "Not logged in");
+        if (userTokenDto == null) {
+            log.error("Not logged in");
+            return null;
+        }
+        log.info("userTokenDto {}",userTokenDto);
+        SseEmitter sseEmitter = sseEmitterService.createSseConnect(userTokenDto.getId());
+//        return MessageResult.success(sseEmitter);
+        return sseEmitter;
     }
 
     @GetMapping(value = "/pushTest")
-    public void pushTest() {
+    public MessageResult<Void> pushTest() {
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         sseEmitterService.pushTest(userTokenDto.getId());
-
+        return MessageResult.success();
     }
 
     @GetMapping(value = "/sseSendMsg")
-    public void sendMsg(String userId) {
+    public MessageResult<Void> sendMsg(String userId) {
         sseEmitterService.sendMsgToClient(userId, "test");
+        return MessageResult.success();
     }
 
     @GetMapping(value = "/close/{userId}")
-    public void close(@PathVariable("userId") String userId) {
+    public MessageResult<Void> close(@PathVariable("userId") String userId) {
         sseEmitterService.closeSseConnect(userId);
+        return MessageResult.success();
     }
     //endregion
 }

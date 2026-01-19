@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.listener.eventbus.CustomEvent;
 import gs.com.gses.filter.UserInfoHolder;
@@ -27,6 +28,8 @@ import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.PageData;
+import gs.com.gses.model.response.mqtt.OrderMaterial;
+import gs.com.gses.model.response.mqtt.OrderMaterialMq;
 import gs.com.gses.model.response.mqtt.PrintWrapper;
 import gs.com.gses.model.response.mqtt.TrunkOderMq;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
@@ -1322,6 +1325,45 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //            }
             redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
         }
+    }
+
+
+    @Override
+    public void printTest() throws JsonProcessingException {
+
+        List<OrderMaterial> orderMaterials = new ArrayList<>();
+        OrderMaterial orderMaterial = null;
+        for (int i = 0; i < 25; i++) {
+            orderMaterial = new OrderMaterial();
+            orderMaterial.setMaterialCode("materialCode" + i);
+            orderMaterial.setBatchNo("batchNo" + i);
+            orderMaterial.setQuantity("" + i);
+            orderMaterials.add(orderMaterial);
+            if (i % 10 == 0) {
+                orderMaterial = new OrderMaterial();
+                orderMaterial.setMaterialCode("合计");
+                orderMaterial.setBatchNo("");
+                orderMaterial.setQuantity("" + i);
+                orderMaterials.add(orderMaterial);
+            }
+        }
+
+        PrintWrapper<OrderMaterialMq> mqttWrapper = new PrintWrapper();
+        OrderMaterialMq orderMaterialMq = new OrderMaterialMq();
+        String msgId = UUID.randomUUID().toString().replaceAll("-", "");
+        orderMaterialMq.setMsgId(msgId);
+        orderMaterialMq.setShipOrderItemList(orderMaterials);
+
+        TruckOrderResponse response = new TruckOrderResponse();
+        response.setSenderAddress("addressTest");
+        orderMaterialMq.setShipOrderInfo(Arrays.asList(response));
+
+        mqttWrapper.setCount(1);
+        mqttWrapper.setData(Arrays.asList(orderMaterialMq));
+        String jsonStr = upperObjectMapper.writeValueAsString(mqttWrapper);
+        log.info("start publish msgId:{}", msgId);
+        mqttProduce.publish(UtilityConst.ORDER_MATERIAL, jsonStr, msgId);
+
     }
 
 }
