@@ -3,6 +3,7 @@ package gs.com.gses.controller;
 import gs.com.gses.model.entity.demo.ProductTest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.service.demo.ProductTestService;
+import gs.com.gses.service.erp.ErpWorkorderinfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,9 @@ public class DynamicDataSourceController {
 
     @Autowired
     private ProductTestService productTestService;
+
+    @Autowired
+    private ErpWorkorderinfoService erpWorkorderinfoService;
 
     @GetMapping("/getProductTestById/{id}")
     public MessageResult<ProductTest> getProductTestById(@PathVariable("id") Integer id) throws Exception {
@@ -39,4 +43,11 @@ public class DynamicDataSourceController {
         productTestService.nestedTranTest1();
         return MessageResult.success();
     }
+
+    @GetMapping("/oracleQuery")
+    public MessageResult<Void> oracleQuery() throws Exception {
+        erpWorkorderinfoService.oracleQuery();
+        return MessageResult.success();
+    }
+
 }

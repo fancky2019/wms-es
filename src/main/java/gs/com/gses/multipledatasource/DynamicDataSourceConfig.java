@@ -34,15 +34,27 @@ public class DynamicDataSourceConfig {
     }
 
     /**
+     * 从数据源配置
+     */
+    @Bean(name = "thirdDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.third")
+    public DataSource thirdDataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+
+    /**
      * 动态数据源
      */
     @Bean(name = "dynamicDataSource")
     @Primary
     public DynamicDataSource dataSource(@Qualifier("masterDataSource") DataSource masterDataSource,
-                                        @Qualifier("slaveDataSource") DataSource slaveDataSource) {
+                                        @Qualifier("slaveDataSource") DataSource slaveDataSource,
+                                        @Qualifier("thirdDataSource") DataSource thirdeDataSource) {
         Map<Object, Object> targetDataSources = new HashMap<>(2);
         targetDataSources.put(DataSourceType.MASTER, masterDataSource);
         targetDataSources.put(DataSourceType.SLAVE, slaveDataSource);
+        targetDataSources.put(DataSourceType.THIRD, thirdeDataSource);
         return new DynamicDataSource(masterDataSource, targetDataSources);
     }
 }

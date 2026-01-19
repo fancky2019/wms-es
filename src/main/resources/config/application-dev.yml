@@ -67,7 +67,7 @@ spring:
   # 主数据源配置
   datasource:
     primary:
-      jdbc-url: jdbc:sqlserver://10.100.200.43;DatabaseName=liku;trustServerCertificate=true
+      jdbc-url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
       username: sa
       password: gen@song123
@@ -103,28 +103,28 @@ spring:
         validation-timeout: 5000
         leak-detection-threshold: 60000
 
-#    # 从数据源配置
-#    secondary:
-#      # Oracle配置
-#      driver-class-name: oracle.jdbc.OracleDriver
-#      # 格式1: 服务名方式 (推荐) jdbc:oracle:thin:@//localhost:1521/orcl
-#      jdbc-url: jdbc:oracle:thin:@//10.100.200.205:1521/topprd
-#      # 格式2: SID方式
-#      # url: jdbc:oracle:thin:@localhost:1521:orcl
-#      username: dsdata
-#      password: dsdata
-#      # Hikari连接池配置
-#      hikari:
-#        pool-name: SecondaryHikariPool
-#        minimum-idle: 3
-#        maximum-pool-size: 15
-#        idle-timeout: 300000
-#        connection-timeout: 30000
-#        max-lifetime: 1800000
-#        connection-test-query: SELECT 1 FROM DUAL
-#        auto-commit: true
-#        validation-timeout: 5000
-#        leak-detection-threshold: 60000
+    # 从数据源配置 oracle
+    third:
+      # Oracle配置
+      driver-class-name: oracle.jdbc.OracleDriver
+      # 格式1: 服务名方式 (推荐) jdbc:oracle:thin:@//localhost:1521/orcl
+      jdbc-url: jdbc:oracle:thin:@//10.100.200.205:1521/topprd
+      # 格式2: SID方式
+      # url: jdbc:oracle:thin:@localhost:1521:orcl
+      username: dsdata
+      password: dsdata
+      # Hikari连接池配置
+      hikari:
+        pool-name: SecondaryHikariPool
+        minimum-idle: 3
+        maximum-pool-size: 15
+        idle-timeout: 300000
+        connection-timeout: 30000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1 FROM DUAL
+        auto-commit: true
+        validation-timeout: 5000
+        leak-detection-threshold: 60000
 
 
   redis:
