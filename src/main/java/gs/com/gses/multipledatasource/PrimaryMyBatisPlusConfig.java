@@ -22,15 +22,15 @@ import org.springframework.context.annotation.Primary;
 
 import javax.sql.DataSource;
 
-//@Configuration
-//@MapperScan(basePackages = {
-//        //mapper及mapper.xml要分包放，不然sqlSessionFactoryRef无法选择
-//        "gs.com.gses.mapper.wms"
-////        "gs.com.gses.**.mapper"  // 递归扫描所有mapper包
-//},
-////        YAML配置（会创建默认的SqlSessionFactory）
-//        sqlSessionFactoryRef = "primarySqlSessionFactory"
-//)
+@Configuration
+@MapperScan(basePackages = {
+        //mapper及mapper.xml要分包放，不然sqlSessionFactoryRef无法选择
+        "gs.com.gses.mapper.wms"
+//        "gs.com.gses.**.mapper"  // 递归扫描所有mapper包
+},
+//        YAML配置（会创建默认的SqlSessionFactory）
+        sqlSessionFactoryRef = "primarySqlSessionFactory"
+)
 public class PrimaryMyBatisPlusConfig {
     @Autowired
     private MybatisPlusProperties mybatisPlusProperties;

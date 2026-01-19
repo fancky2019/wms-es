@@ -17,8 +17,8 @@ import org.springframework.transaction.interceptor.TransactionInterceptor;
 import javax.sql.DataSource;
 import java.util.Properties;
 
-//@Configuration
-//@EnableTransactionManagement
+@Configuration
+@EnableTransactionManagement
 public class TransactionConfig {
 
     /**

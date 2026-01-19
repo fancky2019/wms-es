@@ -21,3 +21,34 @@ public class WmsEsApplication
   )
 
   5、MybatisPlusDataSourceConfig 注释
+
+
+
+
+
+
+
+
+
+  单-->多
+  1、排除自动配置
+  @SpringBootApplication(exclude = {RedissonAutoConfiguration.class,DataSourceAutoConfiguration.class})
+  public class WmsEsApplication
+
+  2、
+  config目录；
+  MybatisPlusDataSourceConfig 注释
+
+  multipledatasource 目录:
+  启用
+  DynamicDataSourceAspect
+  DynamicDataSourceConfig
+  PrimaryMyBatisPlusConfig
+  SecondaryMyBatisConfig
+  TransactionConfig
+
+
+  ProductTestServiceImpl 注释
+      @Autowired
+      @Qualifier("secondarySqlSessionTemplate")
+      private SqlSessionTemplate secondarySqlSessionTemplate;

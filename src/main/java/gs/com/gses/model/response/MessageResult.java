@@ -16,6 +16,7 @@ public class MessageResult<T> implements Serializable {
     //  MDC.put("traceId", traceId);//traceId在过滤器的destroy()中生成、清除
     private String traceId = MDC.get("traceId");
     private T data;
+    private Long timestamp;   // 时间戳
 
     public MessageResult() {
         this.success = true;
@@ -31,6 +32,18 @@ public class MessageResult<T> implements Serializable {
 
     public T getData() {
         return data;
+    }
+
+//    public void setTraceId(String traceId) {
+//        this.traceId = traceId;
+//    }
+
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
     }
 
     public void setData(T data) {
@@ -61,6 +74,7 @@ public class MessageResult<T> implements Serializable {
         MessageResult<T> messageResult = new MessageResult<>();
         messageResult.setSuccess(true);
         messageResult.setCode(200);
+        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
     public static <T> MessageResult<T> success(T data) {
@@ -68,6 +82,7 @@ public class MessageResult<T> implements Serializable {
         messageResult.setSuccess(true);
         messageResult.setCode(200);
         messageResult.setData(data);
+        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 
@@ -76,6 +91,7 @@ public class MessageResult<T> implements Serializable {
         messageResult.setSuccess(false);
         messageResult.setCode(500);
         messageResult.setData(data);
+        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 
@@ -83,6 +99,7 @@ public class MessageResult<T> implements Serializable {
         MessageResult<T> messageResult = new MessageResult<>();
         messageResult.setSuccess(false);
         messageResult.setCode(500);
+        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 
@@ -91,6 +108,7 @@ public class MessageResult<T> implements Serializable {
         messageResult.setSuccess(success);
         messageResult.setCode(code);
         messageResult.setData(data);
+        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 }

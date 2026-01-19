@@ -59,14 +59,14 @@ import javax.sql.DataSource;
 
 
 
-//@Configuration
-//@MapperScan(basePackages = {
-//        //mapper及mapper.xml要分包放，不然sqlSessionFactoryRef无法选择
-//        "gs.com.gses.mapper.demo"
-////        "gs.com.gses.**.mapper"  // 递归扫描所有mapper包
-//},
-////        YAML配置（会创建默认的SqlSessionFactory）
-//        sqlSessionFactoryRef = "secondarySqlSessionFactory")
+@Configuration
+@MapperScan(basePackages = {
+        //mapper及mapper.xml要分包放，不然sqlSessionFactoryRef无法选择
+        "gs.com.gses.mapper.demo"
+//        "gs.com.gses.**.mapper"  // 递归扫描所有mapper包
+},
+//        YAML配置（会创建默认的SqlSessionFactory）
+        sqlSessionFactoryRef = "secondarySqlSessionFactory")
 public class SecondaryMyBatisConfig {
     @Autowired
     private MybatisPlusProperties mybatisPlusProperties;
