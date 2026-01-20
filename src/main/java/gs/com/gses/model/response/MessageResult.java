@@ -20,6 +20,7 @@ public class MessageResult<T> implements Serializable {
 
     public MessageResult() {
         this.success = true;
+        this.timestamp = timestamp;
     }
 
     public Boolean getSuccess() {

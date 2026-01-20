@@ -44,7 +44,8 @@ public class PrimaryMyBatisPlusConfig {
 
         // 分页插件
         PaginationInnerInterceptor paginationInnerInterceptor = new PaginationInnerInterceptor();
-        paginationInnerInterceptor.setDbType(DbType.SQL_SERVER);  // SQL Server
+        // SQL Server ，分页 少 order by 报错
+//        paginationInnerInterceptor.setDbType(DbType.SQL_SERVER);
         paginationInnerInterceptor.setOverflow(true);
         paginationInnerInterceptor.setMaxLimit(1000L);
         interceptor.addInnerInterceptor(paginationInnerInterceptor);

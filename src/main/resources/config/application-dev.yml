@@ -115,7 +115,7 @@ spring:
       password: dsdata
       # Hikari连接池配置
       hikari:
-        pool-name: SecondaryHikariPool
+        pool-name: ThirdHikariPool
         minimum-idle: 3
         maximum-pool-size: 15
         idle-timeout: 300000
