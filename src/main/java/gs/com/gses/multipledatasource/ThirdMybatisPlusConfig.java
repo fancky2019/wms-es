@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import gs.com.gses.mybatisplus.MetaObjectHandlerImp;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
@@ -37,7 +38,8 @@ import javax.sql.DataSource;
 public class ThirdMybatisPlusConfig {
     @Autowired
     private MybatisPlusProperties mybatisPlusProperties;
-
+    @Autowired
+    private MetaObjectHandlerImp metaObjectHandlerImp;
 
     /**
      * SqlSessionFactory
@@ -71,6 +73,7 @@ public class ThirdMybatisPlusConfig {
         // 全局配置
         GlobalConfig globalConfig = GlobalConfigUtils.defaults();
         globalConfig.setBanner(false);
+        globalConfig.setMetaObjectHandler(metaObjectHandlerImp);
         factoryBean.setGlobalConfig(globalConfig);
 
         return factoryBean.getObject();
