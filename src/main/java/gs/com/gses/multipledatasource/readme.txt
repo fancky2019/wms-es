@@ -49,11 +49,13 @@ public class WmsEsApplication
 
 
 
-  ProductTestServiceImpl 注释
+  3、ProductTestServiceImpl 注释
       @Autowired
       @Qualifier("secondarySqlSessionTemplate")
       private SqlSessionTemplate secondarySqlSessionTemplate;
 
 
 
-    ThirdMybatisPlusConfig
+  4、
+   SecondaryMyBatisConfig   SecondaryMyBatisScanMapperConfig
+   ThirdMybatisPlusConfig   ThirdMybatisPlusScanMapperConfig

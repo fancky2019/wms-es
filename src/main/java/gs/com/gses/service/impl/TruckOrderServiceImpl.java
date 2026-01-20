@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rabbitmq.client.Return;
 import gs.com.gses.listener.eventbus.CustomEvent;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.listener.event.EwmsEvent;
@@ -23,6 +24,7 @@ import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrder;
 import gs.com.gses.model.entity.TruckOrderItem;
+import gs.com.gses.model.enums.EnumClass;
 import gs.com.gses.model.enums.TruckOrderStausEnum;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
@@ -1363,6 +1365,28 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         String jsonStr = upperObjectMapper.writeValueAsString(mqttWrapper);
         log.info("start publish msgId:{}", msgId);
         mqttProduce.publish(UtilityConst.ORDER_MATERIAL, jsonStr, msgId);
+
+    }
+
+    @Override
+    public Map<Integer, String> getStatusEnum() {
+
+        Map<Integer, String> map = Arrays.stream(TruckOrderStausEnum.values())
+                .collect(Collectors.toMap(
+                        TruckOrderStausEnum::getValue,
+                        TruckOrderStausEnum::getDescription
+                ));
+//        return Collections.emptyMap();
+        return map;
+    }
+
+
+    @Override
+    public List<EnumClass> getTruckOrderStausEnumClass() {
+        List<EnumClass> list = Arrays.stream(TruckOrderStausEnum.values()).map(p ->
+                new EnumClass(p.getValue(), p.getDescription())).collect(Collectors.toList());
+        return list;
+
 
     }
 

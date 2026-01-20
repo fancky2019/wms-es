@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.model.bo.ModifyMStr12Bo;
+import gs.com.gses.model.enums.EnumClass;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.request.wms.*;
 import gs.com.gses.model.response.MessageResult;
@@ -27,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -166,6 +168,16 @@ public class TruckOrderController {
     }
 
 
+    @GetMapping(value = "/getStatusEnum")
+    public MessageResult<Map<Integer, String>> getStatusEnum() {
+        return MessageResult.success(truckOrderService.getStatusEnum());
+    }
+
+    @GetMapping(value = "/getTruckOrderStausEnumClass")
+    public MessageResult<List<EnumClass>> getTruckOrderStausEnumClass() {
+        return MessageResult.success(truckOrderService.getTruckOrderStausEnumClass());
+    }
+
     //region sse (sever-sent event)
     @Autowired
     private ISseEmitterService sseEmitterService;
@@ -186,7 +198,7 @@ public class TruckOrderController {
             log.error("Not logged in");
             return null;
         }
-        log.info("userTokenDto {}",userTokenDto);
+        log.info("userTokenDto {}", userTokenDto);
         SseEmitter sseEmitter = sseEmitterService.createSseConnect(userTokenDto.getId());
 //        return MessageResult.success(sseEmitter);
         return sseEmitter;

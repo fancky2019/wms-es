@@ -5,6 +5,7 @@ import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrder;
 import com.baomidou.mybatisplus.extension.service.IService;
 import gs.com.gses.model.entity.TruckOrderItem;
+import gs.com.gses.model.enums.EnumClass;
 import gs.com.gses.model.request.wms.AddTruckOrderRequest;
 import gs.com.gses.model.request.wms.TruckOrderRequest;
 import gs.com.gses.model.response.PageData;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author lirui
@@ -50,4 +52,10 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
 
     void printTest() throws JsonProcessingException;
+
+
+    Map<Integer, String> getStatusEnum();
+
+    List<EnumClass> getTruckOrderStausEnumClass();
+
 }
