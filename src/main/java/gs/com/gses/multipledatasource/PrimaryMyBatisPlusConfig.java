@@ -78,7 +78,8 @@ public class PrimaryMyBatisPlusConfig {
         configuration.setMapUnderscoreToCamelCase(false);
         configuration.setCacheEnabled(true);
         configuration.setDefaultStatementTimeout(30);
-        configuration.setLogImpl(org.apache.ibatis.logging.stdout.StdOutImpl.class);
+        //StdOutImpl sql打印在控制台，Slf4jImpl  #SQL脚本输出文件。使用配置文件的配置
+//        configuration.setLogImpl(org.apache.ibatis.logging.stdout.StdOutImpl.class);
         factoryBean.setConfiguration(configuration);
 
         // 添加插件
