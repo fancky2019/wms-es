@@ -1,31 +1,26 @@
 package gs.com.gses.model.response.wms;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import java.io.Serializable;
-import java.math.BigDecimal;
-
 @Data
-public class ReceiptOrderResponse implements Serializable {
+public class ApplyShipOrderResponse {
     /**
      *
      */
     private Long id;
 
     /**
-     * 收货单号
+     * 仓库id
      */
-    @JsonProperty("XCode")
+    private Long whid;
+
+    /**
+     * 单据编号
+     */
     private String XCode;
 
     /**
-     * 关联的入库申请单号(如果多个申请单合并入库，逗号分隔，拼接存储)
-     */
-    private String applyReceiptOrderCode;
-
-    /**
-     * 状态(1-打开;2-生效;3-执行中;4-已完成;5-手动完成;-1-作废)
+     * 状态（1 open新建，2生效，3执行中，4已完成，-1作废）
      */
     private Integer XStatus;
 
@@ -35,19 +30,19 @@ public class ReceiptOrderResponse implements Serializable {
     private Long billTypeId;
 
     /**
-     * 期望收货数量（不可编辑，由明细加总得到）
+     * 审核状态(0 未审核 1 通过 -1不通过)
      */
-    private BigDecimal expectedPkgQuantity;
+    private Integer auditStatus;
 
     /**
-     * 已收货数量（不可编辑，由明细加总得到）
+     * 审核时间
      */
-    private BigDecimal receivedPkgQuantity;
+    private Long auditTime;
 
     /**
-     * 已上架数量（不可编辑，由明细加总得到）
+     * 指定出库口
      */
-    private BigDecimal movedPkgQuantity;
+    private String destination;
 
     /**
      * 备注
@@ -185,7 +180,27 @@ public class ReceiptOrderResponse implements Serializable {
     private Long lastModificationTime;
 
     /**
-     * 组织（客户）
+     * 审核人
+     */
+    private String auditorName;
+
+    /**
+     * 单据优先级[0,8]
+     */
+    private Integer proirity;
+
+    /**
+     * 客户
+     */
+    private Long organiztionCustomId;
+
+    /**
+     * 部门
+     */
+    private Long organiztionDepartmentId;
+
+    /**
+     * 组织（货主）
      */
     private Long organiztionId;
 
@@ -193,40 +208,5 @@ public class ReceiptOrderResponse implements Serializable {
      * 组织（供应商）
      */
     private Long organiztionSupplierId;
-
-    /**
-     * 仓库
-     */
-    private Long whid;
-
-    /**
-     *
-     */
-    private Long organiztionCustomId;
-
-    /**
-     *
-     */
-    private Long organiztionDepartmentId;
-
-    /**
-     * 库区编码
-     */
-
-    private String zoneCode;
-
-    /**
-     * 库区Id
-     */
-
-    private Long zoneID;
-
-    /**
-     * 分区编码
-     */
-    private String areaCode;
-
-
     private static final long serialVersionUID = 1L;
 }
-

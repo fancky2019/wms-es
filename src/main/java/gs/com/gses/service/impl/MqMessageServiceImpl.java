@@ -14,7 +14,6 @@ import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.enums.MqMessageStatus;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.MqMessageRequest;
-import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MqMessageResponse;
 import gs.com.gses.model.response.wms.TruckOrderItemResponse;

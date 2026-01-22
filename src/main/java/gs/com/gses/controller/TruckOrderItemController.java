@@ -1,6 +1,5 @@
 package gs.com.gses.controller;
 
-import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.PageData;

@@ -2,10 +2,11 @@ package gs.com.gses.model.response.wms;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
-public class InspectionRecordResponse {
+public class InspectionRecordResponse implements Serializable {
     /**
      *
      */
@@ -105,4 +106,6 @@ public class InspectionRecordResponse {
      *
      */
     private LocalDateTime lastModificationTime;
+
+    private static final long serialVersionUID = 1L;
 }

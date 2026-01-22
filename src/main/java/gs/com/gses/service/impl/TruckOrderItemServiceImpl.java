@@ -468,29 +468,26 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         // 获取当前页数据
         List<TruckOrderItem> records = truckOrderItemPage.getRecords();
+        //searchCount 可能false
+        if (CollectionUtils.isEmpty(records)) {
+            log.info("No records found");
+            return PageData.getDefault();
+        }
+
         long total = truckOrderItemPage.getTotal();
 
-        List<TruckOrderItemResponse> truckOrderItemResponseResponseList = records.stream().map(p -> {
+        List<TruckOrderItemResponse> truckOrderItemResponseList = records.stream().map(p -> {
             TruckOrderItemResponse response = new TruckOrderItemResponse();
             BeanUtils.copyProperties(p, response);
             return response;
         }).collect(Collectors.toList());
-//        if (true) {
-//            return PageData.getDefault();
-//        }
-
-        //searchCount 可能false
-        if (truckOrderItemResponseResponseList.size() == 0) {
-            log.info("No records found");
-            return PageData.getDefault();
-        }
 
         List<Long> truckOrderIdList = records.stream().map(p -> p.getTruckOrderId()).distinct().collect(Collectors.toList());
         if (CollectionUtils.isEmpty(truckOrderIdList)) {
             throw new Exception("truckOrderIdList empty");
         }
         List<TruckOrder> truckOrderList = this.truckOrderService.listByIds(truckOrderIdList);
-        for (TruckOrderItemResponse response : truckOrderItemResponseResponseList) {
+        for (TruckOrderItemResponse response : truckOrderItemResponseList) {
             TruckOrder truckOrder = truckOrderList.stream().filter(p -> p.getId().equals(response.getTruckOrderId())).findFirst().orElse(null);
             if (truckOrder == null) {
                 throw new Exception(MessageFormat.format("TruckOrder - {0} lost", response.getTruckOrderId()));
@@ -499,7 +496,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
 
         PageData<TruckOrderItemResponse> pageData = new PageData<>();
-        pageData.setData(truckOrderItemResponseResponseList);
+        pageData.setData(truckOrderItemResponseList);
         pageData.setCount(total);
         return pageData;
     }

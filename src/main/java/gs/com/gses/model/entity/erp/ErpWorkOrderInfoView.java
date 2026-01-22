@@ -5,29 +5,22 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 
+ * @author lirui
  * @TableName ERP_WORKORDERINFO
  */
 @TableName(value ="ERP_WORKORDERINFO")
 @Data
-public class ErpWorkorderinfo {
+public class ErpWorkOrderInfoView {
     /**
      * 
      */
     @TableField(value = "工单号")
     private String workOrderCode;
-
     /**
-     * 
-     */
-    @TableField(value = "项序")
-    private Integer rowNo;
-
-    /**
-     * 
+     *
      */
     @TableField(value = "料号")
     private String materialCode;
@@ -39,22 +32,38 @@ public class ErpWorkorderinfo {
     private BigDecimal requiredQuantity;
 
     /**
-     * 
+     *
      */
-    @TableField(value = "未齐套")
-    private BigDecimal percent;
+    @TableField(value = "工单项次")
+    private Integer rowNo;
+
+    /**
+     *
+     */
+    @TableField(value = "未齐套数量")
+    private BigDecimal lackQuantity;
+
+    /**
+     *
+     */
+    @TableField(value = "是否为辅材")
+    private String auxiliaryMaterial;
 
     /**
      * 
      */
     @TableField(value = "申请单")
     private String applyCode;
-
+    /**
+     *
+     */
+    @TableField(value = "批次")
+    private String batchNo;
     /**
      * 
      */
-    @TableField(value = "申请数量")
-    private BigDecimal applyQuantity;
+    @TableField(value = "ERP申请数量")
+    private BigDecimal erpApplyQuantity;
 
     /**
      * 
@@ -73,4 +82,10 @@ public class ErpWorkorderinfo {
      */
     @TableField(value = "工单日期")
     private String workOrderDate;
+
+    /**
+     *
+     */
+    @TableField(value = "物料名称")
+    private String materialName;
 }

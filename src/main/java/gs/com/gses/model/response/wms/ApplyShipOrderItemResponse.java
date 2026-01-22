@@ -1,26 +1,21 @@
 package gs.com.gses.model.response.wms;
 
 import lombok.Data;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Data
-public class ReceiptOrderItemResponse implements Serializable {
+public class ApplyShipOrderItemResponse implements Serializable {
+
     /**
      *
      */
     private Long id;
 
     /**
-     * 关联的收货单主表id
+     * 关联的申请单主表id
      */
-    private Long receiptOrderId;
-
-    /**
-     * 关联的申请单号(如果多个，用逗号分隔，拼接存储)
-     */
-    private String applyReceiptOrderCode;
+    private Long applyShipOrderId;
 
     /**
      * 行号
@@ -28,12 +23,12 @@ public class ReceiptOrderItemResponse implements Serializable {
     private Integer rowNo;
 
     /**
-     * 第三方系统行号
+     * 第三方系统行号（兼容字符型）
      */
     private String thirdPartyRowNo;
 
     /**
-     * 状态(1-打开;2-部分分配;3-整单分配;4-执行中;5-已完成;-1-作废)
+     * 状态（1open新建，2生效，3执行中，4已完成，-1作废）
      */
     private Integer XStatus;
 
@@ -58,45 +53,36 @@ public class ReceiptOrderItemResponse implements Serializable {
     private String batchNo3;
 
     /**
-     * 包装单位
+     * 包装单位id
      */
     private Long packageUnitId;
 
     /**
-     * 期望收货数量
+     * 需求数量
      */
-    private BigDecimal expectedPkgQuantity;
+    private BigDecimal requiredNumber;
 
     /**
-     * 期望数量单位
+     * 需求数量单位
      */
-    private String expectedUnit;
+    private String requiredUnit;
 
     /**
-     * 已收货数量
+     * 分配数量
      */
-    private BigDecimal receivedPkgQuantity;
+    private BigDecimal allocatedNumber;
 
     /**
-     * 收货数量单位
+     * 已拣货数量
      */
-    private String receivedUnit;
-
-    /**
-     * 已上架数量（不可编辑，由任务报完成得到）
-     */
-    private BigDecimal movedPkgQuantity;
-
-    /**
-     * 质检状态值
-     */
-    private Integer QCStatus;
+    private BigDecimal pickedNumber;
 
     /**
      * 备注
      */
     private String comments;
 
+    //region str
     /**
      * 预留字段1
      */
@@ -196,7 +182,9 @@ public class ReceiptOrderItemResponse implements Serializable {
      * 预留字段20
      */
     private String str20;
+    //endregion
 
+    //region m_Str
     /**
      * 物料扩展属性预留字段1
      */
@@ -397,6 +385,8 @@ public class ReceiptOrderItemResponse implements Serializable {
      */
     private String m_Str40;
 
+    //endregion
+
     /**
      * 创建人ID
      */
@@ -428,34 +418,44 @@ public class ReceiptOrderItemResponse implements Serializable {
     private Long lastModificationTime;
 
     /**
-     * 仓库
+     * 待分配数量
      */
-    private Long warehouseId;
+    private BigDecimal waitAllocatNumber;
 
     /**
-     * 包装方式
+     * 过期时间
      */
-    private String packageMethod;
+    private Long expiredTime;
 
     /**
-     * 是否保税
+     * 入库时间
      */
-    private Boolean isBonded;
+    private Long inboundTime;
 
     /**
-     * 图片文件地址
-     */
-    private String imageFile;
-
-    /**
-     * 不合格数量
-     */
-    private BigDecimal unqualifiedQuantity;
-
-    /**
-     * 生产日期
+     * 生产时间
      */
     private Long productTime;
+
+    /**
+     * 质检状态
+     */
+    private Integer QCStatus;
+
+    /**
+     * 组织（客户，供应商）
+     */
+    private Long organiztionId;
+
+    /**
+     *
+     */
+    private String shipAccordingToOrderCode;
+
+    /**
+     *
+     */
+    private String destination;
 
     private static final long serialVersionUID = 1L;
 }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gs.com.gses.mapper.erp.ErpWorkOrderInfoViewMapper">
+
+    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.erp.ErpWorkOrderInfoView">
+        <result property="workOrderCode" column="工单号" jdbcType="VARCHAR"/>
+        <result property="materialCode" column="料号" jdbcType="VARCHAR"/>
+        <result property="requiredQuantity" column="需求数量" jdbcType="DECIMAL"/>
+        <result property="rowNo" column="工单项次" jdbcType="INTEGER"/>
+        <result property="lackQuantity" column="未齐套数量" jdbcType="DECIMAL"/>
+        <result property="auxiliaryMaterial" column="是否为辅材" jdbcType="VARCHAR"/>
+        <result property="applyCode" column="申请单" jdbcType="VARCHAR"/>
+        <result property="batchNo" column="批次" jdbcType="VARCHAR"/>
+        <result property="erpApplyQuantity" column="ERP申请数量" jdbcType="DECIMAL"/>
+        <result property="inBoundCode" column="入库单" jdbcType="VARCHAR"/>
+        <result property="inBoundStatus" column="入库状态" jdbcType="VARCHAR"/>
+        <result property="workOrderDate" column="工单日期" jdbcType="VARCHAR"/>
+        <result property="materialName" column="物料名称" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        工单号
+        ,料号,
+        需求数量,工单项次,未齐套数量,是否为辅材,申请单,
+        批次,ERP申请数量,入库单,入库状态,
+        工单日期,物料名称
+    </sql>
+</mapper>

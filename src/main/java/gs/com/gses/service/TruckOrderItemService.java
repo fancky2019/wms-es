@@ -1,11 +1,9 @@
 package gs.com.gses.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import gs.com.gses.model.bo.wms.AllocateModel;
 import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.entity.TruckOrderItem;
 import com.baomidou.mybatisplus.extension.service.IService;
-import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;

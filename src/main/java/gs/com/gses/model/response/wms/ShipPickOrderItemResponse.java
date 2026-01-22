@@ -2,10 +2,11 @@ package gs.com.gses.model.response.wms;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Data
-public class ShipPickOrderItemResponse {
+public class ShipPickOrderItemResponse  implements Serializable {
     /**
      *
      */

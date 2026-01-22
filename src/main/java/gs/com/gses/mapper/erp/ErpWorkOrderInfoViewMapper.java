@@ -1,6 +1,6 @@
 package gs.com.gses.mapper.erp;
 
-import gs.com.gses.model.entity.erp.ErpWorkorderinfo;
+import gs.com.gses.model.entity.erp.ErpWorkOrderInfoView;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -11,7 +11,7 @@ import org.apache.ibatis.annotations.Mapper;
 * @Entity gs.com.gses.model.entity.erp.ErpWorkorderinfo
 */
 @Mapper
-public interface ErpWorkorderinfoMapper extends BaseMapper<ErpWorkorderinfo> {
+public interface ErpWorkOrderInfoViewMapper extends BaseMapper<ErpWorkOrderInfoView> {
 
 }
 

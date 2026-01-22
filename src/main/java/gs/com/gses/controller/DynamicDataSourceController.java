@@ -1,14 +1,12 @@
 package gs.com.gses.controller;
 
 import gs.com.gses.model.entity.demo.ProductTest;
+import gs.com.gses.model.request.erp.ErpWorkOrderInfoViewRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.service.demo.ProductTestService;
-import gs.com.gses.service.erp.ErpWorkorderinfoService;
+import gs.com.gses.service.erp.ErpWorkOrderInfoViewService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/dynamicDataSource")
@@ -18,7 +16,7 @@ public class DynamicDataSourceController {
     private ProductTestService productTestService;
 
     @Autowired
-    private ErpWorkorderinfoService erpWorkorderinfoService;
+    private ErpWorkOrderInfoViewService erpWorkorderinfoService;
 
     @GetMapping("/getProductTestById/{id}")
     public MessageResult<ProductTest> getProductTestById(@PathVariable("id") Integer id) throws Exception {
@@ -44,9 +42,9 @@ public class DynamicDataSourceController {
         return MessageResult.success();
     }
 
-    @GetMapping("/oracleQuery")
-    public MessageResult<Void> oracleQuery() throws Exception {
-        erpWorkorderinfoService.oracleQuery();
+    @PostMapping("/oracleQuery")
+    public MessageResult<Void> oracleQuery(ErpWorkOrderInfoViewRequest request) throws Exception {
+        erpWorkorderinfoService.getErpWorkOrderInfoViewPage(request);
         return MessageResult.success();
     }
 

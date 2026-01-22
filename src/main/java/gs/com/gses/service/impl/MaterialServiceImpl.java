@@ -13,6 +13,8 @@ import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.MaterialRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MaterialResponse;
+import gs.com.gses.multipledatasource.DataSource;
+import gs.com.gses.multipledatasource.DataSourceType;
 import gs.com.gses.service.MaterialService;
 import gs.com.gses.mapper.wms.MaterialMapper;
 import gs.com.gses.utility.LambdaFunctionHelper;
@@ -59,6 +61,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
         return list.get(0);
     }
 
+    @DataSource(DataSourceType.MASTER)
     @Override
     public List<Material> getByCodeList(List<String> materialCodeList) throws Exception {
         if (CollectionUtils.isEmpty(materialCodeList)) {
