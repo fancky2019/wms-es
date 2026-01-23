@@ -57,8 +57,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInfoViewMapper, ErpWorkOrderInfoView>
-        implements ErpWorkOrderInfoViewService {
+public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInfoViewMapper, ErpWorkOrderInfoView> implements ErpWorkOrderInfoViewService {
 
 
     @Autowired
@@ -154,26 +153,15 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
 //        });
 //
 //
-        List<ApplyShipOrderItem> applyShipOrderItemList = this.applyShipOrderItemService.getByApplyMaterialIdBatch(
-                erpWorkOrderInfoViewResponseList,
-                applyShipOrderResponseList,
-                materialCodeMap,
-                workOrderApplyCodeMap);
+        List<ApplyShipOrderItem> applyShipOrderItemList = this.applyShipOrderItemService.getByApplyMaterialIdBatch(erpWorkOrderInfoViewResponseList, applyShipOrderResponseList, materialCodeMap, workOrderApplyCodeMap);
 
 
         for (ErpWorkOrderInfoViewResponse workOrderInfoView : erpWorkOrderInfoViewResponseList) {
             Material material = materialCodeMap.get(workOrderInfoView.getMaterialCode());
             List<Long> applyShipOrderIdList = workOrderApplyCodeMap.get(workOrderInfoView.getApplyCode());
-            List<ApplyShipOrderItem> currentApplyShipOrderItemList = applyShipOrderItemList.stream().filter(p -> applyShipOrderIdList.contains(p.getApplyShipOrderId()) &&
-                    p.getMaterialId().equals(material.getId())).collect(Collectors.toList());
-            BigDecimal totalRequiredQuantity = currentApplyShipOrderItemList.stream()
-                    .map(ApplyShipOrderItem::getRequiredNumber)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalPickedQuantity = currentApplyShipOrderItemList.stream()
-                    .map(p ->
-                            Optional.ofNullable(p.getPickedNumber()).orElse(BigDecimal.ZERO)
-                    )
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            List<ApplyShipOrderItem> currentApplyShipOrderItemList = applyShipOrderItemList.stream().filter(p -> applyShipOrderIdList.contains(p.getApplyShipOrderId()) && p.getMaterialId().equals(material.getId())).collect(Collectors.toList());
+            BigDecimal totalRequiredQuantity = currentApplyShipOrderItemList.stream().map(ApplyShipOrderItem::getRequiredNumber).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalPickedQuantity = currentApplyShipOrderItemList.stream().map(p -> Optional.ofNullable(p.getPickedNumber()).orElse(BigDecimal.ZERO)).reduce(BigDecimal.ZERO, BigDecimal::add);
             workOrderInfoView.setTotalRequiredQuantity(totalRequiredQuantity);
             workOrderInfoView.setTotalPickedQuantity(totalPickedQuantity);
         }
@@ -187,7 +175,7 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
     @Override
     public void export(ErpWorkOrderInfoViewRequest request, HttpServletResponse httpServletResponse) throws Exception {
         PageData<ErpWorkOrderInfoViewResponse> data = getErpWorkOrderInfoViewPage(request);
-        exportExcel("ErpWorkOrderInfoView",  httpServletResponse,  data.getData()) ;
+        exportExcel("ErpWorkOrderInfoView", httpServletResponse, data.getData());
     }
 
     /**
@@ -246,7 +234,7 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
     /**
      * 将文件输出到浏览器(导出)
      */
-    private static void prepareResponds(String fileName, HttpServletResponse response) throws IOException {
+    private void prepareResponds(String fileName, HttpServletResponse response) throws IOException {
         response.setContentType("application/vnd.ms-excel");
         response.setCharacterEncoding("utf-8");
         fileName = URLEncoder.encode(fileName, "UTF-8");

@@ -8,19 +8,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.HttpMediaTypeNotAcceptableException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.List;
 
 /**
  * 该类放在单独一个文件夹
@@ -30,10 +30,17 @@ import java.util.List;
  *
  * @ControllerAdvice :注解定义全局异常处理类
  * @ExceptionHandler :注解声明异常处理方法
+ *
+ *
+ * @ResponseBody 的作用：把方法的返回值，直接写进 HTTP 响应体（Body），而不是当成“视图名”去解析。
+ *
+ *
+ *
+ *
  */
-@ControllerAdvice
 @Slf4j
-//@RestControllerAdvice
+//组合注解：RestControllerAdvice =@ControllerAdvice+@ResponseBody
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static Logger logger = LogManager.getLogger(GlobalExceptionHandler.class);
@@ -42,18 +49,16 @@ public class GlobalExceptionHandler {
     private HttpServletResponse httpServletResponse;
     @Autowired
     private HttpServletRequest httpServletRequest;
-    @Autowired
-    private HttpServletRequest request;
+
 
     /**
      * 处理404 Not Found异常
      * 需配合ErrorController使用
      */
     @ExceptionHandler(NoHandlerFoundException.class)
-    @ResponseBody
     public MessageResult<String> handle404(NoHandlerFoundException ex) {
-        log.error("404异常 - 请求URL: {}", request.getRequestURL());
-        String errorMsg = "资源不存在: " + request.getRequestURI();
+        log.error("404异常 - 请求URL: {}", httpServletRequest.getRequestURL());
+        String errorMsg = "资源不存在: " + httpServletRequest.getRequestURI();
         MessageResult<Void> result = new MessageResult<>();
         result.setCode(HttpStatus.NOT_FOUND.value());
         result.setMessage(errorMsg);
@@ -73,7 +78,6 @@ public class GlobalExceptionHandler {
      * RESTful API设计严格遵循HTTP语义
      */
     @ExceptionHandler(Exception.class)
-    @ResponseBody
     public ResponseEntity<MessageResult<Void>> exceptionHandler(Exception ex, WebRequest request) {
         logger.error("", ex);
         // 检查响应是否已经被提交,AuthenticationFilter 异常已返回
@@ -155,4 +159,23 @@ public class GlobalExceptionHandler {
     }
 
 
+    /**
+     * @Validated 注解验证
+     * @param ex
+     * @return
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public MessageResult<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        BindingResult bindingResult = ex.getBindingResult();
+
+        String errorMessage = bindingResult.getFieldErrors().stream()
+                .findFirst()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                // 兜底：处理 @Validated 类级别校验
+                .orElseGet(() -> bindingResult.getGlobalErrors().stream()
+                        .findFirst()
+                        .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                        .orElse("Validation failed"));
+        return MessageResult.faile(errorMessage);
+    }
 }

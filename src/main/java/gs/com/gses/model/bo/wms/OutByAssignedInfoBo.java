@@ -2,11 +2,8 @@ package gs.com.gses.model.bo.wms;
 
 import gs.com.gses.model.request.wms.InventoryItemDetailRequest;
 import lombok.Data;
-import org.elasticsearch.client.license.LicensesStatus;
-
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.math.BigDecimal;
 import java.util.List;
 
 /**

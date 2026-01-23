@@ -6,6 +6,7 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.erp.ErpWorkOrderInfoViewResponse;
 import gs.com.gses.service.erp.ErpWorkOrderInfoViewService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -19,7 +20,7 @@ public class ErpWorkOrderInfoViewController {
     private ErpWorkOrderInfoViewService erpWorkorderinfoService;
 
     @PostMapping("/getErpWorkOrderInfoViewPage")
-    public MessageResult<PageData<ErpWorkOrderInfoViewResponse>> getErpWorkOrderInfoViewPage(@RequestBody ErpWorkOrderInfoViewRequest request) throws Exception {
+    public MessageResult<PageData<ErpWorkOrderInfoViewResponse>> getErpWorkOrderInfoViewPage(@Validated @RequestBody ErpWorkOrderInfoViewRequest request) throws Exception {
         return MessageResult.success(erpWorkorderinfoService.getErpWorkOrderInfoViewPage(request));
     }
 
@@ -30,7 +31,7 @@ public class ErpWorkOrderInfoViewController {
      * @throws Exception
      */
     @PostMapping(value = "/export")
-    public void export(@RequestBody ErpWorkOrderInfoViewRequest request, HttpServletResponse httpServletResponse) throws Exception {
+    public void export(@Validated @RequestBody ErpWorkOrderInfoViewRequest request, HttpServletResponse httpServletResponse) throws Exception {
         this.erpWorkorderinfoService.export(request, httpServletResponse);
     }
 

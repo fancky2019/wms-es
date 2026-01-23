@@ -3,6 +3,7 @@ package gs.com.gses.model.request.erp;
 import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 @Data
@@ -10,6 +11,7 @@ public class ErpWorkOrderInfoViewRequest extends RequestPage {
     /**
      *
      */
+    @NotNull(message = "workOrderCode cannot be empty")
     private String workOrderCode;
     /**
      *
