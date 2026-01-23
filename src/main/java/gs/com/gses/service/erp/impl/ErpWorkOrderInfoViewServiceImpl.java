@@ -175,22 +175,25 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
     @Override
     public void export(ErpWorkOrderInfoViewRequest request, HttpServletResponse httpServletResponse) throws Exception {
         PageData<ErpWorkOrderInfoViewResponse> data = getErpWorkOrderInfoViewPage(request);
-        exportExcel("ErpWorkOrderInfoView", httpServletResponse, data.getData());
+        exportExcel(httpServletResponse, data.getData(), ErpWorkOrderInfoViewResponse.class, "");
     }
 
+    //region 泛型导出
     /**
-     * 导出excel
+     * 指定数据源导出excel
      *
-     * @param fileName
      * @param response
      * @param data     导出模板，1 导出错误信息，2 导出数据
      * @throws IOException
      */
-    private void exportExcel(String fileName, HttpServletResponse response, List<ErpWorkOrderInfoViewResponse> data) throws Exception {
+    private <T> void exportExcel(HttpServletResponse response, List<T> data, Class cla, String fileName) throws Exception {
+        if (StringUtils.isEmpty(fileName)) {
+            fileName = cla.getSimpleName();
+        }
         prepareResponds(fileName, response);
         ServletOutputStream outputStream = response.getOutputStream();
         // 获取改类声明的所有字段
-        Field[] fields = ErpWorkOrderInfoViewResponse.class.getDeclaredFields();
+        Field[] fields = cla.getDeclaredFields();
         // 响应字段对应的下拉集合
         Map<Integer, String[]> map = new HashMap<>();
         Field field = null;
@@ -211,12 +214,13 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
         builder.autoCloseStream(true);
 //        if (flag == 0 || flag == 2) {
         builder.registerWriteHandler(new ExcelStyleConfig(Lists.newArrayList(20), null, null));
-        builder.head(ErpWorkOrderInfoViewResponse.class);
+        builder.head(cla);
 //        } else {
 //            builder.registerWriteHandler(new ExcelStyleConfig(null,null,null));
 //            builder.head(GXDetailListLogVO.class);
 //        }
-        WriteSheet sheet1 = EasyExcel.writerSheet(0, "ErpWorkOrderInfoView").build();
+        String sheetName = cla.getSimpleName();
+        WriteSheet sheet1 = EasyExcel.writerSheet(0, sheetName).build();
         builder.registerWriteHandler(new DropDownCellWriteHandler(map));
         builder.file(outputStream);
 
@@ -240,6 +244,7 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
         fileName = URLEncoder.encode(fileName, "UTF-8");
         response.setHeader("Content-disposition", "attachment;filename*=utf-8'zh_cn'" + fileName + ExcelTypeEnum.XLSX.getValue());
     }
+    //endregion
 }
 
 

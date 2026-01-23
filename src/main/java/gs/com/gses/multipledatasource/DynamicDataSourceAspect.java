@@ -17,9 +17,10 @@ import java.lang.reflect.Method;
 public class DynamicDataSourceAspect {
 
     /**
+     * 拦截service包下的所有方法，默认就是DataSourceType.MASTER，否则按照指定的
      * 切入带有@DataSource注解的方法。有@DataSource注解的方法才会拦截
      */
-//    @Pointcut("execution(* gs.com.gses.service.impl.*.*(..))")
+//    @Pointcut("execution(* gs.com.gses.service.*.*.*(..))")
     @Pointcut("@annotation(gs.com.gses.multipledatasource.DataSource)")
     public void dataSourcePointCut() {}
 
