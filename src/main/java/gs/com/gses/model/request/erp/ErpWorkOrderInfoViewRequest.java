@@ -11,7 +11,7 @@ public class ErpWorkOrderInfoViewRequest extends RequestPage {
     /**
      *
      */
-    @NotNull(message = "workOrderCode cannot be empty")
+    @NotNull(message = "workOrderCode can‘t be empty")
     private String workOrderCode;
     /**
      *

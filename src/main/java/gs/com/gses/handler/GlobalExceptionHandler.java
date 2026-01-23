@@ -9,6 +9,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -23,7 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * 该类放在单独一个文件夹
+ *
  * 只能捕捉进入controller里异常的代码。
  *
  * extends ResponseEntityExceptionHandler
@@ -39,7 +41,8 @@ import javax.servlet.http.HttpServletResponse;
  *
  */
 @Slf4j
-//组合注解：RestControllerAdvice =@ControllerAdvice+@ResponseBody
+// 指定最高优先级，避免多个异常处理类
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
