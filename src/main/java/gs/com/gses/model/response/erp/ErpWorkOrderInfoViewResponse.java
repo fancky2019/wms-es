@@ -87,6 +87,13 @@ public class ErpWorkOrderInfoViewResponse implements Serializable {
     private BigDecimal totalRequiredQuantity;
     @ExcelProperty(value = "WMS拣货数量")
     private BigDecimal totalPickedQuantity;
+    @ExcelProperty(value = "项目编号")
+    private String projectNo;
+    /**
+     *
+     */
+    @ExcelProperty(value = "项目名称")
+    private String projectName;
 
     private static final long serialVersionUID = 1L;
 }

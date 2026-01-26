@@ -88,4 +88,15 @@ public class ErpWorkOrderInfoView {
      */
     @TableField(value = "物料名称")
     private String materialName;
+    /**
+     *
+     */
+    @TableField(value = "项目编号")
+    private String projectNo;
+    /**
+     *
+     */
+    @TableField(value = "项目名称")
+    private String projectName;
+
 }

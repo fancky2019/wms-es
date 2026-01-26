@@ -18,6 +18,8 @@
         <result property="inBoundStatus" column="入库状态" jdbcType="VARCHAR"/>
         <result property="workOrderDate" column="工单日期" jdbcType="VARCHAR"/>
         <result property="materialName" column="物料名称" jdbcType="VARCHAR"/>
+        <result property="projectNo" column="项目编号" jdbcType="VARCHAR"/>
+        <result property="projectName" column="项目名称" jdbcType="VARCHAR"/>
     </resultMap>
 
     <sql id="Base_Column_List">
@@ -25,6 +27,6 @@
         ,料号,
         需求数量,工单项次,未齐套数量,是否为辅材,申请单,
         批次,ERP申请数量,入库单,入库状态,
-        工单日期,物料名称
+        工单日期,物料名称,项目编号,项目名称
     </sql>
 </mapper>

@@ -44,10 +44,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -81,14 +78,37 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
 //        int n = 0;
         LambdaQueryWrapper<ErpWorkOrderInfoView> workOrderInfoViewQueryWrapper = new LambdaQueryWrapper<>();
         if (StringUtils.isNotEmpty(request.getWorkOrderCode())) {
-            workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getWorkOrderCode, request.getWorkOrderCode());
+            // StringUtils.split(request.getWorkOrderCode(), "|")
+            List<String> workOrderCodeList = Arrays.asList(request.getWorkOrderCode().split("\\|"));
+            workOrderInfoViewQueryWrapper.in(ErpWorkOrderInfoView::getWorkOrderCode, workOrderCodeList);
         }
         if (StringUtils.isNotEmpty(request.getApplyCode())) {
             workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getApplyCode, request.getApplyCode());
         }
+
         if (StringUtils.isNotEmpty(request.getMaterialCode())) {
             workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getMaterialCode, request.getMaterialCode());
         }
+
+        if (StringUtils.isNotEmpty(request.getBatchNo())) {
+            workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getBatchNo, request.getBatchNo());
+        }
+
+        if (StringUtils.isNotEmpty(request.getProjectNo())) {
+            workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getProjectNo, request.getProjectNo());
+        }
+
+        if (StringUtils.isNotEmpty(request.getProjectName())) {
+            workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getProjectName, request.getProjectName());
+        }
+        if (StringUtils.isNotEmpty(request.getInBoundCode())) {
+            workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getInBoundCode, request.getInBoundCode());
+        }
+
+        if (StringUtils.isNotEmpty(request.getInBoundStatus())) {
+            workOrderInfoViewQueryWrapper.like(ErpWorkOrderInfoView::getInBoundStatus, request.getInBoundStatus());
+        }
+
 
         // 创建分页对象 (当前页, 每页大小)
         Page<ErpWorkOrderInfoView> page = new Page<>(request.getPageIndex(), request.getPageSize());
@@ -179,6 +199,7 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
     }
 
     //region 泛型导出
+
     /**
      * 指定数据源导出excel
      *

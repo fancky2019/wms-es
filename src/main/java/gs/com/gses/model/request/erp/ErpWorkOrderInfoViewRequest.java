@@ -1,5 +1,6 @@
 package gs.com.gses.model.request.erp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
@@ -27,7 +28,6 @@ public class ErpWorkOrderInfoViewRequest extends RequestPage {
      *
      */
     private Integer rowNo;
-
 
 
     /**
@@ -72,5 +72,10 @@ public class ErpWorkOrderInfoViewRequest extends RequestPage {
      */
     private String materialName;
 
+    private String projectNo;
+    /**
+     *
+     */
+    private String projectName;
 
 }
