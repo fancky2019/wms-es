@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -26,9 +26,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
+//    @Autowired
+//    @Lazy  // 防止循环依赖
+//    private BasicInfoCacheService selfProxy;
     @Autowired
-    @Lazy  // 防止循环依赖
-    private BasicInfoCacheService selfProxy;
+    private ApplicationContext applicationContext;
     @Autowired
     private LocationService locationService;
 
@@ -562,7 +564,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
          * List/Set 的 push/add 操作不会覆盖，而是追加
          */
         log.info("start initBasicInfoCache");
-        BasicInfoCacheService basicInfoCacheService = selfProxy;
+        BasicInfoCacheService basicInfoCacheService = applicationContext.getBean(BasicInfoCacheService.class);
         basicInfoCacheService.initLocation();
         basicInfoCacheService.initLaneway();
         basicInfoCacheService.initZone();

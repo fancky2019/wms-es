@@ -9,14 +9,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.mapper.wms.MqMessageMapper;
-import gs.com.gses.model.entity.*;
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.enums.MqMessageSourceEnum;
 import gs.com.gses.model.enums.MqMessageStatus;
 import gs.com.gses.model.request.Sort;
 import gs.com.gses.model.request.wms.MqMessageRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MqMessageResponse;
-import gs.com.gses.model.response.wms.TruckOrderItemResponse;
 import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.model.utility.RedisKeyConfigConst;
 import gs.com.gses.multipledatasource.DataSource;
@@ -41,11 +40,14 @@ import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -72,6 +74,10 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+
+@Primary
+@Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 关键！强制TARGET_CLASS代理,不知道为什么是jdk 动态代理，事务不生效，否则就要在
+//接口加   @Transactional(rollbackFor = Exception.class,
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
 
     /**
@@ -89,9 +95,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
      使用 @Lazy 后：aop 功能可能丢失
      真实对象 ← CGLIB代理（包含Advisors） ← Lazy代理（没有Advisors） ← Spring容器Bean
      */
-    @Autowired
-    @Lazy  // 防止循环依赖
-    private MqMessageService selfProxy;
+//    @Autowired
+//    @Lazy  // 防止循环依赖
+//    private MqMessageService selfProxy;
 
 //     通过setter方法注入，而不是字段注入
 //    @Autowired
@@ -104,7 +110,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Autowired
     private ApplicationContext applicationContext;
     @Autowired
-    @Lazy
+//    @Lazy
     private MqSendUtil mqSendUtil;
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -127,14 +133,77 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //    @Lazy
 //    private IProductTestService productTestService;
 
-    @Autowired
-    @Lazy
-    private TruckOrderItemService truckOrderItemService;
+//    @Autowired
+//    @Lazy
+//    private TruckOrderItemService truckOrderItemService;
+//
+//    @Autowired
+//    private TruckOrderService truckOrderService;
 
-    @Autowired
-    private TruckOrderService truckOrderService;
+
+
     //12次
     private int[] retryPeriod = new int[]{5, 10, 20, 40, 60, 2 * 60, 4 * 60, 8 * 60, 16 * 60, 32 * 60, 1 * 60 * 60, 2 * 60 * 60};
+
+
+    @Override
+//    @Transactional(rollbackFor = Exception.class,isolation = Isolation.REPEATABLE_READ)
+    @Transactional(rollbackFor = Exception.class)
+    public void transactionRepeatReadLock() throws Exception {
+        boolean actualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        // 判断当前是否存在事务,如果没有开启事务是会报错的
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+
+        long id = 1979084944348372994L;
+        MqMessage mqMessage = this.getById(id);
+        String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + id;
+        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockSuccessfully = false;
+        try {
+
+            //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+            if (!lockSuccessfully) {
+                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                throw new Exception(msg);
+            }
+            log.info("update get lock {}", lockKey);
+
+            MqMessage mqMessage1 = this.getById(id);
+
+            LambdaQueryWrapper<MqMessage> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(MqMessage::getVersion, mqMessage.getVersion());
+            queryWrapper.eq(MqMessage::getId, mqMessage.getId());
+            List<MqMessage> mqMessageList = this.list(queryWrapper);
+
+
+            int n = 0;
+//            Integer oldVersion = mqMessage.getVersion();
+//            mqMessage.setVersion(mqMessage.getVersion() + 1);
+//            mqMessage.setLastModificationTime(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+//            LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<MqMessage>();
+//            updateWrapper.set(MqMessage::getVersion, mqMessage.getVersion());
+//            updateWrapper.eq(MqMessage::getId, mqMessage.getId());
+//            updateWrapper.eq(MqMessage::getVersion, oldVersion);
+//            boolean re = this.update(mqMessage, updateWrapper);
+//            if (!re) {
+//                String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
+//                throw new Exception(message);
+//            }
+
+
+        } catch (Exception ex) {
+            log.error("", ex);
+            throw ex;
+        } finally {
+            //非事务操作在此释放
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+        }
+    }
 
 
     @Override
@@ -428,6 +497,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             return;
         }
         log.info("updateByMsgId {} queue {} ", msgId, queue);
+        MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         selfProxy.updateByMsgId(msgId, status);
     }
 
@@ -661,6 +731,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 //可设计单独的job 处理消费失败.消费失败的，才走定时任务补偿处理
                 List<MqMessage> consumerFailList = mqMessageList.stream().filter(p -> p.getStatus() != null && (p.getStatus().equals(MqMessageStatus.CONSUME_FAIL.getValue()))).collect(Collectors.toList());
                 rePublish(unPushList);
+                MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
                 Object object = selfProxy;
                 // 从 ApplicationContext 获取代理对象
                 MqMessageService proxyService = applicationContext.getBean(MqMessageService.class);
@@ -746,6 +817,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //        {
 //            consume(mqMessageList);
 //        });
+        MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         for (MqMessage message : mqMessageList) {
 
             if (message.getMaxRetryCount() == null || (message.getMaxRetryCount() != null && message.getMaxRetryCount() > message.getRetryCount())) {
@@ -924,7 +996,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         String operationLockKey = RedisKeyConfigConst.MQ_FAIL_HANDLER;
         //并发访问，加锁控制
         RLock lock = redissonClient.getLock(operationLockKey);
-
+        MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         try {
             long waitTime = 10;
             long leaseTime = 30;
@@ -993,6 +1065,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Override
     public void MqMessageEventHandler(MqMessage mqMessage, MqMessageSourceEnum sourceEnum) throws Exception {
         log.info("MqMessageEventHandler MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
+        TruckOrderService  truckOrderService= applicationContext.getBean(TruckOrderService.class);
+        TruckOrderItemService  truckOrderItemService= applicationContext.getBean(TruckOrderItemService.class);
+
         //getCurrentTransactionName() 当前事务的名字（默认是 null）
         String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
 //isActualTransactionActive() 最重要、最准：真正有无事务
@@ -1148,7 +1223,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Override
     public void syncMethod() {
         MqMessageService proxyMqMessageService = (MqMessageService) AopContext.currentProxy();
-
+        MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         //从applicationContext 获取的bean 有完整的 Advisor ，selfProxy 是提前暴露的半成品Advisor不全
         selfProxy.asyncMethod();
 
@@ -1166,7 +1241,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //        private static final ThreadLocal<Object> currentProxy = new ThreadLocal<>();
 //        异步方法内需要重新获取代理，通过 ApplicationContext.getBean()
 
-
+        MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         String threadName = Thread.currentThread().getName();
         boolean proxy = AopUtils.isAopProxy(selfProxy);
 
@@ -1209,7 +1284,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     public void TranMethod() {
         //从applicationContext 获取的bean 有完整的 Advisor ，selfProxy 是提前暴露的半成品Advisor不全
         MqMessageService service = applicationContext.getBean(MqMessageService.class);
-
+        MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         String threadName = Thread.currentThread().getName();
         boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
         boolean isSynchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();

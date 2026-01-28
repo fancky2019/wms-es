@@ -35,7 +35,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -62,9 +62,11 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 
     @Value("${sbp.enableCopyShipOrder:false}") // 默认 false，避免报错
     private boolean enableCopyShipOrder;
+    //    @Autowired
+//    @Lazy  // 防止循环依赖
+//    private ShipOrderService selfProxy;
     @Autowired
-    @Lazy  // 防止循环依赖
-    private ShipOrderService selfProxy;
+    private ApplicationContext applicationContext;
     @Autowired
     private InventoryInfoServiceImpl inventoryInfoService;
 
@@ -554,7 +556,7 @@ public class ShipOrderServiceImpl extends ServiceImpl<ShipOrderMapper, ShipOrder
 //                                shipOrderService = (ShipOrderService) proxyObj;
 //                                shipOrderService.copyShipOrder(shipOrder.getId());
 //                            }
-
+                            ShipOrderService selfProxy = applicationContext.getBean(ShipOrderService.class);
                             selfProxy.copyShipOrder(shipOrder.getId());
                         }
                     }

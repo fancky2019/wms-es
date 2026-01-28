@@ -16,6 +16,12 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @EnableAspectJAutoProxy(exposeProxy = true)//开启spring注解aop配置的支持，获取当前代理对象 (PersonService) AopContext.currentProxy();
 //@EnableTransactionManagement //默认是开启的
+//强制使用 CGLIB 代理
+//spring:
+//aop:
+//proxy-target-class: true
+//@EnableTransactionManagement(proxyTargetClass = true)
+
 
 //@EnableAspectJAutoProxy(
 //        exposeProxy = true,        // 必须为true
@@ -30,7 +36,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableFeignClients
 //@SpringBootApplication(exclude = {RedissonAutoConfiguration.class})
 
-@SpringBootApplication(exclude = {RedissonAutoConfiguration.class,DataSourceAutoConfiguration.class})
+@SpringBootApplication(exclude = {RedissonAutoConfiguration.class, DataSourceAutoConfiguration.class})
 public class WmsEsApplication {
 
     public static void main(String[] args) {

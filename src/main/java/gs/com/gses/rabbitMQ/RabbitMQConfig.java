@@ -17,6 +17,7 @@ import org.springframework.amqp.rabbit.listener.RabbitListenerContainerFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -44,14 +45,15 @@ public class RabbitMQConfig {
 
     @Value("${spring.rabbitmq.password:guest}")
     private String password;
-
+    @Autowired
+    private ApplicationContext applicationContext;
     @Autowired
     ObjectMapper objectMapper;
     @Autowired
-    PushConfirmCallback pushConfirmCallback;
+    private  PushConfirmCallback pushConfirmCallback;
 
-    @Autowired
-    MqMessageService mqMessageService;
+//    @Autowired
+//   private MqMessageService mqMessageService;
 
 
     //region 常量参数
@@ -146,6 +148,7 @@ public class RabbitMQConfig {
                 String failedMessage = new String(returnedMessage.getMessage().getBody());
 //                rabbitMqMessage = objectMapper.readValue(failedMessage, RabbitMqMessage.class);
 //                messageId = rabbitMqMessage.getMessageId();
+                MqMessageService mqMessageService=applicationContext.getBean(MqMessageService.class);
 
                 mqMessageService.updateByMsgId(messageId, MqMessageStatus.NOT_PRODUCED.getValue(),queueName);
                 //MQ_MESSAGE

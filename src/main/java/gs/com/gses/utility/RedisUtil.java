@@ -51,7 +51,7 @@ public class RedisUtil {
         }
     }
 
-    public void setKeyWithLock(String key,Object keyVal) {
+    public void setKeyWithLock(String key, Object keyVal) {
         log.info("setKeyWithLock {}", key);
 
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
@@ -63,7 +63,7 @@ public class RedisUtil {
             long waitTime = 10;
             lockSuccessfully = lock.tryLock(waitTime, TimeUnit.SECONDS);
             if (lockSuccessfully) {
-                valueOperations.set(key,keyVal);
+                valueOperations.set(key, keyVal);
             } else {
                 //如果controller是void 返回类型，此处返回 MessageResult<Void>  也不会返回给前段
                 //超过waitTime ，扔未获得锁
@@ -129,11 +129,37 @@ public class RedisUtil {
 
     }
 
+    /**
+     * Redisson 的分布式锁在 Redis 里是用 Hash 结构
+     *redis key :redisson:updateTruckOrder:2
+     *
+     * hash field :clientId:threadId    Redisson 客户端唯一ID（这个 JVM 实例的身份:当前 JVM 里的线程 ID
+     * hash field :47f74905-0865-48fe-973d-edd7db765977:217
+     * hash value:重入次数 = 1
+     * hash value:1
+     * @param lock
+     * @param lockSuccessfully
+     */
+
     public void releaseLock(RLock lock, boolean lockSuccessfully) {
-        if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-            String lockName = lock.getName();
-            lock.unlock();
-            log.info("release lock success, key: {}", lockName);
+        if (lockSuccessfully && lock.isLocked() && lock.isHeldByCurrentThread()) {
+            try {
+                String lockName = lock.getName();
+                log.info("start release lock, key: {}", lockName);
+                lock.unlock();
+                log.info("release lock success, key: {}", lockName);
+            } catch (Exception e) {
+                log.error("release fail", e);
+                //watchdog 30s ttl  ,停止续期 自动删
+//                try {
+//                    // 不校验现成持有，直接删除key
+//                    lock.forceUnlock();
+//                } catch (Exception ex) {
+//                    log.error("forceUnlock fail", ex);
+//                }
+            }
         }
+
+
     }
 }

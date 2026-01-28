@@ -18,6 +18,7 @@ import gs.com.gses.sse.ISseEmitterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
@@ -117,6 +118,15 @@ public class TruckOrderController {
 
     @PostMapping("/expungeStaleAttachment/{id}")
     public MessageResult<Void> expungeStaleAttachment(@PathVariable("id") Integer id) throws Exception {
+
+        // 1. 检查代理类型
+        boolean isAopProxy = AopUtils.isAopProxy(truckOrderService);
+        boolean isCglibProxy = AopUtils.isCglibProxy(truckOrderService);
+        boolean isJdkProxy = AopUtils.isJdkDynamicProxy(truckOrderService);
+        log.info("class = {}", truckOrderService.getClass());
+        log.info("isJdkProxy = {}", AopUtils.isJdkDynamicProxy(truckOrderService));
+        log.info("isCglibProxy = {}", AopUtils.isCglibProxy(truckOrderService));
+
         truckOrderService.expungeStaleAttachment(id);
         return MessageResult.success();
     }

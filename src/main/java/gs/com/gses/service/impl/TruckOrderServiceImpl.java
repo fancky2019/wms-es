@@ -915,6 +915,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public void expungeStaleAttachment(long id) throws Exception {
         log.info("expungeStaleAttachment - {}", id);
+        boolean actualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        // 判断当前是否存在事务,如果没有开启事务是会报错的
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
 
         String lockKey = RedisKey.UPDATE_TRUCK_ORDER_INFO + ":" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁

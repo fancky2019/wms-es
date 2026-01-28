@@ -102,8 +102,8 @@
 <!--            <appender-ref ref="Mail"/>-->
         </AsyncRoot>
 
-        <!--        同步-->
-<!--        <Root level="all">-->
+        <!--   debug  all  info      同步-->
+<!--        <Root level="info">-->
         <!--            <appender-ref ref="Console"/>-->
         <!--            <appender-ref ref="RollingFile"/>-->
         <!--            <appender-ref ref="AsyncMail"/>-->

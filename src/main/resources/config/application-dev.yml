@@ -56,6 +56,7 @@ spring:
 #    hikari:
 #      minimum-idle: 5
 #      maximum-pool-size: 100
+#  HikariCP 默认 auto-commit = true.Spring 的事务管理器会在事务开始时把 auto-commit 设置为 false.事务提交时会 commit
 #      auto-commit: true #OrderManagerService 代码异常，spring自动回滚，或者手动回滚。否则正常自动提交
 #      idle-timeout: 5000
 #      #pool-name: HikariCP-Demo

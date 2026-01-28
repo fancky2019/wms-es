@@ -21,6 +21,10 @@ import java.util.List;
  * @createDate 2024-08-12 14:23:55
  */
 public interface MqMessageService extends IService<MqMessage> {
+
+//    @Transactional(rollbackFor = Exception.class)
+    void transactionRepeatReadLock() throws Exception;
+
     MqMessage add(MqMessage mqMessage);
 
     List<MqMessage> addBatch(List<MqMessage> mqMessageList);

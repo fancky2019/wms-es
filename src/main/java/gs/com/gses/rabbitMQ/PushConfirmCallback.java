@@ -37,15 +37,15 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
 
 
     @Autowired
-    ApplicationContext applicationContext;
+    private ApplicationContext applicationContext;
 
 
     @Autowired
     private RedisTemplate redisTemplate;
 
-    //无法注入 通过容器获取
-    @Autowired
-    MqMessageService mqMessageService;
+//    //无法注入 通过容器获取
+//    @Autowired
+//    MqMessageService mqMessageService;
 
 
 //    @Autowired
@@ -101,8 +101,8 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
                 } catch (Exception ex) {
                     log.error("", ex);
                 }
-
-                mqMessageService.updateByMsgId(msgId, MqMessageStatus.PRODUCE.getValue(),queueName);
+                MqMessageService mqMessageService=applicationContext.getBean(MqMessageService.class);
+                mqMessageService.updateByMsgId(msgId, MqMessageStatus.PRODUCE.getValue(), queueName);
 
             } else {
 //                log.info("消息 - {} 发送到交换机失败！ ", msgId);

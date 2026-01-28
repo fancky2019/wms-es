@@ -504,6 +504,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void mergeTruckOrder(List<Long> truckOrderIdList) throws Exception {
+        boolean tran = TransactionSynchronizationManager.isSynchronizationActive();
         truckOrderIdList = truckOrderIdList.stream().distinct().collect(Collectors.toList());
         if (CollectionUtils.isEmpty(truckOrderIdList)) {
             throw new Exception("truckOrderIdList empty");
@@ -550,6 +551,10 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         truckOrderItemRequest.setTruckOrderIdList(deletedTruckOrderIdList);
         PageData<TruckOrderItemResponse> pageData = this.getTruckOrderItemPage(truckOrderItemRequest);
         List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
+        if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
+            String deletedTruckOrderIdStr = StringUtils.join(deletedTruckOrderIdList, ",");
+            throw new Exception("Can not get  TruckOrderItem by truckOrderId " + deletedTruckOrderIdStr);
+        }
         for (TruckOrderItemResponse item : truckOrderItemResponseList) {
             log.info("mergeTruckOrder- {},{},{}", item.getId(), item.getTruckOrderId(), retainId);
         }

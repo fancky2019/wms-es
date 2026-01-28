@@ -198,8 +198,8 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
         exportExcel(httpServletResponse, data.getData(), ErpWorkOrderInfoViewResponse.class, "");
     }
 
-    //region 泛型导出
-
+    //region 泛型导出,数据量大采用exportByPage（ProductTestServiceImpl）
+     //分页导出定制脚本： SELECT * FROM ERP_WORKORDERINFO WHERE ROWNUM <= 10;
     /**
      * 指定数据源导出excel
      *
