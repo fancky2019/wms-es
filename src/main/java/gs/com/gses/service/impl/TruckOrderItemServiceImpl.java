@@ -36,6 +36,7 @@ import gs.com.gses.service.api.WmsService;
 import gs.com.gses.sse.ISseEmitterService;
 import gs.com.gses.utility.LambdaFunctionHelper;
 import gs.com.gses.utility.RedisUtil;
+import gs.com.gses.utility.TransactionLockManager;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -102,6 +103,8 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     private ObjectMapper upperObjectMapper;
     @Autowired
     private RedissonClient redissonClient;
+    @Autowired
+    private TransactionLockManager transactionLockManager;
     @Autowired
     private RedisUtil redisUtil;
     @Autowired
@@ -570,12 +573,19 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             log.info("mergeTruckOrder- {},{},{}", item.getId(), item.getTruckOrderId(), retainId);
         }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
-        LambdaUpdateWrapper<TruckOrderItem> truckOrderItemLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
-                .set(TruckOrderItem::getTruckOrderId, retainId);
-        boolean re1 = this.update(null, truckOrderItemLambdaUpdateWrapper);
-        if (!re1) {
-            throw new Exception("Update TruckOrderItem truckOrderId fail");
+        try {
+            transactionLockManager.acquireLocks(truckOrderItemIdList, RedisKey.UPDATE_TRUCK_ORDER_ITEM + ":");
+            LambdaUpdateWrapper<TruckOrderItem> truckOrderItemLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+            truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
+                    .set(TruckOrderItem::getTruckOrderId, retainId);
+            boolean re1 = this.update(null, truckOrderItemLambdaUpdateWrapper);
+            if (!re1) {
+                throw new Exception("Update TruckOrderItem truckOrderId fail");
+            }
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            transactionLockManager.releaseLockAfterTransaction();
         }
 
     }

@@ -46,10 +46,7 @@ import gs.com.gses.service.TruckOrderItemService;
 import gs.com.gses.service.TruckOrderService;
 import gs.com.gses.service.api.WmsService;
 import gs.com.gses.sse.ISseEmitterService;
-import gs.com.gses.utility.FileUtil;
-import gs.com.gses.utility.LambdaFunctionHelper;
-import gs.com.gses.utility.PathUtils;
-import gs.com.gses.utility.RedisUtil;
+import gs.com.gses.utility.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.keyvalue.MultiKey;
@@ -139,6 +136,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private RedisTemplate<String, String> redisTemplate;
     @Autowired
     private RedissonClient redissonClient;
+    @Autowired
+    private TransactionLockManager transactionLockManager;
     @Autowired
     private RedisUtil redisUtil;
     @Autowired
@@ -1186,11 +1185,19 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean deleteByIds(List<Long> idList) {
-        LambdaUpdateWrapper<TruckOrder> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList).set(TruckOrder::getDeleted, 1);
-        boolean re = this.update(null, truckOrderLambdaUpdateWrapper);
-        return re;
+    public Boolean deleteByIds(List<Long> idList) throws Exception {
+        try {
+            log.info("delete Ids {}",idList);
+            transactionLockManager.acquireLocks(idList, RedisKey.UPDATE_TRUCK_ORDER_INFO + ":");
+            LambdaUpdateWrapper<TruckOrder> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
+            truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList).set(TruckOrder::getDeleted, 1);
+            boolean re = this.update(null, truckOrderLambdaUpdateWrapper);
+            return re;
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            transactionLockManager.releaseLockAfterTransaction();
+        }
     }
 
     @Override

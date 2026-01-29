@@ -44,7 +44,7 @@ public interface TruckOrderService extends IService<TruckOrder> {
     void exportTrunkOrderExcel(Long id, HttpServletResponse httpServletResponse) throws Exception;
 
 
-    Boolean deleteByIds(List<Long> idList);
+    Boolean deleteByIds(List<Long> idList) throws Exception;
 
     void synchronizeStatus(MqMessage message) throws Exception;
 
