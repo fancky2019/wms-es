@@ -75,7 +75,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 
-@Primary
+//@Primary
 @Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 关键！强制TARGET_CLASS代理,不知道为什么是jdk 动态代理，事务不生效，否则就要在
 //接口加   @Transactional(rollbackFor = Exception.class,
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
@@ -141,7 +141,6 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //    private TruckOrderService truckOrderService;
 
 
-
     //12次
     private int[] retryPeriod = new int[]{5, 10, 20, 40, 60, 2 * 60, 4 * 60, 8 * 60, 16 * 60, 32 * 60, 1 * 60 * 60, 2 * 60 * 60};
 
@@ -170,6 +169,11 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             }
             log.info("update get lock {}", lockKey);
 
+            //MyBatis 的**一级缓存（Local Cache）**就是：SqlSession 级别的缓存，默认开启，
+            // 用来缓存“同一个 SqlSession 内、相同 SQL 的查询结果”。
+            //同一个 SqlSession 里，相同 SQL 不会再查数据库，而是从缓存拿。
+
+            //CacheKey =Mapper方法ID +SQL语句 +参数值 +分页参数(RowBounds) +环境ID
             MqMessage mqMessage1 = this.getById(id);
 
             LambdaQueryWrapper<MqMessage> queryWrapper = new LambdaQueryWrapper<>();
@@ -177,20 +181,23 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
             queryWrapper.eq(MqMessage::getId, mqMessage.getId());
             List<MqMessage> mqMessageList = this.list(queryWrapper);
 
-
+            if (CollectionUtils.isEmpty(mqMessageList)) {
+                throw new Exception("MqMessage " + id + " has been changed");
+            }
             int n = 0;
-//            Integer oldVersion = mqMessage.getVersion();
-//            mqMessage.setVersion(mqMessage.getVersion() + 1);
-//            mqMessage.setLastModificationTime(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
-//            LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<MqMessage>();
-//            updateWrapper.set(MqMessage::getVersion, mqMessage.getVersion());
-//            updateWrapper.eq(MqMessage::getId, mqMessage.getId());
-//            updateWrapper.eq(MqMessage::getVersion, oldVersion);
-//            boolean re = this.update(mqMessage, updateWrapper);
-//            if (!re) {
-//                String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
-//                throw new Exception(message);
-//            }
+
+            //如果根据版本号查询失效，就执行更新校验数据有没有被其他事务更改
+            Integer oldVersion = mqMessage.getVersion();
+            mqMessage.setVersion(mqMessage.getVersion() + 1);
+            mqMessage.setLastModificationTime(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+            LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<MqMessage>();
+            updateWrapper.set(MqMessage::getVersion, mqMessage.getVersion());
+            updateWrapper.eq(MqMessage::getId, mqMessage.getId());
+            updateWrapper.eq(MqMessage::getVersion, oldVersion);
+            boolean re = this.update(mqMessage, updateWrapper);
+            if (!re) {
+                throw new Exception("MqMessage " + id + " has been changed");
+            }
 
 
         } catch (Exception ex) {
@@ -318,6 +325,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
                 throw new Exception(message);
             }
+            log.info("MqMessageUpdate id {} msgId {} status {}", mqMessage.getId(), mqMessage.getMsgId(), mqMessage.getStatus());
 
 
         } catch (Exception ex) {
@@ -401,6 +409,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                         String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
                         throw new Exception(message);
                     }
+                    log.info("MqMessageUpdateByMsgId id {} msgId {} status {}", mqMessage.getId(), mqMessage.getMsgId(), status);
 
                 } catch (Exception ex) {
                     log.error("", ex);
@@ -473,6 +482,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
                 throw new Exception(message);
             }
+            log.info("MqMessageUpdateStaus id {} msgId {} status {}", mqMessage.getId(), mqMessage.getMsgId(), status);
 
         } catch (Exception ex) {
             log.error("", ex);
@@ -731,11 +741,12 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                 //可设计单独的job 处理消费失败.消费失败的，才走定时任务补偿处理
                 List<MqMessage> consumerFailList = mqMessageList.stream().filter(p -> p.getStatus() != null && (p.getStatus().equals(MqMessageStatus.CONSUME_FAIL.getValue()))).collect(Collectors.toList());
                 rePublish(unPushList);
+                log.info("unPushList  size {}", unPushList.size());
                 MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
                 Object object = selfProxy;
                 // 从 ApplicationContext 获取代理对象
                 MqMessageService proxyService = applicationContext.getBean(MqMessageService.class);
-
+                log.info("consumerFailList  size {}", consumerFailList.size());
                 selfProxy.reConsume(consumerFailList);
 
 
@@ -1065,8 +1076,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Override
     public void MqMessageEventHandler(MqMessage mqMessage, MqMessageSourceEnum sourceEnum) throws Exception {
         log.info("MqMessageEventHandler MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
-        TruckOrderService  truckOrderService= applicationContext.getBean(TruckOrderService.class);
-        TruckOrderItemService  truckOrderItemService= applicationContext.getBean(TruckOrderItemService.class);
+        TruckOrderService truckOrderService = applicationContext.getBean(TruckOrderService.class);
+        TruckOrderItemService truckOrderItemService = applicationContext.getBean(TruckOrderItemService.class);
 
         //getCurrentTransactionName() 当前事务的名字（默认是 null）
         String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();

@@ -124,6 +124,15 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     private DebitConfig debitConfig;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void transactionTest() {
+        boolean actualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        // 判断当前是否存在事务,如果没有开启事务是会报错的
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        int n = 0;
+    }
+
+    @Override
     public Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception {
         String currentTaskName = "checkTruckOrderItemRequest";
         StopWatch stopWatch = new StopWatch("checkShipOrderItemExist");
@@ -442,7 +451,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         if (StringUtils.isNotEmpty(request.getCreatorName())) {
             truckOrderItemQueryWrapper.like(TruckOrderItem::getCreatorName, request.getCreatorName());
         }
-
+        if (request.getStatus() != null && request.getStatus() >= 0) {
+            truckOrderItemQueryWrapper.eq(TruckOrderItem::getStatus, request.getStatus());
+        }
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrderItem> page = new Page<>(request.getPageIndex(), request.getPageSize());
         if (CollectionUtils.isEmpty(request.getSortFieldList())) {
@@ -750,6 +761,31 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         }
         return failureReason;
     }
+
+    @Override
+    public void reDebit(Long truckOrderItemId) throws Exception {
+        Assert.notNull(truckOrderItemId, " field value must not be null.");
+        MqMessageRequest request = new MqMessageRequest();
+        request.setBusinessId(truckOrderItemId);
+        request.setBusinessKey(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+        request.setPageIndex(1);
+        request.setPageSize(Integer.MAX_VALUE);
+        request.setSearchCount(false);
+        PageData<MqMessageResponse> pageData = mqMessageService.getMqMessagePage(request);
+        String failureReason = "";
+        if (CollectionUtils.isEmpty(pageData.getData())) {
+            throw new Exception("MqMessage Can't find businessId " + truckOrderItemId);
+        }
+
+        MqMessageResponse response = pageData.getData().get(pageData.getData().size() - 1);
+        MqMessage mqMessage = mqMessageService.getById(response.getId());
+        mqMessage.setFailureReason(null);
+        mqMessage.setRetryCount(0);
+        mqMessage.setStatus(MqMessageStatus.CONSUME_FAIL.getValue());
+        mqMessage.setNextRetryTime(LocalDateTime.now());
+        this.mqMessageService.update(mqMessage);
+    }
+
 }
 
 

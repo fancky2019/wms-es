@@ -1042,6 +1042,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         if (StringUtils.isNotEmpty(request.getCreatorName())) {
             queryWrapper.like(TruckOrder::getCreatorName, request.getCreatorName());
         }
+        if (request.getStatus() != null && request.getStatus() >= 0) {
+            queryWrapper.eq(TruckOrder::getStatus, request.getStatus());
+        }
         // 创建分页对象 (当前页, 每页大小)
         Page<TruckOrder> page = new Page<>(request.getPageIndex(), request.getPageSize());
 

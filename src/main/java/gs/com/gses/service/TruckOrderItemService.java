@@ -17,6 +17,9 @@ import java.util.List;
  * @createDate 2025-05-28 13:18:54
  */
 public interface TruckOrderItemService extends IService<TruckOrderItem> {
+
+    void transactionTest();
+
     Boolean checkAvailable(TruckOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
 
     Boolean checkAvailableBatch(List<TruckOrderItemRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList, List<AllocateModel> allocateModelList) throws Exception;
@@ -39,5 +42,6 @@ public interface TruckOrderItemService extends IService<TruckOrderItem> {
 
     String failureReason(Long truckOrderItemId) throws Exception;
 
+    void reDebit(Long truckOrderItemId) throws Exception;
 
 }

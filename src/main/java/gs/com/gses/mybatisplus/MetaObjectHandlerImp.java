@@ -64,7 +64,7 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
             log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
         } else if (originalObject instanceof MqMessage) {
             MqMessage message = (MqMessage) originalObject;
-            log.info("MqMessageInsert:BusinessId {} MsgContent {}", message.getBusinessId(), message.getMsgContent());
+            log.info("MqMessageInsert:BusinessId {} MsgContent {} status{}", message.getBusinessId(), message.getMsgContent(),message.getStatus());
         }
         int n = 0;
     }
@@ -105,6 +105,9 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
         } else if (originalObject instanceof TruckOrderItem) {
             TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
             log.info("TruckOrderItemUpdate:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
+        }else if (originalObject instanceof MqMessage) {
+            MqMessage message = (MqMessage) originalObject;
+            log.info("MqMessageUpdate:BusinessId {} MsgContent {} status{}", message.getBusinessId(), message.getMsgContent(),message.getStatus());
         }
         int n = 0;
     }
