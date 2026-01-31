@@ -134,7 +134,9 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
             BeanUtils.copyProperties(p, response);
             return response;
         }).collect(Collectors.toList());
-
+        List<String> pageWorkOrderCodeList = erpWorkOrderInfoViewResponseList.stream().map(p -> p.getWorkOrderCode()).distinct().collect(Collectors.toList());
+        String pageWorkOrderCodeStr = StringUtils.join(pageWorkOrderCodeList, ",");
+        log.info("PageIndex {} pageWorkOrderCodeStr {}", request.getPageIndex(), pageWorkOrderCodeStr);
         List<String> applyShipOrderList = erpWorkOrderInfoViewResponseList.stream().map(p -> p.getApplyCode()).distinct().collect(Collectors.toList());
         ApplyShipOrderRequest applyShipOrderRequest = new ApplyShipOrderRequest();
         applyShipOrderRequest.setPageIndex(1);
@@ -153,32 +155,13 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
         Map<String, Material> materialCodeMap = materialList.stream().collect(Collectors.toMap(p -> p.getXCode(), p -> p));
 //        LambdaQueryWrapper<ApplyShipOrderItem> applyShipOrderItemLambdaQueryWrapper = new LambdaQueryWrapper<>();
         Map<String, List<Long>> workOrderApplyCodeMap = new HashMap<>();
-//        applyShipOrderItemLambdaQueryWrapper.and(qw -> {
-//            for (ErpWorkOrderInfoView query : erpWorkOrderInfoViewList) {
-//                Material material = materialCodeMap.get(query.getMaterialCode());
-//                List<Long> currentApplyShipOrderIdList = applyShipOrderResponseList.stream().filter(p -> p.getXCode().contains(query.getApplyCode())).map(p -> p.getId()).collect(Collectors.toList());
-//                if (CollectionUtils.isEmpty(currentApplyShipOrderIdList)) {
-//                    //Exception 抛不出来
-//                    //因为 Lambda 表达式中的代码块只能抛出 RuntimeException 或其子类，不能抛出受检异常（checked exception）。
-//                    throw new RuntimeException("Can't get ApplyShipOrder by ApplyCode " + query.getApplyCode());
-//                }
-//                workOrderApplyCodeMap.put(query.getApplyCode(), currentApplyShipOrderIdList);
-//                for (Long applyShipOrderId : currentApplyShipOrderIdList) {
-//                    qw.or(w -> {
-//                        w.eq(ApplyShipOrderItem::getApplyShipOrderId, applyShipOrderId);
-//                        w.eq(ApplyShipOrderItem::getMaterialId, material.getId());
-//                    });
-//                }
-//            }
-//        });
-//
-//
         List<ApplyShipOrderItem> applyShipOrderItemList = this.applyShipOrderItemService.getByApplyMaterialIdBatch(erpWorkOrderInfoViewResponseList, applyShipOrderResponseList, materialCodeMap, workOrderApplyCodeMap);
-
-
         for (ErpWorkOrderInfoViewResponse workOrderInfoView : erpWorkOrderInfoViewResponseList) {
             Material material = materialCodeMap.get(workOrderInfoView.getMaterialCode());
             List<Long> applyShipOrderIdList = workOrderApplyCodeMap.get(workOrderInfoView.getApplyCode());
+            if (CollectionUtils.isEmpty(applyShipOrderIdList)) {
+                continue;
+            }
             List<ApplyShipOrderItem> currentApplyShipOrderItemList = applyShipOrderItemList.stream().filter(p -> applyShipOrderIdList.contains(p.getApplyShipOrderId()) && p.getMaterialId().equals(material.getId())).collect(Collectors.toList());
             BigDecimal totalRequiredQuantity = currentApplyShipOrderItemList.stream().map(ApplyShipOrderItem::getRequiredNumber).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalPickedQuantity = currentApplyShipOrderItemList.stream().map(p -> Optional.ofNullable(p.getPickedNumber()).orElse(BigDecimal.ZERO)).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -199,7 +182,8 @@ public class ErpWorkOrderInfoViewServiceImpl extends ServiceImpl<ErpWorkOrderInf
     }
 
     //region 泛型导出,数据量大采用exportByPage（ProductTestServiceImpl）
-     //分页导出定制脚本： SELECT * FROM ERP_WORKORDERINFO WHERE ROWNUM <= 10;
+    //分页导出定制脚本： SELECT * FROM ERP_WORKORDERINFO WHERE ROWNUM <= 10;
+
     /**
      * 指定数据源导出excel
      *

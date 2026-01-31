@@ -120,7 +120,7 @@ spring:
         minimum-idle: 3
         maximum-pool-size: 15
         idle-timeout: 300000
-        connection-timeout: 30000
+        connection-timeout: 300000
         max-lifetime: 1800000
         connection-test-query: SELECT 1 FROM DUAL
         auto-commit: true

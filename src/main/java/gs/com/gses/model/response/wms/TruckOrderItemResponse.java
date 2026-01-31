@@ -141,10 +141,11 @@ public class TruckOrderItemResponse implements Serializable {
      *
      * getStatusStr() 是 private 的，所以 Jackson 无法访问
      */
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
+    @Getter(AccessLevel.NONE)//不生成getter
+    @Setter(AccessLevel.NONE)//不生成setter
     private String statusStr;
 
+    //lombok 不会覆盖 此getter
     //    @JsonGetter("statusStr")  // 专门用于 Jackson 序列化的注解
     public String getStatusStr() {
         return status == null ? "" : TruckOrderStausEnum.getDescription(status);

@@ -128,8 +128,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
         PageData<InventoryItemDetailResponse> page = getInventoryItemDetailPage(request);
         List<InventoryItemDetailResponse> detailResponseList = page.getData();
-        int size = detailResponseList.size();
-        if (size == 0) {
+        if (CollectionUtils.isEmpty(detailResponseList)) {
 //            throw new Exception("Can't get inventoryItemDetail info by m_Str7 ,m_Str12,materialCode");
             throw new Exception("库存不存在");
         }
@@ -181,8 +180,9 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                 .map(InventoryItemDetailResponse::getPackageQuantity)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         checkPackageQuantity(sum, request.getPackageQuantity());
-        List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList, null);
-        allocateModelList.addAll(currentAllocateModelList);
+        HashMap<Long, BigDecimal> usedDetailDic = new HashMap<Long, BigDecimal>();
+        List<AllocateModel> currentAllocateModelList = allocate(matchedShipOrderItemResponseList, detailResponseList, null, usedDetailDic, allocateModelList);
+//        allocateModelList.addAll(currentAllocateModelList);
         request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
         return true;
     }
@@ -220,6 +220,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
         currentTaskName = "allocate";
         stopWatch.start(currentTaskName);
+        HashMap<Long, BigDecimal> usedDetailDic = new HashMap<Long, BigDecimal>();
         for (InventoryItemDetailRequest request : requestList) {
 
             List<InventoryItemDetail> currentInventoryItemDetailList = inventoryItemDetailList.stream().filter(p ->
@@ -299,8 +300,8 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                     .map(InventoryItemDetailResponse::getPackageQuantity)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             checkPackageQuantity(sum, request.getPackageQuantity());
-            List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList, palletMap);
-            allocateModelList.addAll(currentAllocateModelList);
+            List<AllocateModel> currentAllocateModelList = allocate(currentShipOrderItemResponseList, detailResponseList, palletMap, usedDetailDic, allocateModelList);
+//            allocateModelList.addAll(currentAllocateModelList);
             request.setMaterialId(inventoryItemDetailResponse.getMaterialId());
         }
 
@@ -340,14 +341,16 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
     @Override
     public List<AllocateModel> allocate(List<ShipOrderItemResponse> shipOrderItemList,
-                                        List<InventoryItemDetailResponse> detailList, Map<Long, String> palletMap) throws Exception {
-        List<AllocateModel> allocateModelList = new ArrayList<>();
+                                        List<InventoryItemDetailResponse> detailList, Map<Long, String> palletMap,
+                                        HashMap<Long, BigDecimal> usedDetailDic,
+                                        List<AllocateModel> allocateModelList) throws Exception {
+//        List<AllocateModel> allocateModelList = new ArrayList<>();
         if (CollectionUtils.isEmpty(shipOrderItemList)) {
             log.info("shipOrderItemList is empty");
             return allocateModelList;
         }
         shipOrderItemList = shipOrderItemList.stream().sorted(Comparator.comparingLong(ShipOrderItemResponse::getId)).collect(Collectors.toList());
-        HashMap<Long, BigDecimal> usedDetailDic = new HashMap<Long, BigDecimal>();
+//        HashMap<Long, BigDecimal> usedDetailDic = new HashMap<Long, BigDecimal>();
         if (palletMap == null) {
             List<Long> detailIdList = detailList.stream().map(m -> m.getId()).collect(Collectors.toList());
             palletMap = getPalletInfo(detailIdList);
@@ -356,6 +359,13 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             ShipOrderItemResponse shipOrderItem = shipOrderItemList.get(i);
 //            BigDecimal itemNeedPackageQuantity = shipOrderItem.getRequiredPkgQuantity().subtract(shipOrderItem.getAlloactedPkgQuantity());
             BigDecimal itemNeedPackageQuantity = shipOrderItem.getCurrentAllocatedPkgQuantity();
+
+            //扫码的统一物料既有设备号又没设备号
+            BigDecimal itemAllocatedPackQuantity = allocateModelList.stream().filter(p -> shipOrderItem.getId().equals(p.getShipOrderItemId()))
+                    .map(AllocateModel::getAllocateQuantity)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            itemNeedPackageQuantity = itemNeedPackageQuantity.subtract(itemAllocatedPackQuantity);
 
             if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
@@ -399,6 +409,8 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
             }
         }
+        //兜底
+        allocateModelList = allocateModelList.stream().distinct().collect(Collectors.toList());
         return allocateModelList;
     }
 
@@ -429,7 +441,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                 barCodeList.add(barCode);
             }
         } else {
-            String  barCode = MessageFormat.format("{0},{1},{2}", detail.getM_Str7(), "", material.getXCode());
+            String barCode = MessageFormat.format("{0},{1},{2}", detail.getM_Str7(), "", material.getXCode());
             barCodeList.add(barCode);
         }
         List<Map<String, String>> result = BarcodeUtil.getMultipleBarcodes(barCodeList, 0, 0, null);
@@ -842,7 +854,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
                 List<Long> materialIdList = materialList.stream().map(p -> p.getId()).collect(Collectors.toList());
                 queryWrapper.in(InventoryItemDetail::getMaterialId, materialIdList);
             } else {
-                PageData.getDefault();
+                return PageData.getDefault();
             }
 
         }
@@ -870,6 +882,10 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
         // 获取当前页数据
         List<InventoryItemDetail> records = inventoryItemDetailPage.getRecords();
+        if (CollectionUtils.isEmpty(records)) {
+            return PageData.getDefault();
+        }
+
         long total = inventoryItemDetailPage.getTotal();
 
         List<InventoryItemDetailResponse> inventoryItemDetailResponseList = records.stream().map(p -> {

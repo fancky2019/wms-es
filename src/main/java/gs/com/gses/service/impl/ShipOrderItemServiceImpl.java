@@ -201,6 +201,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         });
 
         List<ShipOrderItem> shipOrderItemList = baseMapper.selectList(wrapper);
+        shipOrderItemList = shipOrderItemList.stream().distinct().collect(Collectors.toList());
         if (CollectionUtils.isEmpty(shipOrderItemList)) {
             throw new Exception("Get ShipOrderItem fail");
         }
@@ -210,13 +211,13 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         Map<Long, ShipOrder> shipOrderMap = shipOrderList.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
 
         for (ShipOrderItemRequest request : requestList) {
-            log.info("MaterialId {} by ProjectNo {} MaterialCode {} DeviceNo {}",  request.getMaterialId(),request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+            log.info("MaterialId {} by ProjectNo {} MaterialCode {} DeviceNo {}", request.getMaterialId(), request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
             List<ShipOrderItem> currentShipOrderItemList = shipOrderItemList.stream().filter(p ->
                     request.getMaterialId().equals(p.getMaterialId()) && request.getM_Str7().equals(p.getM_Str7())
             ).collect(Collectors.toList());
 
             if (StringUtils.isNotEmpty(request.getM_Str12())) {
-                log.info("Match DeviceNo {}",request.getM_Str12());
+                log.info("Match DeviceNo {}", request.getM_Str12());
                 currentShipOrderItemList = currentShipOrderItemList.stream().filter(p ->
                         request.getM_Str12().equals(p.getM_Str12())
                 ).collect(Collectors.toList());
@@ -228,7 +229,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
                 } else if (size > 1) {
                     List<String> shipOrderItemIdList = currentShipOrderItemList.stream().map(p -> p.getId().toString()).distinct().collect(Collectors.toList());
                     String idListStr = String.join(",", shipOrderItemIdList);
-                    String msg = MessageFormat.format("Match multiple ShipOrderItems {0} by ProjectNo {1} MaterialCode {2} DeviceNo {3}", idListStr,request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+                    String msg = MessageFormat.format("Match multiple ShipOrderItems {0} by ProjectNo {1} MaterialCode {2} DeviceNo {3}", idListStr, request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
                     throw new Exception(msg);
                 }
 //                log.info("M_Str12 is not empty set RequiredPkgQuantity one");
@@ -313,7 +314,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
                 List<Long> materialIdList = materialList.stream().map(p -> p.getId()).collect(Collectors.toList());
                 queryWrapper.in(ShipOrderItem::getMaterialId, materialIdList);
             } else {
-                PageData.getDefault();
+                return PageData.getDefault();
             }
 
         }

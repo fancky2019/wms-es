@@ -588,7 +588,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 }
             }
         }
-
+        //兜底
+        splitTruckOrderItemRequestList=splitTruckOrderItemRequestList.stream().distinct().collect(Collectors.toList());
         if (CollectionUtils.isEmpty(shipOrderPalletRequestList)) {
             throw new Exception("AllocateException:shipOrderPalletRequestList is empty");
         }
