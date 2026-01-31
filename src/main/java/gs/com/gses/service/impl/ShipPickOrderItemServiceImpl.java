@@ -20,13 +20,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* @author lirui
-* @description 针对表【ShipPickOrderItem】的数据库操作Service实现
-* @createDate 2024-08-11 10:23:06
-*/
+ * @author lirui
+ * @description 针对表【ShipPickOrderItem】的数据库操作Service实现
+ * @createDate 2024-08-11 10:23:06
+ */
 @Service
 public class ShipPickOrderItemServiceImpl extends ServiceImpl<ShipPickOrderItemMapper, ShipPickOrderItem>
-    implements ShipPickOrderItemService{
+        implements ShipPickOrderItemService {
     @Override
     public PageData<ShipPickOrderItemResponse> getShipPickOrderItemPage(ShipPickOrderItemRequest request) throws Exception {
         LambdaQueryWrapper<ShipPickOrderItem> queryWrapper = new LambdaQueryWrapper<>();
@@ -38,7 +38,6 @@ public class ShipPickOrderItemServiceImpl extends ServiceImpl<ShipPickOrderItemM
         if (request.getShipOrderItemId() != null && request.getShipOrderItemId() > 0) {
             queryWrapper.eq(ShipPickOrderItem::getShipOrderItemId, request.getShipOrderItemId());
         }
-
 
 
         // 创建分页对象 (当前页, 每页大小)

@@ -122,6 +122,7 @@ public class ApplyShipOrderItemServiceImpl extends ServiceImpl<ApplyShipOrderIte
                     //因为 Lambda 表达式中的代码块只能抛出 RuntimeException 或其子类，不能抛出受检异常（checked exception）。
 //
 //                    throw new RuntimeException("Can't get ApplyShipOrder by ApplyCode " + query.getApplyCode());
+                    log.info("ErpWorkOrder {} Can't get ApplyShipOrder by ApplyCode {} ", query.getWorkOrderCode(), query.getApplyCode());
                     qw.eq(ApplyShipOrderItem::getApplyShipOrderId, -1);
                 } else {
                     workOrderApplyCodeMap.put(query.getApplyCode(), currentApplyShipOrderIdList);

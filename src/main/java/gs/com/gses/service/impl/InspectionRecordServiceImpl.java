@@ -23,13 +23,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* @author lirui
-* @description 针对表【InspectionRecord】的数据库操作Service实现
-* @createDate 2025-09-16 13:29:34
-*/
+ * @author lirui
+ * @description 针对表【InspectionRecord】的数据库操作Service实现
+ * @createDate 2025-09-16 13:29:34
+ */
 @Service
 public class InspectionRecordServiceImpl extends ServiceImpl<InspectionRecordMapper, InspectionRecord>
-    implements InspectionRecordService {
+        implements InspectionRecordService {
 
     @Override
     public Boolean addBatch(List<InspectionRecord> inspectionRecordList) {
@@ -40,7 +40,7 @@ public class InspectionRecordServiceImpl extends ServiceImpl<InspectionRecordMap
     }
 
     @Override
-    public PageData<InspectionRecordResponse> getInspectionRecordPage(InspectionRecordRequest request)  {
+    public PageData<InspectionRecordResponse> getInspectionRecordPage(InspectionRecordRequest request) {
         LambdaQueryWrapper<InspectionRecord> inspectionRecordQueryWrapper = new LambdaQueryWrapper<>();
         inspectionRecordQueryWrapper.eq(InspectionRecord::getDeleted, 0);
 
@@ -50,7 +50,6 @@ public class InspectionRecordServiceImpl extends ServiceImpl<InspectionRecordMap
         }
 
 
-
         if (StringUtils.isNotEmpty(request.getProjectNo())) {
             inspectionRecordQueryWrapper.like(InspectionRecord::getProjectNo, request.getProjectNo());
         }
@@ -58,7 +57,7 @@ public class InspectionRecordServiceImpl extends ServiceImpl<InspectionRecordMap
         if (StringUtils.isNotEmpty(request.getApplyReceiptOrderCode())) {
             inspectionRecordQueryWrapper.like(InspectionRecord::getApplyReceiptOrderCode, request.getApplyReceiptOrderCode());
         }
-        if (request.getApplyReceiptOrderItemRowNo()!=null && request.getApplyReceiptOrderItemRowNo()>0) {
+        if (request.getApplyReceiptOrderItemRowNo() != null && request.getApplyReceiptOrderItemRowNo() > 0) {
             inspectionRecordQueryWrapper.eq(InspectionRecord::getApplyReceiptOrderItemRowNo, request.getApplyReceiptOrderItemRowNo());
         }
         if (StringUtils.isNotEmpty(request.getMaterialCode())) {

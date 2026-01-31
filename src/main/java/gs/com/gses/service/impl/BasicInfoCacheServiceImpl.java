@@ -151,8 +151,12 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         redisTemplate.delete(materialPrefix);
         log.info("delete Material complete");
         List<Material> list = this.materialService.list();
+        //双key
         Map<String, Material> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         redisTemplate.opsForHash().putAll(materialPrefix, map);
+
+        Map<String, Material> mapCode = list.stream().collect(Collectors.toMap(p -> p.getXCode(), p -> p));
+        redisTemplate.opsForHash().putAll(materialPrefix, mapCode);
         log.info("init Material complete");
     }
 

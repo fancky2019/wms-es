@@ -20,21 +20,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* @author lirui
-* @description 针对表【ShipPickOrder】的数据库操作Service实现
-* @createDate 2024-08-11 10:23:06
-*/
+ * @author lirui
+ * @description 针对表【ShipPickOrder】的数据库操作Service实现
+ * @createDate 2024-08-11 10:23:06
+ */
 @Service
 public class ShipPickOrderServiceImpl extends ServiceImpl<ShipPickOrderMapper, ShipPickOrder>
-    implements ShipPickOrderService{
+        implements ShipPickOrderService {
     @Override
     public PageData<ShipPickOrderResponse> getShipPickOrderPage(ShipPickOrderRequest request) {
         LambdaQueryWrapper<ShipPickOrder> queryWrapper = new LambdaQueryWrapper<>();
 
-        if (request.getShipOrderId()!=null&&request.getShipOrderId()>0) {
+        if (request.getShipOrderId() != null && request.getShipOrderId() > 0) {
             queryWrapper.eq(ShipPickOrder::getShipOrderId, request.getShipOrderId());
         }
-        if (request.getStartCreationTime()!=null&&request.getStartCreationTime()>0) {
+        if (request.getStartCreationTime() != null && request.getStartCreationTime() > 0) {
             queryWrapper.ge(ShipPickOrder::getCreationTime, request.getStartCreationTime());
         }
 

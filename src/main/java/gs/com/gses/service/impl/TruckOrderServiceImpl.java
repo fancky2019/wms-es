@@ -589,7 +589,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             }
         }
         //兜底
-        splitTruckOrderItemRequestList=splitTruckOrderItemRequestList.stream().distinct().collect(Collectors.toList());
+        splitTruckOrderItemRequestList = splitTruckOrderItemRequestList.stream().distinct().collect(Collectors.toList());
         if (CollectionUtils.isEmpty(shipOrderPalletRequestList)) {
             throw new Exception("AllocateException:shipOrderPalletRequestList is empty");
         }
@@ -1188,7 +1188,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     public Boolean deleteByIds(List<Long> idList) throws Exception {
         try {
-            log.info("delete Ids {}",idList);
+            log.info("delete Ids {}", idList);
             transactionLockManager.acquireLocks(idList, RedisKey.UPDATE_TRUCK_ORDER_INFO + ":");
             LambdaUpdateWrapper<TruckOrder> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
             truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList).set(TruckOrder::getDeleted, 1);

@@ -22,23 +22,23 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* @author lirui
-* @description 针对表【ReceiptOrderItem】的数据库操作Service实现
-* @createDate 2025-07-29 11:07:16
-*/
+ * @author lirui
+ * @description 针对表【ReceiptOrderItem】的数据库操作Service实现
+ * @createDate 2025-07-29 11:07:16
+ */
 @Service
 public class ReceiptOrderItemServiceImpl extends ServiceImpl<ReceiptOrderItemMapper, ReceiptOrderItem>
-    implements ReceiptOrderItemService{
+        implements ReceiptOrderItemService {
 
     @Override
     public PageData<ReceiptOrderItemResponse> getReceiptOrderItemPage(ReceiptOrderItemRequest request) {
         LambdaQueryWrapper<ReceiptOrderItem> queryWrapper = new LambdaQueryWrapper<>();
 
-        if (request.getReceiptOrderId()!=null&&request.getReceiptOrderId()>0){
+        if (request.getReceiptOrderId() != null && request.getReceiptOrderId() > 0) {
             queryWrapper.eq(ReceiptOrderItem::getReceiptOrderId, request.getReceiptOrderId());
         }
 
-        if (CollectionUtils.isNotEmpty(request.getReceiptOrderIdList())){
+        if (CollectionUtils.isNotEmpty(request.getReceiptOrderIdList())) {
             queryWrapper.in(ReceiptOrderItem::getReceiptOrderId, request.getReceiptOrderIdList());
         }
 
