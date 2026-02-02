@@ -1,5 +1,6 @@
 package gs.com.gses.model.response.wms;
 
+import gs.com.gses.model.request.wms.TruckOrderItemRequest;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -86,6 +87,7 @@ public class ShipOrderItemResponse implements Serializable {
     private BigDecimal alloactedPkgQuantity;
 
     private BigDecimal currentAllocatedPkgQuantity;
+    private String truckOrderItemRequestUuid;
     /**
      * 已拣货数量
      */

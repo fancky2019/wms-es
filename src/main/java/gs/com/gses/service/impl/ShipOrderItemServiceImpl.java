@@ -160,6 +160,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
             if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
+            shipOrderItemResponse.setTruckOrderItemRequestUuid(request.getTruckOrderItemRequestUuid());
             if (leftRequiredPkgQuantity.compareTo(itemNeedPackageQuantity) > 0) {
                 shipOrderItemResponse.setCurrentAllocatedPkgQuantity(itemNeedPackageQuantity);
             } else {
@@ -277,6 +278,7 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
                 if (itemNeedPackageQuantity.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
+                shipOrderItemResponse.setTruckOrderItemRequestUuid(request.getTruckOrderItemRequestUuid());
                 if (leftRequiredPkgQuantity.compareTo(itemNeedPackageQuantity) > 0) {
                     shipOrderItemResponse.setCurrentAllocatedPkgQuantity(itemNeedPackageQuantity);
                 } else {

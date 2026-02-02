@@ -417,6 +417,9 @@ public class InventoryItemDetailRequest extends RequestPage {
      */
     private String imageFile;
     private Integer version;
+
+    private String truckOrderItemRequestUuid;
+    private Long shipOrderItemId;
     private static final long serialVersionUID = 1L;
 
 }

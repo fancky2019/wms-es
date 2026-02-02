@@ -145,6 +145,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         shipOrderItemRequest.setM_Str12(request.getDeviceNo());
         shipOrderItemRequest.setMaterialCode(request.getMaterialCode());
         shipOrderItemRequest.setRequiredPkgQuantity(request.getQuantity());
+        shipOrderItemRequest.setTruckOrderItemRequestUuid(request.getUuid());
         if (matchedShipOrderItemResponseList == null) {
             matchedShipOrderItemResponseList = new ArrayList<>();
         }
@@ -219,6 +220,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             shipOrderItemRequest.setMaterialCode(request.getMaterialCode());
             shipOrderItemRequest.setMaterialId(material.getId());
             shipOrderItemRequest.setRequiredPkgQuantity(request.getQuantity());
+            shipOrderItemRequest.setTruckOrderItemRequestUuid(request.getUuid());
             shipOrderItemRequestList.add(shipOrderItemRequest);
 
             InventoryItemDetailRequest inventoryItemDetailRequest = new InventoryItemDetailRequest();
@@ -228,6 +230,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             inventoryItemDetailRequest.setMaterialId(material.getId());
             inventoryItemDetailRequest.setPackageQuantity(request.getQuantity());
             inventoryItemDetailRequest.setIgnoreDeviceNo(request.getIgnoreDeviceNo());
+            inventoryItemDetailRequest.setTruckOrderItemRequestUuid(request.getUuid());
             inventoryItemDetailRequestList.add(inventoryItemDetailRequest);
         }
 
@@ -573,8 +576,14 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             log.info("mergeTruckOrder- {},{},{}", item.getId(), item.getTruckOrderId(), retainId);
         }
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
+        boolean lockSuccessfully = false;
         try {
-            transactionLockManager.acquireLocks(truckOrderItemIdList, RedisKey.UPDATE_TRUCK_ORDER_ITEM + ":");
+            lockSuccessfully = transactionLockManager.acquireLocks(truckOrderItemIdList, RedisKey.UPDATE_TRUCK_ORDER_ITEM + ":");
+            if (!lockSuccessfully) {
+                log.info("transactionLockManager get lock fail ,truckOrderItemIdList {}", StringUtils.join(truckOrderItemIdList, ","));
+                return;
+            }
+            log.info("transactionLockManager get lock success ,truckOrderItemIdList {}", StringUtils.join(truckOrderItemIdList, ","));
             LambdaUpdateWrapper<TruckOrderItem> truckOrderItemLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
             truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
                     .set(TruckOrderItem::getTruckOrderId, retainId);
@@ -585,7 +594,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         } catch (Exception ex) {
             throw ex;
         } finally {
-            transactionLockManager.releaseLockAfterTransaction();
+            if (lockSuccessfully) {
+                transactionLockManager.releaseLockAfterTransaction();
+            }
         }
 
     }
@@ -606,29 +617,35 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Override
     public void debit(MqMessage mqMessage) throws Exception {
         log.info("debit MqMessage - {}", objectMapper.writeValueAsString(mqMessage));
+        MqMessage dbMessage = this.mqMessageService.getById(mqMessage.getId());
+        if (dbMessage.getStatus().equals(MqMessageStatus.CONSUMED.getValue())) {
+            log.info("Msg id {} has been consumed", mqMessage.getId());
+            return;
+        }
+
+        long truckOrderItemId = objectMapper.readValue(mqMessage.getMsgContent(), Long.class);
+
         String lockKey = RedisKey.DEBIT;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
         RLock lock = redissonClient.getLock(lockKey);
         boolean lockSuccessfully = false;
+        String itemLockKey = RedisKey.UPDATE_TRUCK_ORDER_ITEM + ":" + truckOrderItemId;
+        List<String> lockKeys = new ArrayList<>();
+        lockKeys.add(RedisKey.DEBIT);
+        lockKeys.add(itemLockKey);
+
         try {
 
             //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
             //获取不到锁直接返回，下一个定时任务周期在处理
 
-            lockSuccessfully = lock.tryLock();
+            lockSuccessfully = transactionLockManager.acquireLocks(lockKeys);
             if (!lockSuccessfully) {
-                String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
-                log.info(msg);
+                log.info("transactionLockManager get lock fail ,lockKeys {}", StringUtils.join(lockKeys, ","));
                 return;
             }
-            log.info("update get lock {}", lockKey);
-            MqMessage dbMessage = this.mqMessageService.getById(mqMessage.getId());
-            if (dbMessage.getStatus().equals(MqMessageStatus.CONSUMED.getValue())) {
-                log.info("Msg id {} has been consumed", mqMessage.getId());
-                return;
-            }
+            log.info("transactionLockManager get lock success ,lockKeys {}", StringUtils.join(lockKeys, ","));
 
-            long truckOrderItemId = objectMapper.readValue(mqMessage.getMsgContent(), Long.class);
             TruckOrderItem truckOrderItem = this.getById(truckOrderItemId);
             if (truckOrderItem == null) {
                 String msg = MessageFormat.format("TruckOrderItem {0} doesn't exist", truckOrderItemId);
@@ -649,6 +666,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             detailRequest.setM_Str7(truckOrderItem.getProjectNo());
             detailRequest.setM_Str12(truckOrderItem.getDeviceNo());
             detailRequest.setMovedPkgQuantity(truckOrderItem.getQuantity());
+//            detailRequest.setShipOrderItemId(Long.valueOf(truckOrderItem.getShipOrderItemId()));
             inventoryItemDetailRequestList.add(detailRequest);
             shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
             List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();
@@ -723,10 +741,12 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             throw ex;
         } finally {
             //非事务操作在此释放
-//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
-//                lock.unlock();
-//            }
-            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+            if (lockSuccessfully) {
+                transactionLockManager.releaseLockAfterTransaction();
+            }
+//            redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+
+
         }
 
 

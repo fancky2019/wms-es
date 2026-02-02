@@ -521,6 +521,6 @@ public class ShipOrderItemRequest extends RequestPage {
      * 起点位置Code
      */
     private String palletCode;
-
+    private String truckOrderItemRequestUuid;
     private static final long serialVersionUID = 1L;
 }

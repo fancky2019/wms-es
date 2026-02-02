@@ -527,11 +527,13 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
 
-            List<ShipOrderItemResponse> currentShipOrderItemResponseList = allMatchedShipOrderItemResponseList.stream().filter(p -> p.getM_Str7().equals(truckOrderItemRequest.getProjectNo()) && p.getMaterialId().equals(truckOrderItemRequest.getMaterialId())).collect(Collectors.toList());
+//            List<ShipOrderItemResponse> currentShipOrderItemResponseList = allMatchedShipOrderItemResponseList.stream().filter(p -> p.getM_Str7().equals(truckOrderItemRequest.getProjectNo()) && p.getMaterialId().equals(truckOrderItemRequest.getMaterialId())).collect(Collectors.toList());
+//
+//            if (StringUtils.isNotEmpty(truckOrderItemRequest.getDeviceNo())) {
+//                currentShipOrderItemResponseList = currentShipOrderItemResponseList.stream().filter(p -> p.getM_Str12().equals(truckOrderItemRequest.getDeviceNo())).collect(Collectors.toList());
+//            }
 
-            if (StringUtils.isNotEmpty(truckOrderItemRequest.getDeviceNo())) {
-                currentShipOrderItemResponseList = currentShipOrderItemResponseList.stream().filter(p -> p.getM_Str12().equals(truckOrderItemRequest.getDeviceNo())).collect(Collectors.toList());
-            }
+            List<ShipOrderItemResponse> currentShipOrderItemResponseList = allMatchedShipOrderItemResponseList.stream().filter(p -> truckOrderItemRequest.getUuid().equals(p.getTruckOrderItemRequestUuid())).collect(Collectors.toList());
 
             List<String> currentShipOrderCodeList = currentShipOrderItemResponseList.stream().map(p -> p.getShipOrderCode()).distinct().collect(Collectors.toList());
 
@@ -1187,9 +1189,16 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean deleteByIds(List<Long> idList) throws Exception {
+        boolean lockSuccessfully = false;
         try {
             log.info("delete Ids {}", idList);
             transactionLockManager.acquireLocks(idList, RedisKey.UPDATE_TRUCK_ORDER_INFO + ":");
+
+            if (!lockSuccessfully) {
+                log.info("transactionLockManager get lock fail ,idList {}", StringUtils.join(idList, ","));
+                return false;
+            }
+            log.info("transactionLockManager get lock success ,idList {}", StringUtils.join(idList, ","));
             LambdaUpdateWrapper<TruckOrder> truckOrderLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
             truckOrderLambdaUpdateWrapper.in(TruckOrder::getId, idList).set(TruckOrder::getDeleted, 1);
             boolean re = this.update(null, truckOrderLambdaUpdateWrapper);
@@ -1197,7 +1206,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         } catch (Exception ex) {
             throw ex;
         } finally {
-            transactionLockManager.releaseLockAfterTransaction();
+            if (lockSuccessfully) {
+                transactionLockManager.releaseLockAfterTransaction();
+            }
         }
     }
 

@@ -8,6 +8,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 public class TruckOrderItemRequest extends RequestPage {
@@ -158,7 +159,6 @@ public class TruckOrderItemRequest extends RequestPage {
      */
     private LocalDateTime latestProcessTime;
 
-
-
+    private final String uuid = UUID.randomUUID().toString().replaceAll("-", "");
     private static final long serialVersionUID = 1L;
 }
