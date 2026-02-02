@@ -1051,7 +1051,6 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                         }
 
                     }
-
                     //不需要返回的字段
                     @Override
                     public String[] getExcludes() {
