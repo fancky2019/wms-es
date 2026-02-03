@@ -15,6 +15,7 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MaterialResponse;
 import gs.com.gses.multipledatasource.DataSource;
 import gs.com.gses.multipledatasource.DataSourceType;
+import gs.com.gses.service.BasicInfoCacheService;
 import gs.com.gses.service.MaterialService;
 import gs.com.gses.mapper.wms.MaterialMapper;
 import gs.com.gses.utility.LambdaFunctionHelper;
@@ -22,7 +23,11 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.MessageFormat;
@@ -39,6 +44,13 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
         implements MaterialService {
 
     @Autowired
+    private RedisTemplate redisTemplate;
+
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
     private FtpService ftpService;
 
     @Autowired
@@ -47,7 +59,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
     @Override
     public Material getByCode(String materialCode) throws Exception {
         if (StringUtils.isEmpty(materialCode)) {
-            throw new Exception("materialCode is null ");
+            throw new Exception("materialCode is empty ");
         }
         LambdaQueryWrapper<Material> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Material::getXCode, materialCode);
@@ -197,6 +209,22 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material>
         if (!re) {
             throw new Exception("update material failed");
         }
+    }
+
+    @Override
+    public Material getByCodeCache(String materialCode) throws Exception {
+        Assert.hasText(materialCode, "material code must not be empty");
+        HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
+        String key = BasicInfoCacheServiceImpl.MATERIAL_PREFIX;
+        Material material = (Material) hashOps.get(key, materialCode);
+        if (material == null) {
+            BasicInfoCacheService basicInfoCacheService = applicationContext.getBean(BasicInfoCacheService.class);
+            material = basicInfoCacheService.loadFromDbMaterial(materialCode);
+            if (material == null) {
+                throw new Exception("Can't get material by code " + materialCode);
+            }
+        }
+        return material;
     }
 
 

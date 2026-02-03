@@ -1,20 +1,18 @@
-package gs.com.gses.model.response.wms;
+package gs.com.gses.model.request.wms;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
-import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Data
-public class ApplyShipOrderResponse  implements Serializable {
+public class ApplyReceiptOrderRequest extends RequestPage {
     /**
      *
      */
     private Long id;
-
-    /**
-     * 仓库id
-     */
-    private Long whid;
 
     /**
      * 单据编号
@@ -22,7 +20,7 @@ public class ApplyShipOrderResponse  implements Serializable {
     private String XCode;
 
     /**
-     * 状态（1 open新建，2生效，3执行中，4已完成，-1作废）
+     * 状态(1-打开;2-生效;3-执行中;4-已完成;5-手动完成;-1-作废)
      */
     private Integer XStatus;
 
@@ -30,26 +28,6 @@ public class ApplyShipOrderResponse  implements Serializable {
      * 单据类型id
      */
     private Long billTypeId;
-
-    /**
-     * 审核状态(0 未审核 1 通过 -1不通过)
-     */
-    private Integer auditStatus;
-
-    /**
-     * 审核时间
-     */
-    private Long auditTime;
-
-    /**
-     * 指定出库口
-     */
-    private String destination;
-
-    /**
-     * 备注
-     */
-    private String comments;
 
     /**
      * 预留字段1
@@ -182,33 +160,52 @@ public class ApplyShipOrderResponse  implements Serializable {
     private Long lastModificationTime;
 
     /**
-     * 审核人
+     * 备注
      */
-    private String auditorName;
+    private String comments;
 
     /**
-     * 单据优先级[0,8]
+     * 仓库
      */
-    private Integer proirity;
+    private Long whid;
 
     /**
-     * 客户
-     */
-    private Long organiztionCustomId;
-
-    /**
-     * 部门
-     */
-    private Long organiztionDepartmentId;
-
-    /**
-     * 组织（货主）
+     * 货主
      */
     private Long organiztionId;
 
     /**
-     * 组织（供应商）
+     * 供应商
      */
     private Long organiztionSupplierId;
-    private static final long serialVersionUID = 1L;
+
+    /**
+     *
+     */
+    private Long organiztionCustomId;
+
+    /**
+     *
+     */
+    private Long organiztionDepartmentId;
+
+    /**
+     * 上架数量
+     */
+    private BigDecimal movedPkgQuantity;
+
+    /**
+     * 库区编码
+     */
+    private String zoneCode;
+
+    /**
+     * 库区Id
+     */
+    private Long zoneID;
+
+    /**
+     * 分区编码
+     */
+    private String areaCode;
 }

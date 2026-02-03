@@ -1,11 +1,12 @@
 package gs.com.gses.model.request.wms;
 
+import gs.com.gses.model.request.RequestPage;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
-public class ApplyReceiptOrderItemRequest {
+public class ApplyReceiptOrderItemRequest extends RequestPage {
     /**
      *
      */
@@ -15,7 +16,7 @@ public class ApplyReceiptOrderItemRequest {
      * 关联的申请单主表id
      */
     private Long applyReceiptOrderId;
-
+    private String applyReceiptOrderCode;
     /**
      * 行号
      */
@@ -35,6 +36,7 @@ public class ApplyReceiptOrderItemRequest {
      * 物料id
      */
     private Long materialId;
+    private String materialCode;
 
     /**
      * 批号
@@ -450,4 +452,8 @@ public class ApplyReceiptOrderItemRequest {
      * 生产日期
      */
     private Long productTime;
+
+    private String erpCode;
+
+    private String purchaseOrderNumber;
 }

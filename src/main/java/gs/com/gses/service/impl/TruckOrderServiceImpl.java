@@ -1192,7 +1192,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         boolean lockSuccessfully = false;
         try {
             log.info("delete Ids {}", idList);
-            transactionLockManager.acquireLocks(idList, RedisKey.UPDATE_TRUCK_ORDER_INFO + ":");
+            lockSuccessfully = transactionLockManager.acquireLocks(idList, RedisKey.UPDATE_TRUCK_ORDER_INFO + ":");
 
             if (!lockSuccessfully) {
                 log.info("transactionLockManager get lock fail ,idList {}", StringUtils.join(idList, ","));

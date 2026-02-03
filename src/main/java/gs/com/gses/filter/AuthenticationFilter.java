@@ -69,6 +69,11 @@ public class AuthenticationFilter implements Filter {
             return;
         }
 
+        if (requestURI.contains("/sseConnect")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         //OPTIONS 请求不会到此过滤器，应该到cors 中
         try {
             CheckPermissionRequest checkPermissionRequest = new CheckPermissionRequest();
@@ -156,8 +161,6 @@ public class AuthenticationFilter implements Filter {
     }
 
     private void authenticationFail(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, MessageResult<Void> messageResult, String msg) throws Exception {
-
-
         messageResult.setMessage(msg);
         messageResult.setCode(httpServletResponse.getStatus());
         String json = objectMapper.writeValueAsString(messageResult);
@@ -178,13 +181,17 @@ public class AuthenticationFilter implements Filter {
 //        response.setContentType("text/html; charset=utf-8");
         response.setContentType("application/json; charset=utf-8");
         String origin = httpServletRequest.getHeader("Origin");
-        // 设置跨域响应头
-//        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
-        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-        response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
-        //跨域返回给源
-        response.setHeader("Access-Control-Allow-Origin", origin);
+
+
+        //CorsFilterConfig 做了处理
+//        // 设置跨域响应头
+////        response.setHeader("Access-Control-Allow-Origin", "*");
+//        response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+//        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+//        response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
+//        //跨域返回给源
+//        response.setHeader("Access-Control-Allow-Origin", origin);
+
 
 //        response.setHeader("Access-Control-Allow-Credentials", "false");//不允许携带 cookie 或其他认证信息
 //        response.setHeader("Access-Control-Allow-Origin", "*");

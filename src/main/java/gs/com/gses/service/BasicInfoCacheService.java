@@ -35,6 +35,8 @@ public interface BasicInfoCacheService {
 
     Material loadFromDbMaterial(Long materialId) throws InterruptedException;
 
+    Material loadFromDbMaterial(String materialCode) throws Exception;
+
     Warehouse loadFromDbWarehouse(Long wareHouseId) throws InterruptedException;
 
     Orgnization loadFromDbOrgnization(Long orgnizationd) throws InterruptedException;

@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
-//    @Autowired
+    //    @Autowired
 //    @Lazy  // 防止循环依赖
 //    private BasicInfoCacheService selfProxy;
     @Autowired
@@ -70,15 +70,17 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    public static final String locationPrefix = "BasicInfo:Location";
-    public static final String lanewayPrefix = "BasicInfo:Laneway";
-    public static final String zonePrefix = "BasicInfo:Zone";
-    public static final String materialPrefix = "BasicInfo:Material";
-    public static final String warehousePrefix = "BasicInfo:Warehouse";
-    public static final String orgnizationPrefix = "BasicInfo:Orgnization";
-    public static final String packageUnitPrefix = "BasicInfo:PackageUnit";
-    public static final String conveyorPrefix = "BasicInfo:Conveyor";
-    public static final String conveyorLanewayPrefix = "BasicInfo:ConveyorLaneway";
+    public static final String LOCATION_PREFIX = "BasicInfo:Location";
+    public static final String LANEWAY_PREFIX = "BasicInfo:Laneway";
+    public static final String ZONE_PREFIX = "BasicInfo:Zone";
+    public static final String MATERIAL_PREFIX = "BasicInfo:Material";
+    public static final String WAREHOUSE_PREFIX = "BasicInfo:Warehouse";
+    public static final String ORGNIZATION_PREFIX = "BasicInfo:Orgnization";
+    public static final String PACKAGE_UNIT_PREFIX = "BasicInfo:PackageUnit";
+    public static final String CONVEYOR_PREFIX = "BasicInfo:Conveyor";
+    public static final String CONVEYOR_LANEWAY_PREFIX = "BasicInfo:ConveyorLaneway";
+
+    public static final int EMPTY_VALUE_EXPTRE_TIME = 5;
 
 
     //__NULL__
@@ -86,7 +88,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
     @Override
     public void getBasicInfoCache() {
-        Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.locationPrefix);
+        Map<String, Location> locationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.LOCATION_PREFIX);
         Location location = locationMap.get("509955478157011");
         int m = 0;
     }
@@ -95,14 +97,14 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initLocation() {
         log.info("start init location");
-        redisTemplate.delete(locationPrefix);
+        redisTemplate.delete(LOCATION_PREFIX);
         log.info("delete Location complete");
         List<Location> list = this.locationService.list();
 
         Map<String, Location> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
         //redis key  都是string
         HashOperations<String, String, Location> hashOps = redisTemplate.opsForHash();
-        hashOps.putAll(locationPrefix, map);
+        hashOps.putAll(LOCATION_PREFIX, map);
 //        redisTemplate.opsForValue().multiSet(map);
 //        Map<String, Location> locationMap=   hashOps.entries(locationPrefix);
 
@@ -124,11 +126,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initLaneway() {
         log.info("start init Laneway");
-        redisTemplate.delete(lanewayPrefix);
+        redisTemplate.delete(LANEWAY_PREFIX);
         log.info("delete Laneway complete");
         List<Laneway> list = this.lanewayService.list();
         Map<String, Laneway> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
-        redisTemplate.opsForHash().putAll(lanewayPrefix, map);
+        redisTemplate.opsForHash().putAll(LANEWAY_PREFIX, map);
         log.info("init Laneway complete");
     }
 
@@ -136,11 +138,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initZone() {
         log.info("start init Zone");
-        redisTemplate.delete(zonePrefix);
+        redisTemplate.delete(ZONE_PREFIX);
         log.info("delete Zone complete");
         List<Zone> list = this.zoneService.list();
         Map<String, Zone> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
-        redisTemplate.opsForHash().putAll(zonePrefix, map);
+        redisTemplate.opsForHash().putAll(ZONE_PREFIX, map);
         log.info("init Zone complete");
     }
 
@@ -148,15 +150,15 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initMaterial() {
         log.info("start init Material");
-        redisTemplate.delete(materialPrefix);
+        redisTemplate.delete(MATERIAL_PREFIX);
         log.info("delete Material complete");
         List<Material> list = this.materialService.list();
         //双key
         Map<String, Material> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
-        redisTemplate.opsForHash().putAll(materialPrefix, map);
+        redisTemplate.opsForHash().putAll(MATERIAL_PREFIX, map);
 
         Map<String, Material> mapCode = list.stream().collect(Collectors.toMap(p -> p.getXCode(), p -> p));
-        redisTemplate.opsForHash().putAll(materialPrefix, mapCode);
+        redisTemplate.opsForHash().putAll(MATERIAL_PREFIX, mapCode);
         log.info("init Material complete");
     }
 
@@ -164,11 +166,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initWarehouse() {
         log.info("start init Warehouse");
-        redisTemplate.delete(warehousePrefix);
+        redisTemplate.delete(WAREHOUSE_PREFIX);
         log.info("delete Warehouse complete");
         List<Warehouse> list = this.warehouseService.list();
         Map<String, Warehouse> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
-        redisTemplate.opsForHash().putAll(warehousePrefix, map);
+        redisTemplate.opsForHash().putAll(WAREHOUSE_PREFIX, map);
         log.info("init Warehouse complete");
     }
 
@@ -176,11 +178,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initOrgnization() {
         log.info("start init Orgnization");
-        redisTemplate.delete(orgnizationPrefix);
+        redisTemplate.delete(ORGNIZATION_PREFIX);
         log.info("delete Orgnization complete");
         List<Orgnization> list = this.orgnizationService.list();
         Map<String, Orgnization> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
-        redisTemplate.opsForHash().putAll(orgnizationPrefix, map);
+        redisTemplate.opsForHash().putAll(ORGNIZATION_PREFIX, map);
         log.info("init Orgnization complete");
     }
 
@@ -188,11 +190,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initPackageUnit() {
         log.info("start init PackageUnit");
-        redisTemplate.delete(packageUnitPrefix);
+        redisTemplate.delete(PACKAGE_UNIT_PREFIX);
         log.info("delete PackageUnit complete");
         List<PackageUnit> list = this.packageUnitService.list();
         Map<String, PackageUnit> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
-        redisTemplate.opsForHash().putAll(packageUnitPrefix, map);
+        redisTemplate.opsForHash().putAll(PACKAGE_UNIT_PREFIX, map);
         log.info("init PackageUnit complete");
     }
 
@@ -201,14 +203,14 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     public void initConveyor() {
 
         log.info("start init Conveyor");
-        redisTemplate.delete(conveyorPrefix);
+        redisTemplate.delete(CONVEYOR_PREFIX);
         log.info("delete Conveyor complete");
         List<Conveyor> list = this.conveyorService.list();
         Map<String, Conveyor> map = list.stream().collect(Collectors.toMap(p -> p.getId().toString(), p -> p));
-        redisTemplate.opsForHash().putAll(conveyorPrefix, map);
+        redisTemplate.opsForHash().putAll(CONVEYOR_PREFIX, map);
 
         Map<String, Conveyor> codeMap = list.stream().collect(Collectors.toMap(p -> p.getXCode(), p -> p));
-        redisTemplate.opsForHash().putAll(conveyorPrefix, codeMap);
+        redisTemplate.opsForHash().putAll(CONVEYOR_PREFIX, codeMap);
 
         log.info("init Conveyor complete");
     }
@@ -217,7 +219,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void initConveyorLaneway() {
         log.info("start init ConveyorLaneway");
-        redisTemplate.delete(conveyorLanewayPrefix);
+        redisTemplate.delete(CONVEYOR_LANEWAY_PREFIX);
         log.info("delete ConveyorLaneway complete");
         List<ConveyorLaneway> list = this.conveyorLanewayService.list();
         Map<String, List<Long>> conveyorGroupMap = list.stream()
@@ -228,7 +230,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                                 Collectors.toList()
                         )
                 ));
-        redisTemplate.opsForHash().putAll(conveyorLanewayPrefix, conveyorGroupMap);
+        redisTemplate.opsForHash().putAll(CONVEYOR_LANEWAY_PREFIX, conveyorGroupMap);
 
         log.info("init ConveyorLaneway complete");
     }
@@ -236,11 +238,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public Location loadFromDbLocation(Long locationId) throws InterruptedException {
         HashOperations<String, String, Location> hashOps = redisTemplate.opsForHash();
-        String key = locationPrefix;
+        String key = LOCATION_PREFIX;
         Location location = (Location) hashOps.get(key, locationId.toString());
         if (location == null) {
 
-            String lockKey = locationPrefix + "redisson";
+            String lockKey = LOCATION_PREFIX + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             boolean lockSuccessfully = false;
@@ -276,11 +278,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public Laneway loadFromDbLaneway(Long lanewayId) throws InterruptedException {
         HashOperations<String, String, Laneway> hashOps = redisTemplate.opsForHash();
-        String key = lanewayPrefix;
+        String key = LANEWAY_PREFIX;
         Laneway laneway = (Laneway) hashOps.get(key, lanewayId.toString());
         if (laneway == null) {
 
-            String lockKey = lanewayPrefix + "redisson";
+            String lockKey = LANEWAY_PREFIX + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             boolean lockSuccessfully = false;
@@ -315,11 +317,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public Zone loadFromDbZone(Long zoneId) throws InterruptedException {
         HashOperations<String, String, Zone> hashOps = redisTemplate.opsForHash();
-        String key = zonePrefix;
+        String key = ZONE_PREFIX;
         Zone zone = (Zone) hashOps.get(key, zoneId.toString());
         if (zone == null) {
 
-            String lockKey = zonePrefix + "redisson";
+            String lockKey = ZONE_PREFIX + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             boolean lockSuccessfully = false;
@@ -360,11 +362,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
 
         HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
-        String key = materialPrefix;
+        String key = MATERIAL_PREFIX;
         Material material = (Material) hashOps.get(key, materialId.toString());
         if (material == null) {
 
-            String lockKey = materialPrefix + "redisson";
+            String lockKey = MATERIAL_PREFIX + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             boolean lockSuccessfully = false;
@@ -382,6 +384,52 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                 //穿透：设置个空值,待优化
                 if (material != null) {
                     hashOps.put(key, materialId.toString(), material);
+                } else {
+//                    穿透：设置个空值,待优化
+                }
+            } catch (Exception e) {
+                throw e;
+            } finally {
+                //解锁，如果业务执行完成，就不会继续续期，即使没有手动释放锁，在30秒过后，也会释放锁
+                //unlock 删除key
+                //如果锁因超时（leaseTime）会抛异常
+//                lock.unlock();
+                redisUtil.releaseLock(lock, lockSuccessfully);
+            }
+        }
+        return material;
+    }
+
+    @Override
+    public Material loadFromDbMaterial(String materialCode) throws Exception {
+//        Material material = (Material) redisTemplate.opsForHash().get(BasicInfoCacheServiceImpl.materialPrefix, inventoryItemDetail.getMaterialId().toString());
+
+//boolean locked = redisTemplate.opsForValue().setIfAbsent("lock:material:123", "1", 10, TimeUnit.SECONDS);
+
+
+        HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
+        String key = MATERIAL_PREFIX;
+        Material material = (Material) hashOps.get(key, materialCode);
+        if (material == null) {
+
+            String lockKey = MATERIAL_PREFIX + "redisson";
+            //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+            RLock lock = redissonClient.getLock(lockKey);
+            boolean lockSuccessfully = false;
+            try {
+
+                lockSuccessfully = lock.tryLock(30, 60, TimeUnit.SECONDS);
+                if (!lockSuccessfully) {
+                    log.info("Thread - {} 获得锁 {}失败！锁被占用！", Thread.currentThread().getId(), lockKey);
+
+                    //获取不到锁，抛异常处理 服务器繁忙，稍后重试
+//                    throw new Exception("服务器繁忙，稍后重试");
+                    return null;
+                }
+                material = this.materialService.getByCode(materialCode);
+                //穿透：设置个空值,待优化
+                if (material != null) {
+                    hashOps.put(key, materialCode, material);
                 }
             } catch (Exception e) {
                 throw e;
@@ -399,11 +447,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public Warehouse loadFromDbWarehouse(Long wareHouseId) throws InterruptedException {
         HashOperations<String, String, Warehouse> hashOps = redisTemplate.opsForHash();
-        String key = warehousePrefix;
+        String key = WAREHOUSE_PREFIX;
         Warehouse warehouse = (Warehouse) hashOps.get(key, wareHouseId.toString());
         if (warehouse == null) {
 
-            String lockKey = warehousePrefix + "redisson";
+            String lockKey = WAREHOUSE_PREFIX + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             boolean lockSuccessfully = false;
@@ -438,11 +486,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public Orgnization loadFromDbOrgnization(Long orgnizationd) throws InterruptedException {
         HashOperations<String, String, Orgnization> hashOps = redisTemplate.opsForHash();
-        String key = orgnizationPrefix;
+        String key = ORGNIZATION_PREFIX;
         Orgnization orgnization = (Orgnization) hashOps.get(key, orgnizationd.toString());
         if (orgnization == null) {
 
-            String lockKey = orgnizationPrefix + "redisson";
+            String lockKey = ORGNIZATION_PREFIX + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             boolean lockSuccessfully = false;
@@ -477,11 +525,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public PackageUnit loadFromDbPackageUnit(Long packageUnitId) throws InterruptedException {
         HashOperations<String, String, PackageUnit> hashOps = redisTemplate.opsForHash();
-        String key = packageUnitPrefix;
+        String key = PACKAGE_UNIT_PREFIX;
         PackageUnit packageUnit = (PackageUnit) hashOps.get(key, packageUnitId.toString());
         if (packageUnit == null) {
 
-            String lockKey = packageUnitPrefix + "redisson";
+            String lockKey = PACKAGE_UNIT_PREFIX + "redisson";
             //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
             RLock lock = redissonClient.getLock(lockKey);
             boolean lockSuccessfully = false;
@@ -517,35 +565,35 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public void updateLocation(Location location) throws InterruptedException {
         HashOperations<String, String, Location> hashOps = redisTemplate.opsForHash();
-        String key = locationPrefix;
+        String key = LOCATION_PREFIX;
         hashOps.put(key, location.getId().toString(), location);
     }
 
     @Override
     public void updateLaneway(Laneway laneway) throws InterruptedException {
         HashOperations<String, String, Laneway> hashOps = redisTemplate.opsForHash();
-        String key = lanewayPrefix;
+        String key = LANEWAY_PREFIX;
         hashOps.put(key, laneway.getId().toString(), laneway);
     }
 
     @Override
     public void updateZone(Zone zone) throws InterruptedException {
         HashOperations<String, String, Zone> hashOps = redisTemplate.opsForHash();
-        String key = zonePrefix;
+        String key = ZONE_PREFIX;
         hashOps.put(key, zone.getId().toString(), zone);
     }
 
     @Override
     public void updateMaterial(Material material) throws InterruptedException {
         HashOperations<String, String, Material> hashOps = redisTemplate.opsForHash();
-        String key = materialPrefix;
+        String key = MATERIAL_PREFIX;
         hashOps.put(key, material.getId().toString(), material);
     }
 
     @Override
     public void updateWarehouse(Warehouse wareHouse) throws InterruptedException {
         HashOperations<String, String, Warehouse> hashOps = redisTemplate.opsForHash();
-        String key = warehousePrefix;
+        String key = WAREHOUSE_PREFIX;
         hashOps.put(key, wareHouse.getId().toString(), wareHouse);
     }
 

@@ -550,6 +550,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         if (!re) {
             throw new Exception("Delete truckOrder fail");
         }
+        log.info("Delete truckOrder success {}",StringUtils.join(deletedTruckOrderIdList,","));
         List<String> attachmentPathList = truckOrderList.stream().filter(p -> StringUtils.isNotEmpty(p.getFilePath())).map(p -> p.getFilePath()).collect(Collectors.toList());
         List<String> splitAttachmentPathList = new ArrayList<>();
         for (String path : attachmentPathList) {
@@ -666,7 +667,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             detailRequest.setM_Str7(truckOrderItem.getProjectNo());
             detailRequest.setM_Str12(truckOrderItem.getDeviceNo());
             detailRequest.setMovedPkgQuantity(truckOrderItem.getQuantity());
-//            detailRequest.setShipOrderItemId(Long.valueOf(truckOrderItem.getShipOrderItemId()));
+            detailRequest.setShipOrderItemId(Long.valueOf(truckOrderItem.getShipOrderItemId()));
             inventoryItemDetailRequestList.add(detailRequest);
             shipOrderPalletRequest.setInventoryItemDetailDtoList(inventoryItemDetailRequestList);
             List<ShipOrderPalletRequest> shipOrderPalletRequestList = new ArrayList<>();

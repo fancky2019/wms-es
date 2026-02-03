@@ -11,9 +11,9 @@ server:
   shutdown: GRACEFUL # GRACEFUL/IMMEDIATE (默认:IMMEDIATE)
 #开发配
 spring:
-#  #指定CGLIB代理
-#  aop:
-#    proxy-target-class: true
+  #  #指定CGLIB代理
+  #  aop:
+  #    proxy-target-class: true
   #  mvc:
   #    pathmatch:
   #      matching-strategy: ant_path_matcher
@@ -28,41 +28,41 @@ spring:
       enabled: true
       max-file-size: 100MB       # Spring特定配置  -1 #不做限制
       max-request-size: 100MB
-#  datasource:
-#    #    # sqlserver  装车单 liku  GensongWms3DB 质检 wms_liku
-#    #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
-#    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
-#    #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
-#    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-#    username: sa
-#    password: gen@song123
-#
-#    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-#    #    driver-class-name: com.mysql.cj.jdbc.Driver
-#    #    username: root
-#    #    password: 123456
-#    #    #mysql
-#    #    #具体参见类DynamicDataSourceAspect 说明
-#    #    #不用此默认，默认就是写库,多数据源用jdbcUrl，不是url,spring 默认用的是url，用多数据源用url会报错。
-#    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-#    #    driver-class-name: com.mysql.cj.jdbc.Driver
-#    #    username: root
-#    #    password: 123456
-#
-#
-#    #要引入mybatis
-#    type: com.zaxxer.hikari.HikariDataSource
-#    # Hikari will use the above plus the following to setup connection pooling
-#    hikari:
-#      minimum-idle: 5
-#      maximum-pool-size: 100
-#  HikariCP 默认 auto-commit = true.Spring 的事务管理器会在事务开始时把 auto-commit 设置为 false.事务提交时会 commit
-#      auto-commit: true #OrderManagerService 代码异常，spring自动回滚，或者手动回滚。否则正常自动提交
-#      idle-timeout: 5000
-#      #pool-name: HikariCP-Demo
-#      max-lifetime: 1800000
-#      connection-timeout: 5000
-#      #connection-test-query: SELECT 1
+  #  datasource:
+  #    #    # sqlserver  装车单 liku  GensongWms3DB 质检 wms_liku
+  #    #    url: jdbc:sqlserver://gen-song.vip,13999;DatabaseName=GensongWms3DB;integratedSecurity=true;encrypt=true;trustServerCertificate=true
+  #    url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
+  #    #url: jdbc:sqlserver://localhost:1433;DatabaseName=RABC
+  #    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  #    username: sa
+  #    password: gen@song123
+  #
+  #    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+  #    #    driver-class-name: com.mysql.cj.jdbc.Driver
+  #    #    username: root
+  #    #    password: 123456
+  #    #    #mysql
+  #    #    #具体参见类DynamicDataSourceAspect 说明
+  #    #    #不用此默认，默认就是写库,多数据源用jdbcUrl，不是url,spring 默认用的是url，用多数据源用url会报错。
+  #    #    url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+  #    #    driver-class-name: com.mysql.cj.jdbc.Driver
+  #    #    username: root
+  #    #    password: 123456
+  #
+  #
+  #    #要引入mybatis
+  #    type: com.zaxxer.hikari.HikariDataSource
+  #    # Hikari will use the above plus the following to setup connection pooling
+  #    hikari:
+  #      minimum-idle: 5
+  #      maximum-pool-size: 100
+  #  HikariCP 默认 auto-commit = true.Spring 的事务管理器会在事务开始时把 auto-commit 设置为 false.事务提交时会 commit
+  #      auto-commit: true #OrderManagerService 代码异常，spring自动回滚，或者手动回滚。否则正常自动提交
+  #      idle-timeout: 5000
+  #      #pool-name: HikariCP-Demo
+  #      max-lifetime: 1800000
+  #      connection-timeout: 5000
+  #      #connection-test-query: SELECT 1
 
 
   # 主数据源配置
@@ -85,24 +85,24 @@ spring:
         validation-timeout: 5000
         leak-detection-threshold: 60000
 
-#    # 从数据源配置  mysql
-#    secondary:
-#      jdbc-url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
-#      driver-class-name: com.mysql.cj.jdbc.Driver
-#      username: root
-#      password: 123456
-#      # Hikari连接池配置
-#      hikari:
-#        pool-name: SecondaryHikariPool
-#        minimum-idle: 3
-#        maximum-pool-size: 15
-#        idle-timeout: 300000
-#        connection-timeout: 30000
-#        max-lifetime: 1800000
-#        connection-test-query: SELECT 1
-#        auto-commit: true
-#        validation-timeout: 5000
-#        leak-detection-threshold: 60000
+    #    # 从数据源配置  mysql
+    #    secondary:
+    #      jdbc-url: jdbc:mysql://127.0.0.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&allowMultiQueries=true&rewriteBatchedStatements=true
+    #      driver-class-name: com.mysql.cj.jdbc.Driver
+    #      username: root
+    #      password: 123456
+    #      # Hikari连接池配置
+    #      hikari:
+    #        pool-name: SecondaryHikariPool
+    #        minimum-idle: 3
+    #        maximum-pool-size: 15
+    #        idle-timeout: 300000
+    #        connection-timeout: 30000
+    #        max-lifetime: 1800000
+    #        connection-test-query: SELECT 1
+    #        auto-commit: true
+    #        validation-timeout: 5000
+    #        leak-detection-threshold: 60000
 
     # 从数据源配置 oracle
     third:
@@ -181,7 +181,7 @@ spring:
     redisson:
       file: classpath:redisson-config.yml
       # 修改这里，使用file:前缀指定外部文件
-#      config: file:./redisson-config.yml
+  #      config: file:./redisson-config.yml
 
 
   rabbitmq:
@@ -229,7 +229,7 @@ spring:
     #        #默认是1
     #        prefetch: 1
     management: #操作rabbitmq 使用
-#      base-url: http://127.0.0.1:15672/api
+      #      base-url: http://127.0.0.1:15672/api
       port: 15672
       base-url: http://${spring.rabbitmq.host}:${spring.rabbitmq.management.port}/api
 
@@ -277,29 +277,30 @@ feign:
 
 
 sbp:
-#  enable: true
-#  true  false
-#  ordermigratedbtoolurl: http://localhost:8101
-#  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
-#  wmsurl: http://10.100.200.43:9000/api/app
+  #  enable: true
+  #  true  false
+  #  ordermigratedbtoolurl: http://localhost:8101
+  #  ESCertPath: D:\work\dev\ES\elk\elasticsearch-8.8.2\config\certs\http_ca.crt
+  #  wmsurl: http://10.100.200.43:9000/api/app
   wmsurl: http://127.0.0.1:9000/api/app
-#  wmsurl: http://10.100.200.32:9000/api/app
+  #  wmsurl: http://10.100.200.32:9000/api/app
   allowedoriginpatterns:
-    - "http://10.84.4.173:8081/"
+    - "http://10.84.6.208:8081"
+    - "http://10.84.4.173:8081"
     - "http://10.100.200.43:8088"
     - "http://10.100.200.43:8188"
     - "http://10.100.200.32:8889"
     - "http://10.100.200.32:8882"
     - "http://10.100.200.32:8088"
-    - "http://localhost:[*]"
-    - "http://127.0.0.1:[*]"
+    - "http://localhost:*"
+    - "http://127.0.0.1:*"
   authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
   hostAndPort: 10.100.200.43:9200
-#  hostAndPort: 10.100.202.113:9200
+  #  hostAndPort: 10.100.202.113:9200
   checkpermission: true
   initCache: false
   logMq: false
-#  enableCopyShipOrder: false
+  #  enableCopyShipOrder: false
   flink:
     enable: false
     databaseList:
@@ -310,7 +311,7 @@ sbp:
       - dbo.Inventory
       - dbo.Location
       - dbo.ShipOrder
-#      - dbo.InventoryItemDetail_copy1
+    #      - dbo.InventoryItemDetail_copy1
     hostname: 10.100.200.43
     port: 1433
     username: sa

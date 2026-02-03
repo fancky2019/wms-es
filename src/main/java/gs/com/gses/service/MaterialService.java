@@ -29,4 +29,8 @@ public interface MaterialService extends IService<Material> {
     List<MaterialResponse> getByMatchedCode(String materialCode) throws Exception;
 
     void uploadInspectionTemple(MultipartFile[] files, MaterialRequest materialRequest) throws Exception;
+
+    Material getByCodeCache(String materialCode) throws Exception;
+
+
 }
