@@ -46,14 +46,19 @@ public class BasicInfoController {
     }
 
     @PostMapping("/setKeyVal/{key}/{val}")
-    public MessageResult<Void> setKeyVal(@PathVariable("key") String key,@PathVariable("val") String val) throws Exception {
-        basicInfoCacheService.setKeyVal(key,val);
+    public MessageResult<Void> setKeyVal(@PathVariable("key") String key, @PathVariable("val") String val) throws Exception {
+
+        //可以设置null 值
+//        basicInfoCacheService.setKeyVal(key, null);
+//        Object object = basicInfoCacheService.getStringKey(key);
+
+        basicInfoCacheService.setKeyVal(key, val);
         return MessageResult.success();
     }
 
     @PostMapping("/setKeyValExpire/{key}/{val}/{timeout}")
-    public MessageResult<Void> setKeyValExpire(@PathVariable("key") String key,@PathVariable("val") String val,@PathVariable("timeout") long timeout) throws Exception {
-        basicInfoCacheService.setKeyValExpire(key,val,timeout, TimeUnit.SECONDS);
+    public MessageResult<Void> setKeyValExpire(@PathVariable("key") String key, @PathVariable("val") String val, @PathVariable("timeout") long timeout) throws Exception {
+        basicInfoCacheService.setKeyValExpire(key, val, timeout, TimeUnit.SECONDS);
         return MessageResult.success();
     }
 

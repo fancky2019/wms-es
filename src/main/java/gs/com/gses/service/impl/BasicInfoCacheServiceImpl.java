@@ -1,25 +1,26 @@
 package gs.com.gses.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.*;
 import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -82,7 +83,9 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
     public static final int EMPTY_VALUE_EXPTRE_TIME = 5;
 
-
+    // 缓存前缀
+    private static final String ID_PREFIX = MATERIAL_PREFIX + "id:";
+    private static final String CODE_PREFIX = MATERIAL_PREFIX + "code:";
     //__NULL__
     public static final String EMPTY_VALUE = "-1@.EmptyValue";
 
@@ -160,6 +163,133 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         Map<String, Material> mapCode = list.stream().collect(Collectors.toMap(p -> p.getXCode(), p -> p));
         redisTemplate.opsForHash().putAll(MATERIAL_PREFIX, mapCode);
         log.info("init Material complete");
+    }
+
+    private void deleteOldCache() {
+        try {
+            log.info("开始删除旧的物料缓存...");
+
+            // 删除所有以 material:id: 开头的key
+            long idCount = deleteKeysByPattern(ID_PREFIX + "*");
+            // 删除所有以 material:code: 开头的key
+            long codeCount = deleteKeysByPattern(CODE_PREFIX + "*");
+
+            log.info("delete Material complete, deleted {} keys (id: {}, code: {})",
+                    idCount + codeCount, idCount, codeCount);
+
+        } catch (Exception e) {
+            log.warn("删除旧缓存时发生异常，继续执行", e);
+        }
+    }
+
+    /**
+     * 使用SCAN命令模糊删除key
+     */
+    private long deleteKeysByPattern(String pattern) {
+        Set<String> keys = scanKeys(pattern);
+        if (keys.isEmpty()) {
+            return 0;
+        }
+
+        Long deleted = redisTemplate.delete(keys);
+        return deleted != null ? deleted : 0;
+    }
+
+    /**
+     * 使用SCAN命令安全地获取所有匹配的key
+     */
+    private Set<String> scanKeys(String pattern) {
+        Set<String> keys = new HashSet<>();
+
+//        try {
+//            // 使用SCAN命令避免阻塞Redis
+//            Cursor<byte[]> cursor = redisTemplate.execute((RedisCallback<Cursor<byte[]>>) connection ->
+//                    connection.scan(ScanOptions.scanOptions()
+//                            .match(pattern)
+//                            .count(1000) // 每次扫描1000个key
+//                            .build())
+//            );
+//
+//            while (cursor.hasNext()) {
+//                byte[] keyBytes = cursor.next();
+//                String key = new String(keyBytes, StandardCharsets.UTF_8);
+//                keys.add(key);
+//            }
+//            cursor.close();
+//
+//        } catch (Exception e) {
+//            log.error("扫描key失败, pattern: {}", pattern, e);
+//        }
+
+        return keys;
+    }
+
+    private static final String DELETE_BY_PREFIX_SCRIPT =
+            "local pattern = ARGV[1]\n" +
+                    "local limit = tonumber(ARGV[2] or '1000')\n" +
+                    "local deleted = 0\n" +
+                    "local cursor = '0'\n" +
+                    "repeat\n" +
+                    "    local result = redis.call('SCAN', cursor, 'MATCH', pattern, 'COUNT', limit)\n" +
+                    "    cursor = result[1]\n" +
+                    "    local keys = result[2]\n" +
+                    "    if #keys > 0 then\n" +
+                    "        redis.call('DEL', unpack(keys))\n" +
+                    "        deleted = deleted + #keys\n" +
+                    "    end\n" +
+                    "until cursor == '0'\n" +
+                    "return deleted";
+
+    private long deleteKeysByPatternLua(String pattern) {
+//        try {
+//            Long deleted = redisTemplate.execute(
+//                    new DefaultRedisScript<>(DELETE_BY_PREFIX_SCRIPT, Long.class),
+//                    Collections.emptyList(),
+//                    pattern, "1000"
+//            );
+//            return deleted != null ? deleted : 0;
+//        } catch (Exception e) {
+//            log.error("Lua脚本删除key失败, pattern: {}", pattern, e);
+//            return 0;
+//        }
+        return 0;
+    }
+
+    /**
+     * 批量设置缓存
+     *
+     * 1. Pipeline 的特性
+     * 批量发送：Pipeline会将多个命令打包一次性发送到Redis服务器
+     *
+     * 非原子性：这些命令在Redis服务器上是按顺序执行的，但不是原子事务
+     *
+     * 中间状态可见：如果执行过程中发生错误，已经执行的命令不会被回滚
+     */
+    private void batchSetCache(List<Material> list) {
+        // 使用管道批量操作，提高性能
+        redisTemplate.executePipelined(new SessionCallback<Object>() {
+            @Override
+            public Object execute(RedisOperations operations) throws DataAccessException {
+                for (Material material : list) {
+                    String idKey = ID_PREFIX + material.getId();
+                    String codeKey = CODE_PREFIX + material.getXCode();
+                    String jsonValue = null;
+                    try {
+                        jsonValue = objectMapper.writeValueAsString(material);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    // 设置ID映射
+                    operations.opsForValue().set(idKey, jsonValue, -1, TimeUnit.SECONDS);
+                    // 设置Code映射
+                    operations.opsForValue().set(codeKey, jsonValue, -1, TimeUnit.SECONDS);
+                }
+                return null;
+            }
+        });
+
+        log.info("批量设置 {} 条物料的缓存完成", list.size() * 2);
     }
 
     @Async("threadPoolExecutor")
@@ -386,6 +516,38 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                     hashOps.put(key, materialId.toString(), material);
                 } else {
 //                    穿透：设置个空值,待优化
+
+                    //混合key方案 :
+                    // 数据：用 Hash ,
+                    // 空值：用 String + TTL
+
+
+
+//            Hash类型：只能对整个key设置过期时间（EXPIRE），不能对内部的field单独设置过期
+//            String类型：可以单独设置每个key的过期时间
+                    //nullKey string 类型
+//                    String nullKey = "material:null:id:" + id;
+//                    // 1. 先判断是否命中过空缓存
+//                    if (Boolean.TRUE.equals(redisTemplate.hasKey(nullKey))) {
+//                        return null;
+//                    }
+//
+//// 2. 查 hash
+//                    Material m = (Material) redisTemplate.opsForHash()
+//                            .get("material:id", id);
+//                    if (m != null) {
+//                        return m;
+//                    }
+//
+//// 3. 查 DB
+//                    Material db = materialService.getById(id);
+//                    if (db == null) {
+//                        // 缓存空值（有 TTL）
+//                        redisTemplate.opsForValue().set(nullKey, "1", 60, TimeUnit.SECONDS);
+//                        return null;
+//                    }
+
+
                 }
             } catch (Exception e) {
                 throw e;
@@ -701,6 +863,14 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         Object val = valueOperations.get(RedisKey.SBP_ENABLE);
         return val != null && val.equals(1);
     }
+
+    @Override
+    public Object getStringKey(String key) {
+        ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+        Object val = valueOperations.get(RedisKey.SBP_ENABLE);
+        return val;
+    }
+
 
     @Override
     public void setSbpEnable() {

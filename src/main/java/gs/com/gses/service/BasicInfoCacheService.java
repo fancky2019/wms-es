@@ -62,4 +62,8 @@ public interface BasicInfoCacheService {
     void setKeyVal(String keyVal, Object val);
 
     void setKeyValExpire(String keyVal, Object val, long timeout, TimeUnit unit);
+
+    Object getStringKey(String key);
+
+
 }
