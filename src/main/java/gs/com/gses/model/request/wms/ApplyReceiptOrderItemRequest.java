@@ -456,4 +456,6 @@ public class ApplyReceiptOrderItemRequest extends RequestPage {
     private String erpCode;
 
     private String purchaseOrderNumber;
+
+    private BigDecimal inspectionQuantity;
 }

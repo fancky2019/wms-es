@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 public interface ApplyReceiptOrderItemService extends IService<ApplyReceiptOrderItem> {
     String inspection(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception;
 
-    String inspectionForm(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception;
+    void inspectionForm(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception;
 
     String inspectionOptimization(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception;
 

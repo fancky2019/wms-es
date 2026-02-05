@@ -54,4 +54,12 @@ public class ApplyReceiptOrderItemController {
 //        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
     }
+
+    @DuplicateSubmission
+    @PostMapping(value = "/inspectionForm")
+    public MessageResult inspectionForm(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+        this.applyReceiptOrderItemService.inspectionForm(files, applyReceiptOrderItemRequest);
+//        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
+        return MessageResult.success();
+    }
 }

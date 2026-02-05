@@ -627,154 +627,101 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String inspectionForm(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+    public void inspectionForm(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
         Assert.notNull(applyReceiptOrderItemRequest, "applyReceiptOrderItemRequest must not be empty");
         Assert.notEmpty(files, "attachment must not be empty");
 
-        applyReceiptOrderService.getByCode(applyReceiptOrderItemRequest.getApplyReceiptOrderCode());
+        ApplyReceiptOrder applyReceiptOrder = applyReceiptOrderService.getByCode(applyReceiptOrderItemRequest.getApplyReceiptOrderCode());
         Material material = materialService.getByCodeCache(applyReceiptOrderItemRequest.getMaterialCode());
 
         LambdaQueryWrapper<ApplyReceiptOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ApplyReceiptOrderItem::getMaterialId, material.getId());
-        wrapper.eq(ApplyReceiptOrderItem::getApplyReceiptOrderId, material.getId());
-        wrapper.eq(ApplyReceiptOrderItem::getMaterialId, material.getId());
-
-
-        List<ApplyReceiptOrderItem> itemList = baseMapper.selectList(wrapper);
-//        //多个字段分组
-//        MultiKeyMap<MultiKey, List<ApplyReceiptOrderItem>> multiKeyMap = new MultiKeyMap<>();
-//        for (ApplyReceiptOrderItem p : itemList) {
-//            MultiKey key = new MultiKey<>(p.getMaterialId(), p.getM_Str7(), p.getM_Str12());
-//            List<ApplyReceiptOrderItem> group = multiKeyMap.get(key);
-//            if (group == null) {
-//                group = new ArrayList<>();
-//                multiKeyMap.put(key, group);
-//            }
-//            group.add(p);
-//        }
-//
-//        for (MultiKey multiKey : multiKeyMap.keySet()) {
-//            List<ApplyReceiptOrderItem> list = multiKeyMap.get(multiKey);
-//            if (list.size() > 1) {
-//                throw new Exception("multiple ApplyReceiptOrderItem - " + StringUtils.join(multiKey.getKeys(), ","));
-//            }
-//        }
-//
-//        List<Long> applyReceiptOrderIdList = itemList.stream().map(ApplyReceiptOrderItem::getApplyReceiptOrderId).collect(Collectors.toList());
-//        List<ApplyReceiptOrder> applyReceiptOrderList = applyReceiptOrderService.listByIds(applyReceiptOrderIdList);
-//        Map<Long, ApplyReceiptOrder> applyReceiptOrderMap = applyReceiptOrderList.stream().collect(Collectors.toMap(ApplyReceiptOrder::getId, p -> p));
-//        Map<Long, ApplyReceiptOrderItem> updatedItemListMap = new HashMap<>();
-//        List<InspectionRecord> inspectionRecordList = new ArrayList<>();
-//        InspectionRecord inspectionRecord = null;
-//
-//        for (ExcelInspectionData data : excelInspectionDataList) {
-//            MaterialResponse materialResponse = materialCodeMap.get(data.getMaterialCode());
-//            Stream<ApplyReceiptOrderItem> stream = itemList.stream().filter(p -> p.getMaterialId().equals(materialResponse.getId()));
-//            if (StringUtils.isNotEmpty(data.getProjectNo())) {
-//                stream = stream.filter(p -> data.getProjectNo().equals(p.getM_Str7()));
-//            }
-//            if (StringUtils.isNotEmpty(data.getDeviceNo())) {
-//                stream = stream.filter(p -> p.getM_Str12() != null && data.getDeviceNo().contains(p.getM_Str12()));
-//            }
-//            if (StringUtils.isNotEmpty(data.getBatchNo())) {
-//                stream = stream.filter(p -> data.getBatchNo().equals(p.getBatchNo()));
-//            }
-//            List<ApplyReceiptOrderItem> matchedItemList = stream.collect(Collectors.toList());
-//
-//            if (CollectionUtils.isEmpty(matchedItemList)) {
-//                String msg = MessageFormat.format("Can not find ApplyReceiptOrderItem by excel data materialCode:{0} projectNo: {1} deviceNo: {2} BatchNo: {3}",
-//                        materialResponse.getXCode(), data.getProjectNo(), data.getDeviceNo(), data.getBatchNo());
-//                throw new Exception(msg);
-//            }
-//
-//            if (matchedItemList.size() > 1) {
-//                String msg = MessageFormat.format("Find multiple ApplyReceiptOrderItem by excel data materialCode:{0} projectNo: {1} deviceNo: {2} BatchNo: {3}",
-//                        materialResponse.getXCode(), data.getProjectNo(), data.getDeviceNo(), data.getBatchNo());
-//                throw new Exception(msg);
-//            }
-//
-//            ApplyReceiptOrderItem applyReceiptOrderItem = matchedItemList.get(0);
-//            ApplyReceiptOrder applyReceiptOrder = applyReceiptOrderMap.get(applyReceiptOrderItem.getApplyReceiptOrderId());
-//            if (applyReceiptOrder == null) {
-//                throw new Exception("Can not find applyReceiptOrder " + applyReceiptOrderItem.getApplyReceiptOrderId());
-//            }
-//
-//
-//            if ("N".equals(applyReceiptOrderItem.getM_Str20())) {
-//                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} is exempt from inspection ", applyReceiptOrderItem.getId());
-////                throw new Exception(msg);
+        wrapper.eq(ApplyReceiptOrderItem::getApplyReceiptOrderId, applyReceiptOrder.getId());
+        List<ApplyReceiptOrderItem> applyReceiptOrderItemList = baseMapper.selectList(wrapper);
+        if (CollectionUtils.isEmpty(applyReceiptOrderItemList)) {
+            throw new Exception("match applyReceiptOrderItem fail");
+        }
+        if (applyReceiptOrderItemList.size() > 1) {
+            throw new Exception("multiple  applyReceiptOrderItem");
+        }
+        ApplyReceiptOrderItem applyReceiptOrderItem = applyReceiptOrderItemList.get(0);
+        if ("N".equals(applyReceiptOrderItem.getM_Str20())) {
+            String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} is exempt from inspection ", applyReceiptOrderItem.getId());
+            throw new Exception(msg);
 //                log.info(msg);
-//            } else {
-//                //合格数量
-//                int qualifiedCount = !data.getUnqualified() ? 1 : 0;
-//                if (qualifiedCount != 0) {
-//                    BigDecimal inspectionItemQuantity = BigDecimal.ZERO;
-//                    if (StringUtils.isNotEmpty(applyReceiptOrderItem.getM_Str21())) {
-//                        boolean number = NumberUtils.isCreatable(applyReceiptOrderItem.getM_Str21());
-//                        if (number) {
-//                            inspectionItemQuantity = NumberUtils.createBigDecimal(applyReceiptOrderItem.getM_Str21());
-//                        }
-//                    }
-//                    BigDecimal totalQuantity = inspectionItemQuantity.add(BigDecimal.valueOf(qualifiedCount));
-//                    BigDecimal allNeed = applyReceiptOrderItem.getAllocatedNumber().add(applyReceiptOrderItem.getWaitAllocateNumber());
-//                    if (totalQuantity.compareTo(allNeed) > 0) {
-//
-//                        String msg = MessageFormat.format("ApplyReceiptOrderItem - {0}  exceed AllWaitAllocateNumber ", applyReceiptOrderItem.getId());
-//                        throw new Exception(msg);
-//
-//                    }
-//                    applyReceiptOrderItem.setM_Str21(totalQuantity.toString());
-//                    updatedItemListMap.put(applyReceiptOrderItem.getId(), applyReceiptOrderItem);
-//                }
-//            }
-//
-//
-//            inspectionRecord = new InspectionRecord();
-//            inspectionRecord.setApplyReceiptOrderId(applyReceiptOrder.getId());
-//            inspectionRecord.setApplyReceiptOrderItemId(applyReceiptOrderItem.getId());
-//            inspectionRecord.setApplyReceiptOrderCode(applyReceiptOrder.getXCode());
-//            inspectionRecord.setApplyReceiptOrderItemRowNo(applyReceiptOrderItem.getRowNo());
-//            inspectionRecord.setMaterialId(materialResponse.getId());
-//            inspectionRecord.setMaterialCode(materialResponse.getXCode());
-//            inspectionRecord.setProjectNo(data.getProjectNo());
-//            inspectionRecord.setDeviceNo(data.getDeviceNo());
-//            inspectionRecord.setBatchNo(data.getBatchNo());
-//            inspectionRecord.setFilePath(data.getFtpPath());
-//            String inspection = data.getUnqualified() ? "N" : "Y";
-//            inspectionRecord.setInspectionResult(inspection);
-//
-//            LoginUserTokenDto user = UserInfoHolder.getUser();
-//            inspectionRecord.setCreationTime(LocalDateTime.now());
-//            inspectionRecord.setLastModificationTime(LocalDateTime.now());
-//            inspectionRecord.setCreatorId(user.getId());
-//            inspectionRecord.setCreatorName(user.getAccountName());
-//            inspectionRecordList.add(inspectionRecord);
-//        }
-//
-//        log.info("updatedItemListMap size {}", updatedItemListMap.size());
-//        if (!updatedItemListMap.isEmpty()) {
-////            // 遍历键值对（最常用）
-////            for (Map.Entry<Long, ApplyReceiptOrderItem> entry : updatedItemListMap.entrySet()) {
-////                Long key = entry.getKey();
-////                ApplyReceiptOrderItem value = entry.getValue();
-////            }
-//
-//            for (ApplyReceiptOrderItem item : updatedItemListMap.values()) {
-//
-//                LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
-//                updateWrapper.eq(ApplyReceiptOrderItem::getId, item.getId())
-//                        .set(ApplyReceiptOrderItem::getM_Str21, item.getM_Str21());
-//                boolean result = this.update(null, updateWrapper);
-//                if (!result) {
-//                    throw new Exception("update inspectionItemQuantity fail");
-//                }
-//            }
-//        }
-//
-////        inspectionRecordService.addBatch(inspectionRecordList);
-        return null;
-    }
+        }
 
+        String inspectionResult = "不合格";
+        if (applyReceiptOrderItemRequest.getInspectionQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal inspectionItemQuantity = BigDecimal.ZERO;
+            if (StringUtils.isNotEmpty(applyReceiptOrderItem.getM_Str21())) {
+                boolean number = NumberUtils.isCreatable(applyReceiptOrderItem.getM_Str21());
+                if (number) {
+                    inspectionItemQuantity = NumberUtils.createBigDecimal(applyReceiptOrderItem.getM_Str21());
+                }
+            }
+            BigDecimal totalQuantity = inspectionItemQuantity.add(applyReceiptOrderItemRequest.getInspectionQuantity());
+            BigDecimal allNeed = applyReceiptOrderItem.getAllocatedNumber().add(applyReceiptOrderItem.getWaitAllocateNumber());
+            if (totalQuantity.compareTo(allNeed) > 0) {
+
+                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0}  exceed AllWaitAllocateNumber ", applyReceiptOrderItem.getId());
+                throw new Exception(msg);
+
+            }
+            applyReceiptOrderItem.setM_Str21(totalQuantity.toString());
+            inspectionResult = "合格";
+        }
+
+
+        String rootPath = ftpConfig.getBasePath();
+        String basePath = rootPath + buildDateBasedPath();
+        List<String> filePathList = new ArrayList<>();
+        for (MultipartFile file : files) {
+            String materialPath = MessageFormat.format("{0}{1}/{2}", basePath, material.getXCode(), file.getOriginalFilename());
+            this.ftpService.uploadFile(file.getBytes(), materialPath);
+            log.info("ftp upload {} complete", materialPath);
+            filePathList.add(materialPath);
+
+        }
+        String filePath = "";
+        if (CollectionUtils.isNotEmpty(filePathList)) {
+            filePath = StringUtils.join(filePathList, ";");
+        }
+
+
+        InspectionRecord inspectionRecord = new InspectionRecord();
+        inspectionRecord.setApplyReceiptOrderId(applyReceiptOrder.getId());
+        inspectionRecord.setApplyReceiptOrderItemId(applyReceiptOrderItem.getId());
+        inspectionRecord.setApplyReceiptOrderCode(applyReceiptOrder.getXCode());
+        inspectionRecord.setApplyReceiptOrderItemRowNo(applyReceiptOrderItem.getRowNo());
+        inspectionRecord.setMaterialId(material.getId());
+        inspectionRecord.setMaterialCode(material.getXCode());
+//        inspectionRecord.setProjectNo(data.getProjectNo());
+//        inspectionRecord.setDeviceNo(data.getDeviceNo());
+//        inspectionRecord.setBatchNo(data.getBatchNo());
+        inspectionRecord.setInspectionResult(inspectionResult);
+        inspectionRecord.setFilePath(filePath);
+
+        LoginUserTokenDto user = UserInfoHolder.getUser();
+        inspectionRecord.setCreationTime(LocalDateTime.now());
+        inspectionRecord.setLastModificationTime(LocalDateTime.now());
+        inspectionRecord.setCreatorId(user.getId());
+        inspectionRecord.setCreatorName(user.getAccountName());
+        List<InspectionRecord> inspectionRecordList = new ArrayList<>();
+        inspectionRecordList.add(inspectionRecord);
+        inspectionRecordService.addBatch(inspectionRecordList);
+
+        if (applyReceiptOrderItemRequest.getInspectionQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(ApplyReceiptOrderItem::getId, applyReceiptOrderItem.getId())
+                    .set(ApplyReceiptOrderItem::getM_Str21, applyReceiptOrderItem.getM_Str21());
+            boolean result = this.update(null, updateWrapper);
+            if (!result) {
+                throw new Exception("update inspectionItemQuantity fail");
+            }
+        }
+
+    }
 }
 
 
