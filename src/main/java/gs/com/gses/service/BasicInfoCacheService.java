@@ -2,6 +2,8 @@ package gs.com.gses.service;
 
 import gs.com.gses.model.entity.*;
 
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public interface BasicInfoCacheService {
@@ -66,4 +68,7 @@ public interface BasicInfoCacheService {
     Object getStringKey(String key);
 
 
+    Set<String> scanKeys(String pattern);
+
+    void batchSetCache(List<Material> list);
 }

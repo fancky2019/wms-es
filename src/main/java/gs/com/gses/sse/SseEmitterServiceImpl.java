@@ -76,7 +76,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
         //        emitter.onTimeout(() -> emitter.complete());
 
         sseCache.put(userId, sseEmitter);
-        log.info("创建新的sse连接，当前用户：{}", userId);
+        log.info("CreateSseConnectSuccess：{}", userId);
         //SSE协议特性：客户端（Postman）在收到第一个 data: 格式的响应后，才会认为SSE连接真正建立
         //发送一个连接成功消息SSE_CONNECTED给前端。
         sseEmitter.send(SseEmitter.event().id("USER_ID").data("SSE_CONNECTED"));

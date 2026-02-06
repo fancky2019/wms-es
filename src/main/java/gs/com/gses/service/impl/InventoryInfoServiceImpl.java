@@ -200,7 +200,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             String initInventoryTimeStr = INIT_INVENTORY_TIME.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             redisTemplate.opsForValue().set("InitInventoryTime", initInventoryTimeStr);
             StopWatch stopWatch = new StopWatch("initInventoryInfoFromDb");
-            stopWatch.start("initInventoryInfoFromDb");
+            String currentTaskName = "loadCache";
+            stopWatch.start(currentTaskName);
 
             IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(InventoryInfo.class);
 
@@ -220,13 +221,25 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             Map<String, Warehouse> warehouseMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.WAREHOUSE_PREFIX);
             log.info("load orgnizationMap");
             Map<String, Orgnization> orgnizationMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.ORGNIZATION_PREFIX);
+            stopWatch.stop();
+            log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+            currentTaskName = "loadMaterialMap";
+            stopWatch.start(currentTaskName);
             log.info("load materialMap");
             Map<String, Material> materialMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.MATERIAL_PREFIX);
+            stopWatch.stop();
+            log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+            currentTaskName = "loadPackageUnitMap";
+            stopWatch.start(currentTaskName);
             log.info("load packageUnitMap");
             Map<String, PackageUnit> packageUnitMap = redisTemplate.opsForHash().entries(BasicInfoCacheServiceImpl.PACKAGE_UNIT_PREFIX);
             log.info("get inventoryItemDetail count");
             long count = this.inventoryItemDetailService.count();
             log.info("get inventoryItemDetail count {}", count);
+            stopWatch.stop();
+            log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+            currentTaskName = "loadFromDb";
+            stopWatch.start(currentTaskName);
             int step = 1000;
             long times = count / step;
             long left = count % step;
@@ -257,12 +270,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 log.info("totalIndexSize - {} inventory_info - {}", totalIndexSize, size);
             }
 
+            log.info("initInventoryInfoFromDb complete inventory_info total:" + totalIndexSize);
             stopWatch.stop();
-//        stopWatch.start("BatchInsert_Trace2");
-            long mills = stopWatch.getTotalTimeMillis();
-            log.info("initInventoryInfoFromDb complete {} ms", mills);
-            log.info("inventory_info total:" + totalIndexSize);
-
+            log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+            log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
         } catch (Exception ex) {
             log.error("", ex);
             throw ex;
@@ -284,6 +295,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                                                  Map<String, Warehouse> warehouseMap,
                                                  Map<String, Orgnization> orgnizationMap) throws InterruptedException {
         log.info("inventoryItemDetailList size {}", inventoryItemDetailList.size());
+        List<Long> inventoryItemDetailIdList =  inventoryItemDetailList.stream().map(p->p.getId()).distinct().collect(Collectors.toList());
+        log.info("inventoryItemDetaiIdlList  {}",StringUtils.join(inventoryItemDetailIdList,",") );
         List<InventoryInfo> inventoryInfos = new ArrayList<>();
         List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
         log.info("inventoryItemIdList {}", inventoryItemIdList.size());
@@ -1048,6 +1061,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                         }
 
                     }
+
                     //不需要返回的字段
                     @Override
                     public String[] getExcludes() {
@@ -1809,7 +1823,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                 String modificationTimeStr = modificationTime.format(formatter);
                 String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
-                log.info("{} {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(), modificationTimeStr, initInventoryTimeStr);
+                LocalDateTime creationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getCreationTime()), ZoneOffset.of("+8"));
+                String creationTimeStr = creationTime.format(formatter);
+                log.info("{} {} creationTimeStr {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(),creationTimeStr, modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }

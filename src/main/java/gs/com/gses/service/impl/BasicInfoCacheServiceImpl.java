@@ -8,11 +8,14 @@ import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.RedisClusterConnection;
+import org.springframework.data.redis.connection.RedisClusterNode;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Async;
@@ -61,6 +64,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
     @Autowired
     private RedisTemplate redisTemplate;
+//    private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
     private RedissonClient redissonClient;
@@ -197,76 +201,127 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
     /**
      * 使用SCAN命令安全地获取所有匹配的key
+     * SCAN 只能扫描当前节点.
+     * Redis Cluster 是 分片存储,每个节点只知道自己负责的 hash slot
+     *
+     * 注意避免key过大，一次全部加载。
+     *
+     * pattern 要自己写通配符：
+     * * ：匹配任意字符，包括空
+     * ? ：匹配单个字符
+     * [abc] ：匹配括号内任意一个字符
+     *如：
+     * BasicInfo:*
      */
-    private Set<String> scanKeys(String pattern) {
+    @Override
+    public Set<String> scanKeys(String pattern) {
         Set<String> keys = new HashSet<>();
 
-//        try {
-//            // 使用SCAN命令避免阻塞Redis
-//            Cursor<byte[]> cursor = redisTemplate.execute((RedisCallback<Cursor<byte[]>>) connection ->
-//                    connection.scan(ScanOptions.scanOptions()
-//                            .match(pattern)
-//                            .count(1000) // 每次扫描1000个key
-//                            .build())
-//            );
-//
-//            while (cursor.hasNext()) {
-//                byte[] keyBytes = cursor.next();
-//                String key = new String(keyBytes, StandardCharsets.UTF_8);
-//                keys.add(key);
-//            }
-//            cursor.close();
-//
-//        } catch (Exception e) {
-//            log.error("扫描key失败, pattern: {}", pattern, e);
-//        }
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(pattern)
+                .count(1000)
+                .build();
+
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+
+            if (connection instanceof RedisClusterConnection) {
+
+                RedisClusterConnection clusterConnection = (RedisClusterConnection) connection;
+                // 集群：每个节点都 scan
+                for (RedisClusterNode node : clusterConnection.clusterGetNodes()) {
+                    try (Cursor<byte[]> cursor = clusterConnection.scan(node, options)) {
+                        while (cursor.hasNext()) {
+                            keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                        }
+                    }
+                }
+            } else {
+                // 单机 / 哨兵
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                    }
+                }
+            }
+
+            return null;
+        });
 
         return keys;
     }
 
-    private static final String DELETE_BY_PREFIX_SCRIPT =
-            "local pattern = ARGV[1]\n" +
-                    "local limit = tonumber(ARGV[2] or '1000')\n" +
-                    "local deleted = 0\n" +
-                    "local cursor = '0'\n" +
-                    "repeat\n" +
-                    "    local result = redis.call('SCAN', cursor, 'MATCH', pattern, 'COUNT', limit)\n" +
-                    "    cursor = result[1]\n" +
-                    "    local keys = result[2]\n" +
-                    "    if #keys > 0 then\n" +
-                    "        redis.call('DEL', unpack(keys))\n" +
-                    "        deleted = deleted + #keys\n" +
-                    "    end\n" +
-                    "until cursor == '0'\n" +
-                    "return deleted";
 
-    private long deleteKeysByPatternLua(String pattern) {
-//        try {
-//            Long deleted = redisTemplate.execute(
-//                    new DefaultRedisScript<>(DELETE_BY_PREFIX_SCRIPT, Long.class),
-//                    Collections.emptyList(),
-//                    pattern, "1000"
-//            );
-//            return deleted != null ? deleted : 0;
-//        } catch (Exception e) {
-//            log.error("Lua脚本删除key失败, pattern: {}", pattern, e);
-//            return 0;
-//        }
-        return 0;
+    private static final String DELETE_BY_PATTERN_BATCH_SCRIPT =
+            "local pattern = ARGV[1]\n" +
+                    "local limit = tonumber(ARGV[2])\n" +
+                    "local cursor = ARGV[3]\n" +
+                    "local result = redis.call('SCAN', cursor, 'MATCH', pattern, 'COUNT', limit)\n" +
+                    "local nextCursor = result[1]\n" +
+                    "local keys = result[2]\n" +
+                    "local deleted = 0\n" +
+                    "if #keys > 0 then\n" +
+                    "    redis.call('UNLINK', unpack(keys))\n" +
+                    "    deleted = #keys\n" +
+                    "end\n" +
+                    "return { nextCursor, deleted }";
+
+    public long deleteKeysByPatternLua(String pattern) {
+        long totalDeleted = 0L;
+        String cursor = "0";
+        int limit = 500;
+
+        DefaultRedisScript<List<Object>> script = new DefaultRedisScript<>();
+        script.setScriptText(DELETE_BY_PATTERN_BATCH_SCRIPT);
+        //要强转Class
+        script.setResultType((Class) List.class);
+
+
+        try {
+            do {
+                List<Object> result = (List<Object>) redisTemplate.execute(
+                        script,
+                        Collections.emptyList(),
+                        pattern,
+                        String.valueOf(limit),
+                        cursor
+                );
+
+                if (result == null || result.size() < 2) {
+                    break;
+                }
+
+                cursor = result.get(0).toString();
+                totalDeleted += Long.parseLong(result.get(1).toString());
+
+            } while (!"0".equals(cursor));
+        } catch (Exception e) {
+            log.error("Lua 批量删除 key 失败, pattern: {}", pattern, e);
+        }
+
+        return totalDeleted;
     }
+
 
     /**
      * 批量设置缓存
      *
      * 1. Pipeline 的特性
      * 批量发送：Pipeline会将多个命令打包一次性发送到Redis服务器
-     *
      * 非原子性：这些命令在Redis服务器上是按顺序执行的，但不是原子事务
-     *
      * 中间状态可见：如果执行过程中发生错误，已经执行的命令不会被回滚
+     *
+     *
+     *
      */
-    private void batchSetCache(List<Material> list) {
-        // 使用管道批量操作，提高性能
+    @Override
+    public void batchSetCache(List<Material> materialList) {
+        if (CollectionUtils.isEmpty(materialList)) {
+            materialList = this.materialService.list();
+//            return;
+        }
+        final List<Material> list = materialList;
+        // 使用管道批量操作，提高性能。
+//        callback 执行完后 closePipeline() 在关闭 pipeline 时会一次发送所有累积命令
         redisTemplate.executePipelined(new SessionCallback<Object>() {
             @Override
             public Object execute(RedisOperations operations) throws DataAccessException {
@@ -279,11 +334,17 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                     }
+//                    // Redis不允许设置负数的过期时间（-1秒）.
+//                    operations.opsForValue().set(idKey, jsonValue);
+//                    // 设置Code映射
+//                    operations.opsForValue().set(codeKey, jsonValue);
 
-                    // 设置ID映射
-                    operations.opsForValue().set(idKey, jsonValue, -1, TimeUnit.SECONDS);
-                    // 设置Code映射
-                    operations.opsForValue().set(codeKey, jsonValue, -1, TimeUnit.SECONDS);
+                    //set把命令放入队列，没有马上发送到 Redis.关闭 pipeline 并 flush才会一次性发送所有命令到 Redis ,Redis 按顺序逐条执行
+                    //注意：不保证原子性
+//                    // 设置ID映射
+                    operations.opsForValue().set(idKey, jsonValue, 3600, TimeUnit.SECONDS);
+//                    // 设置Code映射
+                    operations.opsForValue().set(codeKey, jsonValue, 3600, TimeUnit.SECONDS);
                 }
                 return null;
             }
@@ -291,6 +352,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 
         log.info("批量设置 {} 条物料的缓存完成", list.size() * 2);
     }
+
 
     @Async("threadPoolExecutor")
     @Override
@@ -520,7 +582,6 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
                     //混合key方案 :
                     // 数据：用 Hash ,
                     // 空值：用 String + TTL
-
 
 
 //            Hash类型：只能对整个key设置过期时间（EXPIRE），不能对内部的field单独设置过期

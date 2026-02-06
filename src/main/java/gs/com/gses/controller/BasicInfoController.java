@@ -6,6 +6,7 @@ import gs.com.gses.service.InventoryInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 //public class BasicInfoController {
@@ -59,6 +60,23 @@ public class BasicInfoController {
     @PostMapping("/setKeyValExpire/{key}/{val}/{timeout}")
     public MessageResult<Void> setKeyValExpire(@PathVariable("key") String key, @PathVariable("val") String val, @PathVariable("timeout") long timeout) throws Exception {
         basicInfoCacheService.setKeyValExpire(key, val, timeout, TimeUnit.SECONDS);
+        return MessageResult.success();
+    }
+
+    /**
+     * 初始化缓存信息
+     * @return
+     * @throws Exception
+     */
+    @GetMapping("/scanKeys")
+    public MessageResult<Void> scanKeys(@RequestParam("pattern") String pattern) {
+        basicInfoCacheService.scanKeys(pattern);
+        return MessageResult.success();
+    }
+
+    @GetMapping("/batchSetCache")
+    public MessageResult<Void> batchSetCache() {
+        basicInfoCacheService.batchSetCache(new ArrayList<>());
         return MessageResult.success();
     }
 

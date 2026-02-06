@@ -205,7 +205,7 @@ public class TruckOrderController {
         //此处返回SseEmitter类型，全局异常返回MessageResult，类型冲突
 //        Assert.notNull(userTokenDto, "Not logged in");
         if (userTokenDto == null) {
-            log.error("Not logged in");
+            log.info("sseConnectFail:Not logged in");
             return null;
         }
         log.info("userTokenDto {}", userTokenDto);

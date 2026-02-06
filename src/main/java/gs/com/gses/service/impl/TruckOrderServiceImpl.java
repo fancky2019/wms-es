@@ -149,6 +149,10 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
+
+        for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
+            truckOrderItemRequest.setUuid(UUID.randomUUID().toString().replaceAll("-", ""));
+        }
         if (request.getAsync()) {
             addTruckOrderAndItemAsync(request, token);
             return;

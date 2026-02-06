@@ -158,7 +158,7 @@ public class TruckOrderItemRequest extends RequestPage {
      *
      */
     private LocalDateTime latestProcessTime;
-
-    private final String uuid = UUID.randomUUID().toString().replaceAll("-", "");
+    private String uuid;
+    //    private final String uuid = UUID.randomUUID().toString().replaceAll("-", "");
     private static final long serialVersionUID = 1L;
 }

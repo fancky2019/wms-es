@@ -1,5 +1,6 @@
 package gs.com.gses.filter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import gs.com.gses.config.CorsProperties;
@@ -44,19 +45,14 @@ public class AuthenticationFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-
         //路径变量，根据 / 分割，获得数组，去除最有一个数组元素
-
-
         MessageResult<Void> messageResult = new MessageResult<>();
         messageResult.setSuccess(false);
-
 
         HttpServletResponse httpServletResponse = (HttpServletResponse) response;
         // 转换为HttpServletRequest
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String requestURI = httpServletRequest.getRequestURI();
-//        log.info("RequestURI:{}", httpServletRequest.getRequestURI());
         // 获取客户端IP地址
         String clientIp = getClientIpAddress(httpServletRequest);
         log.info("Request from IP: {}, URI: {}", clientIp, requestURI);
@@ -65,6 +61,7 @@ public class AuthenticationFilter implements Filter {
         if (requestURI.contains("/swagger-ui") ||
                 requestURI.contains("/v3/api-docs") ||
                 requestURI.contains("/swagger-resources")) {
+//            不调用 chain.doFilter() → 过滤器链断开 → 请求不会进入 Controller。
             chain.doFilter(request, response);
             return;
         }
@@ -75,138 +72,149 @@ public class AuthenticationFilter implements Filter {
         }
 
         //OPTIONS 请求不会到此过滤器，应该到cors 中
-        try {
-            CheckPermissionRequest checkPermissionRequest = new CheckPermissionRequest();
-            //ShipOrder/OneClickContinuous
-            String code = "ShipOrder/ComplexQueryDemo";
-//            String code = "ShipOrder/SubAssignPalletsByShipOrderBatch";
-            checkPermissionRequest.setCode(code);
-            checkPermissionRequest.setUrl(code);
-            //  LoginUserTokenDto dto = authorityService.checkPermission(request, token);
 
-            String token = httpServletRequest.getHeader("Authorization");
-            log.info("token {}", token);
-            try {
-                log.info("Start checkPermission");
-                WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
-                log.info("WmsResponse {}", dto);
-                LoginUserTokenDto userInfo = null;
-                if (dto.getResult()) {
-                    log.info("Complete checkPermission success");
-                    Map<String, String> userInfoMap = (Map) dto.getData();
-                    userInfo = new LoginUserTokenDto();
-                    BeanWrapper wrapper = new BeanWrapperImpl(userInfo);
-                    wrapper.setPropertyValues(userInfoMap);
+        CheckPermissionRequest checkPermissionRequest = new CheckPermissionRequest();
+        //ShipOrder/OneClickContinuous
+        String code = "ShipOrder/ComplexQueryDemo";
+//            String code = "ShipOrder/SubAssignPalletsByShipOrderBatch";
+        checkPermissionRequest.setCode(code);
+        checkPermissionRequest.setUrl(code);
+        //  LoginUserTokenDto dto = authorityService.checkPermission(request, token);
+
+        String token = httpServletRequest.getHeader("Authorization");
+        log.info("token {}", token);
+        try {
+            log.info("Start checkPermission");
+            WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
+            log.info("WmsResponse {}", dto);
+            LoginUserTokenDto userInfo = null;
+            if (dto.getResult()) {
+                log.info("Complete checkPermission success");
+                Map<String, String> userInfoMap = (Map) dto.getData();
+                userInfo = new LoginUserTokenDto();
+                BeanWrapper wrapper = new BeanWrapperImpl(userInfo);
+                wrapper.setPropertyValues(userInfoMap);
 //           String jsonStr= objectMapper.writeValueAsString( dto.getData());
 //            LoginUserTokenDto pojoJacksonPojo = objectMapper.readValue(jsonStr, LoginUserTokenDto.class);
-                    UserInfoHolder.setUser(userInfo);
-                    UserInfoHolder.setUser(userInfo.getId(), userInfo);
-                    log.info("UserInfoHolder set complete {}", dto);
-                } else {
-
-                    String msg = "checkPermission fail";
-                    log.info(msg);
-                    httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    authenticationFail(httpServletRequest, httpServletResponse, messageResult, msg);
-
-                }
-
-                log.info("Authentication complete");
-                chain.doFilter(request, response);
-                log.info("doFilter completed");
-
-            } catch (FeignException ex) {
-                log.error("CheckPermission fail", ex);
-                if (httpServletResponse.getStatus() == HttpStatus.UNAUTHORIZED.value()) {
-
-                    // 401处理逻辑
-                    //  return new UnauthorizedException("服务调用未授权，请检查认证信息");
-                }
-
-                if (ex instanceof FeignException.Unauthorized) {
-                    // 401特殊处理
-                    httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                }
-                if (ex instanceof FeignException.Forbidden) {
-                    // 401特殊处理
-                    httpServletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                }
-//                messageResult.setMessage(ex.getMessage());
-//                messageResult.setCode(HttpServletResponse.SC_UNAUTHORIZED);
-//                String msg = objectMapper.writeValueAsString(messageResult);
-
-                try {
-                    authenticationFail(httpServletRequest, httpServletResponse, messageResult, ex.getMessage());
-                } catch (Exception e) {
-                    log.error("returnJson ", e);
-                }
-            } catch (Exception ex) {
-                try {
-                    messageResult.setMessage(ex.getMessage());
-                    messageResult.setCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                    String msg = objectMapper.writeValueAsString(messageResult);
-                    returnJson(httpServletRequest, httpServletResponse, msg);
-                } catch (Exception e) {
-                    log.error("returnJson ", e);
-                }
+                UserInfoHolder.setUser(userInfo);
+                UserInfoHolder.setUser(userInfo.getId(), userInfo);
+                log.info("UserInfoHolder set complete {}", dto);
+            } else {
+                String msg = "checkPermission fail";
+                log.info(msg);
+                httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                authenticationFail(httpServletRequest, httpServletResponse, messageResult, msg);
+//               请求被拦截 不再往下走过滤器链 不会进入 Controller 直接由 Filter 自己返回响应
+                return;
             }
 
+            log.info("Authentication complete");
+            chain.doFilter(request, response);
+            log.info("doFilter completed");
+
+        } catch (FeignException ex) {
+            log.error("CheckPermission fail", ex);
+            if (ex instanceof FeignException.Unauthorized) {
+                // 401特殊处理
+                httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            }
+            if (ex instanceof FeignException.Forbidden) {
+                // 401特殊处理
+                httpServletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            }
+            try {
+                authenticationFail(httpServletRequest, httpServletResponse, messageResult, ex.getMessage());
+               //自己返回(returnJson)加return
+                return;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         } catch (Exception ex) {
-            log.error("", ex);
+            try {
+                messageResult.setMessage(ex.getMessage());
+                messageResult.setCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                String msg = objectMapper.writeValueAsString(messageResult);
+                returnJson(httpServletRequest, httpServletResponse, msg);
+                return;
+            } catch (Exception e) {
+                log.error("returnJson ", e);
+            }
         } finally {
             UserInfoHolder.removeUser();
         }
-//        int statusCode = responseWrapper.getStatus();
-//        System.out.println("Final status code: " + statusCode);
     }
 
     private void authenticationFail(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, MessageResult<Void> messageResult, String msg) throws Exception {
         messageResult.setMessage(msg);
         messageResult.setCode(httpServletResponse.getStatus());
         String json = objectMapper.writeValueAsString(messageResult);
-
-        try {
-            returnJson(httpServletRequest, httpServletResponse, json);
-        } catch (Exception e) {
-            log.error("returnJson ", e);
-        }
+        returnJson(httpServletRequest, httpServletResponse, json);
     }
 
-    private void returnJson(HttpServletRequest httpServletRequest, HttpServletResponse response, String json) throws Exception {
+    private void returnJson(HttpServletRequest httpServletRequest, HttpServletResponse response, String json) {
 
-//        response.setHeader("Access-Control-Allow-Origin", "*");
-//        response.setHeader("Cache-Control","no-cache");
-        PrintWriter writer = null;
-        response.setCharacterEncoding("UTF-8");
-//        response.setContentType("text/html; charset=utf-8");
-        response.setContentType("application/json; charset=utf-8");
-        String origin = httpServletRequest.getHeader("Origin");
-
-
-        //CorsFilterConfig 做了处理
-//        // 设置跨域响应头
 ////        response.setHeader("Access-Control-Allow-Origin", "*");
-//        response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
-//        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-//        response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
-//        //跨域返回给源
-//        response.setHeader("Access-Control-Allow-Origin", origin);
+////        response.setHeader("Cache-Control","no-cache");
+//        PrintWriter writer = null;
+//        response.setCharacterEncoding("UTF-8");
+////        response.setContentType("text/html; charset=utf-8");
+//        response.setContentType("application/json; charset=utf-8");
+//        String origin = httpServletRequest.getHeader("Origin");
+//
+//
+//        //CorsFilterConfig 做了处理
+////        // 设置跨域响应头
+//////        response.setHeader("Access-Control-Allow-Origin", "*");
+////        response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+////        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+////        response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
+////        //跨域返回给源
+////        response.setHeader("Access-Control-Allow-Origin", origin);
+//
+//
+////        response.setHeader("Access-Control-Allow-Credentials", "false");//不允许携带 cookie 或其他认证信息
+////        response.setHeader("Access-Control-Allow-Origin", "*");
+//
+//        try {
+//            writer = response.getWriter();
+//            writer.print(json);
+//        } catch (IOException e) {
+//            log.error("returnJson error", e);
+//        } finally {
+//            if (writer != null) {
+//                writer.close();
+//            }
+//
+//        }
 
 
-//        response.setHeader("Access-Control-Allow-Credentials", "false");//不允许携带 cookie 或其他认证信息
-//        response.setHeader("Access-Control-Allow-Origin", "*");
 
-        try {
-            writer = response.getWriter();
+
+
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json; charset=utf-8");
+
+        String origin = httpServletRequest.getHeader("Origin");
+        if (origin != null) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+            response.setHeader("Access-Control-Allow-Credentials", "true");
+            response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+        }
+
+        try (PrintWriter writer = response.getWriter()) {
             writer.print(json);
+            writer.flush();
         } catch (IOException e) {
             log.error("returnJson error", e);
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
-
         }
+
+
+
+
+
+
+
     }
 
     //region ip
