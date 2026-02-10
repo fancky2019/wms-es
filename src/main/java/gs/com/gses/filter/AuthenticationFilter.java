@@ -19,12 +19,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -57,6 +59,12 @@ public class AuthenticationFilter implements Filter {
         String clientIp = getClientIpAddress(httpServletRequest);
         log.info("Request from IP: {}, URI: {}", clientIp, requestURI);
 
+        String method = httpServletRequest.getMethod();
+        // 放行 OPTIONS 请求（由 CorsFilter 处理）
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            chain.doFilter(request, response);
+            return;
+        }
         // 放行 Swagger 相关路径,不校验
         if (requestURI.contains("/swagger-ui") ||
                 requestURI.contains("/v3/api-docs") ||
@@ -66,10 +74,10 @@ public class AuthenticationFilter implements Filter {
             return;
         }
 
-        if (requestURI.contains("/sseConnect")) {
-            chain.doFilter(request, response);
-            return;
-        }
+//        if (requestURI.contains("/sseConnect")) {
+//            chain.doFilter(request, response);
+//            return;
+//        }
 
         //OPTIONS 请求不会到此过滤器，应该到cors 中
 
@@ -153,46 +161,16 @@ public class AuthenticationFilter implements Filter {
 
     private void returnJson(HttpServletRequest httpServletRequest, HttpServletResponse response, String json) {
 
-////        response.setHeader("Access-Control-Allow-Origin", "*");
-////        response.setHeader("Cache-Control","no-cache");
-//        PrintWriter writer = null;
-//        response.setCharacterEncoding("UTF-8");
-////        response.setContentType("text/html; charset=utf-8");
-//        response.setContentType("application/json; charset=utf-8");
-//        String origin = httpServletRequest.getHeader("Origin");
-//
-//
-//        //CorsFilterConfig 做了处理
-////        // 设置跨域响应头
-//////        response.setHeader("Access-Control-Allow-Origin", "*");
-////        response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
-////        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-////        response.setHeader("Access-Control-Allow-Credentials", "true");//不允许携带 cookie 或其他认证信息
-////        //跨域返回给源
-////        response.setHeader("Access-Control-Allow-Origin", origin);
-//
-//
-////        response.setHeader("Access-Control-Allow-Credentials", "false");//不允许携带 cookie 或其他认证信息
-////        response.setHeader("Access-Control-Allow-Origin", "*");
-//
-//        try {
-//            writer = response.getWriter();
-//            writer.print(json);
-//        } catch (IOException e) {
-//            log.error("returnJson error", e);
-//        } finally {
-//            if (writer != null) {
-//                writer.close();
-//            }
-//
-//        }
-
-
-
-
-
         response.setCharacterEncoding("UTF-8");
-        response.setContentType("application/json; charset=utf-8");
+        String requestURI = httpServletRequest.getRequestURI();
+        if (requestURI.contains("/sseConnect")) {
+            response.setContentType("application/json; charset=utf-8");
+        }
+        else {
+            response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+//        response.setStatus(HttpServletResponse.SC_OK); // SSE需要返回200
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        }
 
         String origin = httpServletRequest.getHeader("Origin");
         if (origin != null) {
@@ -208,12 +186,6 @@ public class AuthenticationFilter implements Filter {
         } catch (IOException e) {
             log.error("returnJson error", e);
         }
-
-
-
-
-
-
 
     }
 
@@ -283,4 +255,27 @@ public class AuthenticationFilter implements Filter {
 
 
     //endregion
+
+
+    /**
+     * 发送SSE格式的错误响应
+     */
+    private void sendSseError(HttpServletResponse response, int code, String message) throws IOException {
+        response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+        response.setCharacterEncoding("UTF-8");
+//        response.setStatus(HttpServletResponse.SC_OK); // SSE需要返回200
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        Map<String, Object> errorData = new HashMap<>();
+        errorData.put("code", code);
+        errorData.put("message", message);
+        errorData.put("type", "auth_error");
+        errorData.put("timestamp", System.currentTimeMillis());
+
+        PrintWriter writer = response.getWriter();
+        writer.write("event: error\n");
+        writer.write("data: " + objectMapper.writeValueAsString(errorData) + "\n");
+        writer.write("retry: 0\n\n"); // 设置为0表示不要自动重连
+        writer.flush();
+        writer.close();
+    }
 }

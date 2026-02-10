@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -198,7 +199,7 @@ public class TruckOrderController {
      * @return
      * @throws Exception
      */
-    @GetMapping(value = "/sseConnect")
+    @GetMapping(value = "/sseConnect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sseConnect() throws Exception {
         //SseEmitter
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
