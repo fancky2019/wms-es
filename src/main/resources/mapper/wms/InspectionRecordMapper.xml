@@ -17,6 +17,7 @@
             <result property="batchNo" column="BatchNo" jdbcType="VARCHAR"/>
             <result property="inspectionResult" column="InspectionResult" jdbcType="VARCHAR"/>
             <result property="filePath" column="FilePath" jdbcType="VARCHAR"/>
+            <result property="purchaseOrder" column="PurchaseOrder" jdbcType="VARCHAR"/>
             <result property="deleted" column="Deleted" jdbcType="TINYINT"/>
             <result property="version" column="Version" jdbcType="INTEGER"/>
             <result property="creatorId" column="CreatorId" jdbcType="VARCHAR"/>

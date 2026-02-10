@@ -1,16 +1,18 @@
 package gs.com.gses.sse;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 /**
@@ -58,13 +60,29 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      */
     private static Map<String, SseEmitter> sseCache = new ConcurrentHashMap<>();
 
+    @PostConstruct
+    public void init() {
+
+        try {
+            startHeartbeat();
+        } catch (Exception e) {
+            log.error("", e);
+        }
+    }
+
+    /**
+     * 启动心跳任务
+     */
+    private void startHeartbeat() {
+        batchSendMessage("heartbeat");
+    }
 
     /**
      * 当后台服务重启，http会和后台重连
      */
     @Override
     public SseEmitter createSseConnect(String userId) throws Exception {
-        log.info("createSseConnect userId {}",userId);
+        log.info("createSseConnect userId {}", userId);
         // 设置超时时间，0表示不过期。默认30秒，超过时间未完成会抛出异常：AsyncRequestTimeoutException
         SseEmitter sseEmitter = new SseEmitter(0L);//建议和会话时长保持一致
         // 是否需要给客户端推送ID

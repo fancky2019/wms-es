@@ -96,7 +96,7 @@ public class ApplyReceiptOrderServiceImpl extends ServiceImpl<ApplyReceiptOrderM
         queryWrapper.eq(ApplyReceiptOrder::getXCode, applyReceiptOrderCode);
         List<ApplyReceiptOrder> list = this.list(queryWrapper);
         if (list.size() > 1) {
-            throw new Exception("find more than one ApplyReceiptOrder info  by " + applyReceiptOrderCode);
+            throw new Exception("find multiple ApplyReceiptOrder info  by " + applyReceiptOrderCode);
         }
         if (list.isEmpty()) {
             throw new Exception("can't get ApplyReceiptOrder info  by " + applyReceiptOrderCode);

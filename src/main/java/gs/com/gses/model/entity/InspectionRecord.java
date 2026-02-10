@@ -87,6 +87,9 @@ public class InspectionRecord {
     @TableField(value = "FilePath")
     private String filePath;
 
+    @TableField(value = "PurchaseOrder")
+    private String purchaseOrder;
+
     /**
      * 
      */

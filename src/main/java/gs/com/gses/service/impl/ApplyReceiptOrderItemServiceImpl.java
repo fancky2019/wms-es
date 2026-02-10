@@ -6,6 +6,7 @@ import com.alibaba.excel.read.listener.ReadListener;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.sun.org.apache.bcel.internal.generic.NEW;
 import gs.com.gses.filter.UserInfoHolder;
 import gs.com.gses.ftp.FtpConfig;
 import gs.com.gses.ftp.FtpService;
@@ -20,6 +21,7 @@ import gs.com.gses.model.request.wms.ApplyReceiptOrderItemRequest;
 import gs.com.gses.model.request.wms.MaterialRequest;
 import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.MaterialResponse;
+import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.ApplyReceiptOrderItemService;
 import gs.com.gses.mapper.wms.ApplyReceiptOrderItemMapper;
 import gs.com.gses.service.ApplyReceiptOrderService;
@@ -641,37 +643,70 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
         if (CollectionUtils.isEmpty(applyReceiptOrderItemList)) {
             throw new Exception("match applyReceiptOrderItem fail");
         }
-        if (applyReceiptOrderItemList.size() > 1) {
-            throw new Exception("multiple  applyReceiptOrderItem");
-        }
-        ApplyReceiptOrderItem applyReceiptOrderItem = applyReceiptOrderItemList.get(0);
-        if ("N".equals(applyReceiptOrderItem.getM_Str20())) {
-            String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} is exempt from inspection ", applyReceiptOrderItem.getId());
-            throw new Exception(msg);
-//                log.info(msg);
-        }
 
+        applyReceiptOrderItemList = applyReceiptOrderItemList.stream().sorted(Comparator.comparing(ApplyReceiptOrderItem::getThirdPartyRowNo)).collect(Collectors.toList());
+        List<ApplyReceiptOrderItem> updatedItemList = new ArrayList<>();
+        List<InspectionRecord> inspectionRecordList = new ArrayList<>();
+
+        LocalDateTime now = LocalDateTime.now();
         String inspectionResult = "不合格";
         if (applyReceiptOrderItemRequest.getInspectionQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal inspectionItemQuantity = BigDecimal.ZERO;
-            if (StringUtils.isNotEmpty(applyReceiptOrderItem.getM_Str21())) {
-                boolean number = NumberUtils.isCreatable(applyReceiptOrderItem.getM_Str21());
-                if (number) {
-                    inspectionItemQuantity = NumberUtils.createBigDecimal(applyReceiptOrderItem.getM_Str21());
+            BigDecimal allNeedQuantity = BigDecimal.ZERO;
+            BigDecimal leftInspectionQuantity = applyReceiptOrderItemRequest.getInspectionQuantity();
+            for (int i = 0; i < applyReceiptOrderItemList.size(); i++) {
+                if (leftInspectionQuantity.compareTo(BigDecimal.ZERO) == 0) {
+                    break;
+                }
+                ApplyReceiptOrderItem applyReceiptOrderItem = applyReceiptOrderItemList.get(i);
+                if ("N".equals(applyReceiptOrderItem.getM_Str20())) {
+                    String msg = MessageFormat.format("ApplyReceiptOrderItem - {0} is exempt from inspection ", applyReceiptOrderItem.getId());
+//                throw new Exception(msg);
+                    log.info(msg);
+                    continue;
+                }
+                //已质检数量
+                BigDecimal inspectionItemQuantity = BigDecimal.ZERO;
+                if (StringUtils.isNotEmpty(applyReceiptOrderItem.getM_Str21())) {
+                    boolean number = NumberUtils.isCreatable(applyReceiptOrderItem.getM_Str21());
+                    if (number) {
+                        inspectionItemQuantity = NumberUtils.createBigDecimal(applyReceiptOrderItem.getM_Str21());
+                    }
+                }
+
+                BigDecimal usedInspectionQuantity = BigDecimal.ZERO;
+                BigDecimal currentNeedQuantity = applyReceiptOrderItem.getExpectedNumber().subtract(applyReceiptOrderItem.getAllocatedNumber());
+                BigDecimal currentNeedInspectionQuantity = currentNeedQuantity.subtract(inspectionItemQuantity);
+
+                if (currentNeedInspectionQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                    if (leftInspectionQuantity.compareTo(currentNeedInspectionQuantity) > 0) {
+                        usedInspectionQuantity = currentNeedInspectionQuantity;
+                        leftInspectionQuantity = leftInspectionQuantity.subtract(currentNeedInspectionQuantity);
+                    } else {
+                        usedInspectionQuantity = leftInspectionQuantity;
+                        leftInspectionQuantity = BigDecimal.ZERO;
+                    }
+
+                    allNeedQuantity = allNeedQuantity.add(usedInspectionQuantity);
+                    if (i == applyReceiptOrderItemList.size() - 1) {
+                        if (leftInspectionQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                            String msg = MessageFormat.format("ApplyReceiptOrder {0} need quantity {1} less than  request quantity {2}",
+                                    applyReceiptOrderItemRequest.getApplyReceiptOrderCode(),
+                                    allNeedQuantity,
+                                    applyReceiptOrderItemRequest.getInspectionQuantity());
+                            throw new Exception(msg);
+                        }
+                    }
+
+                    BigDecimal totalQuantity = inspectionItemQuantity.add(usedInspectionQuantity);
+                    applyReceiptOrderItem.setM_Str21(totalQuantity.toString());
+                    updatedItemList.add(applyReceiptOrderItem);
+                    inspectionResult = "合格";
+                    createInspectionRecord(applyReceiptOrder, applyReceiptOrderItem.getId(), material, inspectionResult, now, inspectionRecordList, applyReceiptOrderItem.getRowNo(), applyReceiptOrderItem.getM_Str22());
                 }
             }
-            BigDecimal totalQuantity = inspectionItemQuantity.add(applyReceiptOrderItemRequest.getInspectionQuantity());
-            BigDecimal allNeed = applyReceiptOrderItem.getAllocatedNumber().add(applyReceiptOrderItem.getWaitAllocateNumber());
-            if (totalQuantity.compareTo(allNeed) > 0) {
-
-                String msg = MessageFormat.format("ApplyReceiptOrderItem - {0}  exceed AllWaitAllocateNumber ", applyReceiptOrderItem.getId());
-                throw new Exception(msg);
-
-            }
-            applyReceiptOrderItem.setM_Str21(totalQuantity.toString());
-            inspectionResult = "合格";
+        } else {
+            createInspectionRecord(applyReceiptOrder, 0, material, inspectionResult, now, inspectionRecordList, 0, null);
         }
-
 
         String rootPath = ftpConfig.getBasePath();
         String basePath = rootPath + buildDateBasedPath();
@@ -687,40 +722,53 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
         if (CollectionUtils.isNotEmpty(filePathList)) {
             filePath = StringUtils.join(filePathList, ";");
         }
-
-
-        InspectionRecord inspectionRecord = new InspectionRecord();
-        inspectionRecord.setApplyReceiptOrderId(applyReceiptOrder.getId());
-        inspectionRecord.setApplyReceiptOrderItemId(applyReceiptOrderItem.getId());
-        inspectionRecord.setApplyReceiptOrderCode(applyReceiptOrder.getXCode());
-        inspectionRecord.setApplyReceiptOrderItemRowNo(applyReceiptOrderItem.getRowNo());
-        inspectionRecord.setMaterialId(material.getId());
-        inspectionRecord.setMaterialCode(material.getXCode());
-//        inspectionRecord.setProjectNo(data.getProjectNo());
-//        inspectionRecord.setDeviceNo(data.getDeviceNo());
-//        inspectionRecord.setBatchNo(data.getBatchNo());
-        inspectionRecord.setInspectionResult(inspectionResult);
-        inspectionRecord.setFilePath(filePath);
-
-        LoginUserTokenDto user = UserInfoHolder.getUser();
-        inspectionRecord.setCreationTime(LocalDateTime.now());
-        inspectionRecord.setLastModificationTime(LocalDateTime.now());
-        inspectionRecord.setCreatorId(user.getId());
-        inspectionRecord.setCreatorName(user.getAccountName());
-        List<InspectionRecord> inspectionRecordList = new ArrayList<>();
-        inspectionRecordList.add(inspectionRecord);
+        for (InspectionRecord inspectionRecord : inspectionRecordList) {
+            inspectionRecord.setFilePath(filePath);
+        }
         inspectionRecordService.addBatch(inspectionRecordList);
 
-        if (applyReceiptOrderItemRequest.getInspectionQuantity().compareTo(BigDecimal.ZERO) > 0) {
-            LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.eq(ApplyReceiptOrderItem::getId, applyReceiptOrderItem.getId())
-                    .set(ApplyReceiptOrderItem::getM_Str21, applyReceiptOrderItem.getM_Str21());
-            boolean result = this.update(null, updateWrapper);
-            if (!result) {
-                throw new Exception("update inspectionItemQuantity fail");
+        if (CollectionUtils.isNotEmpty(updatedItemList)) {
+            for (ApplyReceiptOrderItem applyReceiptOrderItem : updatedItemList) {
+                LambdaUpdateWrapper<ApplyReceiptOrderItem> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(ApplyReceiptOrderItem::getId, applyReceiptOrderItem.getId())
+                        .set(ApplyReceiptOrderItem::getM_Str21, applyReceiptOrderItem.getM_Str21());
+                boolean result = this.update(null, updateWrapper);
+                if (!result) {
+                    throw new Exception("update inspectionItemQuantity fail");
+                }
             }
         }
 
+    }
+
+    private static void createInspectionRecord(ApplyReceiptOrder applyReceiptOrder,
+                                               long applyReceiptOrderItemId,
+                                               Material material,
+                                               String inspectionResult,
+                                               LocalDateTime now,
+                                               List<InspectionRecord> inspectionRecordList,
+                                               int rowNo,
+                                               String purchaseOrder) {
+        InspectionRecord inspectionRecord = new InspectionRecord();
+        inspectionRecord.setApplyReceiptOrderId(applyReceiptOrder.getId());
+        inspectionRecord.setApplyReceiptOrderItemId(applyReceiptOrderItemId);
+        inspectionRecord.setApplyReceiptOrderCode(applyReceiptOrder.getXCode());
+        inspectionRecord.setApplyReceiptOrderItemRowNo(rowNo);
+        inspectionRecord.setMaterialId(material.getId());
+        inspectionRecord.setMaterialCode(material.getXCode());
+        inspectionRecord.setPurchaseOrder(purchaseOrder);
+        //        inspectionRecord.setProjectNo(data.getProjectNo());
+        //        inspectionRecord.setDeviceNo(data.getDeviceNo());
+        //        inspectionRecord.setBatchNo(data.getBatchNo());
+        inspectionRecord.setInspectionResult(inspectionResult);
+
+
+        LoginUserTokenDto user = UserInfoHolder.getUser();
+        inspectionRecord.setCreationTime(now);
+        inspectionRecord.setLastModificationTime(now);
+        inspectionRecord.setCreatorId(user.getId());
+        inspectionRecord.setCreatorName(user.getAccountName());
+        inspectionRecordList.add(inspectionRecord);
     }
 }
 
