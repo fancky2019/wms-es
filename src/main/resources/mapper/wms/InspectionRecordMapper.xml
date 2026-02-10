@@ -34,7 +34,7 @@
         MaterialCode,ProjectNo,DeviceNo,
         BatchNo,InspectionResult,FilePath,
         Deleted,Version,CreatorId,
-        CreatorName,LastModifierId,LastModifierName,
+        CreatorName,LastModifierId,LastModifierName,purchaseOrder,
         CreationTime,LastModificationTime
     </sql>
 </mapper>
