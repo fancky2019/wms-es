@@ -164,12 +164,12 @@ public class AuthenticationFilter implements Filter {
         response.setCharacterEncoding("UTF-8");
         String requestURI = httpServletRequest.getRequestURI();
         if (requestURI.contains("/sseConnect")) {
-            response.setContentType("application/json; charset=utf-8");
-        }
-        else {
             response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
 //        response.setStatus(HttpServletResponse.SC_OK); // SSE需要返回200
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        }
+        else {
+            response.setContentType("application/json; charset=utf-8");
         }
 
         String origin = httpServletRequest.getHeader("Origin");
@@ -259,12 +259,18 @@ public class AuthenticationFilter implements Filter {
 
     /**
      * 发送SSE格式的错误响应
+     *
+     * 401 + application/json
+     * 200 + text/event-stream
      */
     private void sendSseError(HttpServletResponse response, int code, String message) throws IOException {
         response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
         response.setCharacterEncoding("UTF-8");
-//        response.setStatus(HttpServletResponse.SC_OK); // SSE需要返回200
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        // SSE需要返回200,前端才能解析到SSE body消息
+        //401 + application/json
+        //200 + text/event-stream
+        response.setStatus(HttpServletResponse.SC_OK);
+//        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         Map<String, Object> errorData = new HashMap<>();
         errorData.put("code", code);
         errorData.put("message", message);
