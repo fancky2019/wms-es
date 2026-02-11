@@ -3,6 +3,8 @@ package gs.com.gses.filter;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UserInfoHolder {
 
@@ -10,7 +12,7 @@ public class UserInfoHolder {
      * 使用ThreadLocal存储数据源
      */
     private static final ThreadLocal<LoginUserTokenDto> CONTEXT_HOLDER = new ThreadLocal<>();
-    private static HashMap<String, LoginUserTokenDto> userInfoMap = new HashMap<>();
+    private static Map<String, LoginUserTokenDto> userInfoMap = new ConcurrentHashMap<>();
 
     /**
      *

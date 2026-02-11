@@ -9,6 +9,7 @@ import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.wms.WmsResponse;
 import gs.com.gses.service.api.AuthorityService;
+import gs.com.gses.sse.SseEmitterServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.exception.ExtIOException;
 import org.slf4j.Logger;
@@ -26,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -91,11 +93,12 @@ public class AuthenticationFilter implements Filter {
 
         String token = httpServletRequest.getHeader("Authorization");
         log.info("token {}", token);
+        LoginUserTokenDto userInfo = null;
         try {
             log.info("Start checkPermission");
             WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
             log.info("WmsResponse {}", dto);
-            LoginUserTokenDto userInfo = null;
+
             if (dto.getResult()) {
                 log.info("Complete checkPermission success");
                 Map<String, String> userInfoMap = (Map) dto.getData();
@@ -107,6 +110,13 @@ public class AuthenticationFilter implements Filter {
                 UserInfoHolder.setUser(userInfo);
                 UserInfoHolder.setUser(userInfo.getId(), userInfo);
                 log.info("UserInfoHolder set complete {}", dto);
+
+                if (requestURI.contains("/sseConnect") && SseEmitterServiceImpl.sseCache.containsKey(userInfo.getId())) {
+                    String msg = MessageFormat.format("userInfo {0} has been connected", userInfo.getId());
+                    log.info(msg);
+                    authenticationFail(httpServletRequest, httpServletResponse, messageResult, msg);
+                    return;
+                }
             } else {
                 String msg = "checkPermission fail";
                 log.info(msg);
@@ -132,7 +142,7 @@ public class AuthenticationFilter implements Filter {
             }
             try {
                 authenticationFail(httpServletRequest, httpServletResponse, messageResult, ex.getMessage());
-               //自己返回(returnJson)加return
+                //自己返回(returnJson)加return
                 return;
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -149,6 +159,9 @@ public class AuthenticationFilter implements Filter {
             }
         } finally {
             UserInfoHolder.removeUser();
+            if (userInfo != null) {
+                UserInfoHolder.removeUser(userInfo.getId());
+            }
         }
     }
 
@@ -164,11 +177,14 @@ public class AuthenticationFilter implements Filter {
         response.setCharacterEncoding("UTF-8");
         String requestURI = httpServletRequest.getRequestURI();
         if (requestURI.contains("/sseConnect")) {
-            response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
-//        response.setStatus(HttpServletResponse.SC_OK); // SSE需要返回200
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        }
-        else {
+//            response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+//            // SSE需要返回200
+//            response.setStatus(HttpServletResponse.SC_OK);
+//            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+            sendSseError(response, HttpServletResponse.SC_UNAUTHORIZED, json);
+            return;
+        } else {
             response.setContentType("application/json; charset=utf-8");
         }
 
@@ -262,26 +278,33 @@ public class AuthenticationFilter implements Filter {
      *
      * 401 + application/json
      * 200 + text/event-stream
+     * 发送SSE格式的错误响应
+     *
+     * @param response HttpServletResponse
+     * @param httpStatusCode HTTP状态码（401/403等）
+     * @param errorMessage 错误消息
      */
-    private void sendSseError(HttpServletResponse response, int code, String message) throws IOException {
-        response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        // SSE需要返回200,前端才能解析到SSE body消息
-        //401 + application/json
-        //200 + text/event-stream
-        response.setStatus(HttpServletResponse.SC_OK);
-//        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        Map<String, Object> errorData = new HashMap<>();
-        errorData.put("code", code);
-        errorData.put("message", message);
-        errorData.put("type", "auth_error");
-        errorData.put("timestamp", System.currentTimeMillis());
+    private void sendSseError(HttpServletResponse response, int httpStatusCode, String errorMessage) {
+        try {
+            response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            response.setStatus(HttpServletResponse.SC_OK); // SSE必须返回200
 
-        PrintWriter writer = response.getWriter();
-        writer.write("event: error\n");
-        writer.write("data: " + objectMapper.writeValueAsString(errorData) + "\n");
-        writer.write("retry: 0\n\n"); // 设置为0表示不要自动重连
-        writer.flush();
-        writer.close();
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("httpStatusCode", httpStatusCode); // 原始HTTP状态码
+            errorData.put("code", httpStatusCode); // 兼容旧格式
+            errorData.put("message", errorMessage);
+            errorData.put("type", "auth_error");
+            errorData.put("timestamp", System.currentTimeMillis());
+            errorData.put("success", false);
+
+            PrintWriter writer = response.getWriter();
+            writer.write("event: auth_error\n"); // 明确的事件名称
+            writer.write("data: " + objectMapper.writeValueAsString(errorData) + "\n");
+            writer.write("retry: 0\n\n"); // 设置为0表示不要自动重连
+            writer.flush();
+        } catch (IOException e) {
+            log.error("发送SSE错误响应失败", e);
+        }
     }
 }
