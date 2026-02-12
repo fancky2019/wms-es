@@ -49,7 +49,7 @@ public class ApplyReceiptOrderItemController {
     @DuplicateSubmission(timeOut = 0)
     @PostMapping(value = "/createWorkingDirectory")
     public MessageResult createWorkingDirectory() throws Exception {
-        int m=Integer.parseInt("m");
+        int m = Integer.parseInt("m");
         this.ftpService.createWorkingDirectory("wms/2025/09/11/P0002150747");
 //        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
@@ -57,8 +57,11 @@ public class ApplyReceiptOrderItemController {
 
     @DuplicateSubmission
     @PostMapping(value = "/inspectionForm")
-    public MessageResult inspectionForm(@RequestPart(value = "files", required = false) MultipartFile[] files, @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
-        this.applyReceiptOrderItemService.inspectionForm(files, applyReceiptOrderItemRequest);
+    public MessageResult inspectionForm(@RequestPart(value = "files", required = false) MultipartFile[] files,
+                                        @RequestPart(value = "files1", required = false) MultipartFile[] files1,
+                                        @RequestPart(value = "files2", required = false) MultipartFile[] files2,
+                                        @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+        this.applyReceiptOrderItemService.inspectionForm(files, files1, files2, applyReceiptOrderItemRequest);
 //        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
     }

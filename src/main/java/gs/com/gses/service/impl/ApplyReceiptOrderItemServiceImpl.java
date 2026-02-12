@@ -629,7 +629,7 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void inspectionForm(MultipartFile[] files, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+    public void inspectionForm(MultipartFile[] files,MultipartFile[] files1,MultipartFile[] files2, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
         Assert.notNull(applyReceiptOrderItemRequest, "applyReceiptOrderItemRequest must not be empty");
         Assert.notEmpty(files, "attachment must not be empty");
 
@@ -708,22 +708,13 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             createInspectionRecord(applyReceiptOrder, 0, material, inspectionResult, now, inspectionRecordList, 0, null);
         }
 
-        String rootPath = ftpConfig.getBasePath();
-        String basePath = rootPath + buildDateBasedPath();
-        List<String> filePathList = new ArrayList<>();
-        for (MultipartFile file : files) {
-            String materialPath = MessageFormat.format("{0}{1}/{2}", basePath, material.getXCode(), file.getOriginalFilename());
-            this.ftpService.uploadFile(file.getBytes(), materialPath);
-            log.info("ftp upload {} complete", materialPath);
-            filePathList.add(materialPath);
-
-        }
-        String filePath = "";
-        if (CollectionUtils.isNotEmpty(filePathList)) {
-            filePath = StringUtils.join(filePathList, ";");
-        }
+        String filePath = getFtpPath(files, material);
+        String file1Path = getFtpPath(files1, material);
+        String file2Path = getFtpPath(files2, material);
         for (InspectionRecord inspectionRecord : inspectionRecordList) {
             inspectionRecord.setFilePath(filePath);
+//            inspectionRecord.setFilePath(file1Path);
+//            inspectionRecord.setFilePath(file2Path);
         }
         inspectionRecordService.addBatch(inspectionRecordList);
 
@@ -739,6 +730,24 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             }
         }
 
+    }
+
+    private String getFtpPath(MultipartFile[] files, Material material) throws Exception {
+        String rootPath = ftpConfig.getBasePath();
+        String basePath = rootPath + buildDateBasedPath();
+        List<String> filePathList = new ArrayList<>();
+        for (MultipartFile file : files) {
+            String materialPath = MessageFormat.format("{0}{1}/{2}", basePath, material.getXCode(), file.getOriginalFilename());
+            this.ftpService.uploadFile(file.getBytes(), materialPath);
+            log.info("ftp upload {} complete", materialPath);
+            filePathList.add(materialPath);
+
+        }
+        String filePath = "";
+        if (CollectionUtils.isNotEmpty(filePathList)) {
+            filePath = StringUtils.join(filePathList, ";");
+        }
+        return filePath;
     }
 
     private static void createInspectionRecord(ApplyReceiptOrder applyReceiptOrder,
