@@ -57,11 +57,10 @@ public class ApplyReceiptOrderItemController {
 
     @DuplicateSubmission
     @PostMapping(value = "/inspectionForm")
-    public MessageResult inspectionForm(@RequestPart(value = "files", required = false) MultipartFile[] files,
-                                        @RequestPart(value = "files1", required = false) MultipartFile[] files1,
-                                        @RequestPart(value = "files2", required = false) MultipartFile[] files2,
+    public MessageResult inspectionForm(@RequestPart(value = "productFiles", required = false) MultipartFile[] productFiles,
+                                        @RequestPart(value = "certificationFiles", required = false) MultipartFile[] certificationFiles,
                                         @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
-        this.applyReceiptOrderItemService.inspectionForm(files, files1, files2, applyReceiptOrderItemRequest);
+        this.applyReceiptOrderItemService.inspectionForm(productFiles, certificationFiles, applyReceiptOrderItemRequest);
 //        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
     }

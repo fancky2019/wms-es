@@ -1,6 +1,8 @@
 package gs.com.gses.model.response.wms;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -66,7 +68,7 @@ public class InspectionRecordResponse implements Serializable {
      *
      */
     private String filePath;
-
+    private String certificationFilePath;
     /**
      *
      */
@@ -100,11 +102,15 @@ public class InspectionRecordResponse implements Serializable {
     /**
      *
      */
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  // 用于 Spring 接收前端传入的字符串日期
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")  // 用于返回给前端时格式化 JSON 输出
     private LocalDateTime creationTime;
 
     /**
      *
      */
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  // 用于 Spring 接收前端传入的字符串日期
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")  // 用于返回给前端时格式化 JSON 输出
     private LocalDateTime lastModificationTime;
 
     private static final long serialVersionUID = 1L;

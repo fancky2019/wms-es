@@ -38,8 +38,10 @@ import org.slf4j.MDC;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
@@ -52,6 +54,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.annotation.PostConstruct;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -76,7 +79,7 @@ import java.util.stream.Collectors;
 @Service
 
 //@Primary
-@Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 关键！强制TARGET_CLASS代理,不知道为什么是jdk 动态代理，事务不生效，否则就要在
+//@Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 强制TARGET_CLASS代理获取完整bean,或者jdk动态代理通过PostConstruct内获取完整bean
 //接口加   @Transactional(rollbackFor = Exception.class,
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
 
@@ -95,9 +98,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
      使用 @Lazy 后：aop 功能可能丢失
      真实对象 ← CGLIB代理（包含Advisors） ← Lazy代理（没有Advisors） ← Spring容器Bean
      */
-//    @Autowired
-//    @Lazy  // 防止循环依赖
-//    private MqMessageService selfProxy;
+    @Autowired
+    @Lazy  // 防止循环依赖
+    private MqMessageService lazySelfProxy;
 
 //     通过setter方法注入，而不是字段注入
 //    @Autowired
@@ -106,6 +109,25 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //        this.selfProxy = selfProxy;
 //    }
 
+    // 声明一个实例变量来持有完整的代理对象
+    private MqMessageService selfProxy;
+    @Autowired
+    private ObjectProvider<MqMessageService> serviceProvider;
+
+    @PostConstruct
+    public void init() {
+        //事务生效可获取完整bean
+        //生命周期顺序：实例化 → 依赖注入 → AOP代理完成 → @PostConstruct
+        //在 Bean 初始化完成后获取完整的代理
+//        this.selfProxy = applicationContext.getBean(MqMessageService.class);
+        this.selfProxy = serviceProvider.getObject();
+        // 验证代理完整性
+        boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
+        boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
+        boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
+        log.info("Proxy info - AOP: {}, CGLIB: {}, JDK: {}",
+                isAopProxy, isCglibProxy, isJdkProxy);
+    }
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -1261,7 +1283,13 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
         boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
         //自注入selfProxy导致Spring在Bean创建过程中提前创建了一个不完整的代理（0 advisors）。
-        selfProxy.TranMethod();
+        //使用jdk 动态代理，从容器中取得的bean事务不生效： Bean 可能还在创建过程中，获取到的是"提前暴露"的半成品代理
+        //这个代理没有完整的 Advisor（增强器）信息，导致 @Transactional 注解不被识别
+//        selfProxy.TranMethod();
+        this.selfProxy.TranMethod();
+        //使用lazySelfProxy 事务不生效
+//        this.lazySelfProxy.TranMethod();
+
 
 //        //从applicationContext 获取的bean 有完整的 Advisor ，selfProxy 是提前暴露的半成品Advisor不全
 //        MqMessageService service = applicationContext.getBean(MqMessageService.class);

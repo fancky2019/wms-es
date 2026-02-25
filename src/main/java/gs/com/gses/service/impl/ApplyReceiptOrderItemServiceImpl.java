@@ -629,9 +629,9 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void inspectionForm(MultipartFile[] files,MultipartFile[] files1,MultipartFile[] files2, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
+    public void inspectionForm(MultipartFile[] productFiles,MultipartFile[] certificationFiles, ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
         Assert.notNull(applyReceiptOrderItemRequest, "applyReceiptOrderItemRequest must not be empty");
-        Assert.notEmpty(files, "attachment must not be empty");
+        Assert.notEmpty(productFiles, "attachment must not be empty");
 
         ApplyReceiptOrder applyReceiptOrder = applyReceiptOrderService.getByCode(applyReceiptOrderItemRequest.getApplyReceiptOrderCode());
         Material material = materialService.getByCodeCache(applyReceiptOrderItemRequest.getMaterialCode());
@@ -708,13 +708,11 @@ public class ApplyReceiptOrderItemServiceImpl extends ServiceImpl<ApplyReceiptOr
             createInspectionRecord(applyReceiptOrder, 0, material, inspectionResult, now, inspectionRecordList, 0, null);
         }
 
-        String filePath = getFtpPath(files, material);
-        String file1Path = getFtpPath(files1, material);
-        String file2Path = getFtpPath(files2, material);
+        String filePath = getFtpPath(productFiles, material);
+        String certificationFilePath = getFtpPath(certificationFiles, material);
         for (InspectionRecord inspectionRecord : inspectionRecordList) {
             inspectionRecord.setFilePath(filePath);
-//            inspectionRecord.setFilePath(file1Path);
-//            inspectionRecord.setFilePath(file2Path);
+            inspectionRecord.setCertificationFilePath(certificationFilePath);
         }
         inspectionRecordService.addBatch(inspectionRecordList);
 
