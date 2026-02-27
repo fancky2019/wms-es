@@ -10,7 +10,8 @@
 <!--        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId}] %-5level %c{36} - %m%n</property>-->
 
 <!--        不打印类信息-->
-        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId}] [%X{spanId}] %-5level - %m%n</property>
+<!--        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId}] [%X{spanId}] %-5level - %m%n</property>-->
+        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%X{traceId},%X{spanId}] %-5level - %m%n</property>
     </Properties>
 
     <appenders>
