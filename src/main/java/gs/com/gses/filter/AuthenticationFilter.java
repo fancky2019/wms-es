@@ -8,6 +8,7 @@ import gs.com.gses.model.request.authority.CheckPermissionRequest;
 import gs.com.gses.model.request.authority.LoginUserTokenDto;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.model.response.wms.WmsResponse;
+import gs.com.gses.service.BasicInfoCacheService;
 import gs.com.gses.service.api.AuthorityService;
 import gs.com.gses.sse.SseEmitterServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ import java.io.PrintWriter;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -45,7 +47,10 @@ public class AuthenticationFilter implements Filter {
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private BasicInfoCacheService basicInfoCacheService;
 
+    private static final String BLACKLIST_PREFIX = "blacklist:";
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -76,10 +81,25 @@ public class AuthenticationFilter implements Filter {
             return;
         }
 
-//        if (requestURI.contains("/sseConnect")) {
+        if (requestURI.contains("/sseConnect")) {
 //            chain.doFilter(request, response);
 //            return;
-//        }
+            String key = BLACKLIST_PREFIX + clientIp;
+            Object object = this.basicInfoCacheService.getStringKey(key);
+            String msg="blacklist";
+            if (object != null) {
+                log.info("sseConnect reject {}",clientIp);
+                try {
+                    messageResult.setMessage(msg);
+                    messageResult.setCode(httpServletResponse.getStatus());
+                    String json = objectMapper.writeValueAsString(messageResult);
+                    sendSseError(httpServletResponse, HttpServletResponse.SC_UNAUTHORIZED, json);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return;
+            }
+        }
 
         //OPTIONS 请求不会到此过滤器，应该到cors 中
 
@@ -165,6 +185,13 @@ public class AuthenticationFilter implements Filter {
         }
     }
 
+    private void rejectClient(HttpServletRequest httpServletRequest) {
+        String clientIp = getClientIpAddress(httpServletRequest);
+        String key = BLACKLIST_PREFIX + clientIp;
+        log.info("add blacklist {}",clientIp);
+        this.basicInfoCacheService.setKeyValExpire(key, 1, 60*3, TimeUnit.SECONDS);
+    }
+
     private void authenticationFail(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, MessageResult<Void> messageResult, String msg) throws Exception {
         messageResult.setMessage(msg);
         messageResult.setCode(httpServletResponse.getStatus());
@@ -181,7 +208,7 @@ public class AuthenticationFilter implements Filter {
 //            // SSE需要返回200
 //            response.setStatus(HttpServletResponse.SC_OK);
 //            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
+            rejectClient(httpServletRequest);
             sendSseError(response, HttpServletResponse.SC_UNAUTHORIZED, json);
             return;
         } else {

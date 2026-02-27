@@ -928,7 +928,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Override
     public Object getStringKey(String key) {
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
-        Object val = valueOperations.get(RedisKey.SBP_ENABLE);
+        Object val = valueOperations.get(key);
         return val;
     }
 

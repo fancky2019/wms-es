@@ -166,7 +166,7 @@ public class LogAspect {
         }
 
         String argsJson = objectMapper.writeValueAsString(loggableArgs);
-        log.info("{} : {} - {} 开始处理,参数列表 - {}", uri, className, methodName, argsJson);
+        log.info("{} : {} - {} StartDeal,Parameter - {}", uri, className, methodName, argsJson);
 
         DuplicateSubmission duplicateSubmission = method.getDeclaredAnnotation(DuplicateSubmission.class);
         Object result = null;
@@ -310,7 +310,7 @@ public class LogAspect {
             result = monitor(jp, servletPath);
         }
 //        如果是列别插叙数据量大，会影响性能
-        log.debug("{} : {} - {} 处理完成,返回结果 - {}", uri, className, methodName, objectMapper.writeValueAsString(result));
+        log.debug("{} : {} - {} DealCompleted,Return - {}", uri, className, methodName, objectMapper.writeValueAsString(result));
         return result;
 
     }
@@ -322,7 +322,7 @@ public class LogAspect {
         stopWatch.stop();
         long costTime = stopWatch.getTotalTimeMillis();
         MessageResult<Object> messageResult = MessageResult.success(obj);
-        log.info("{} 处理完成,cost_time {} ms ,返回结果 - {} ", servletPath, costTime, objectMapper.writeValueAsString(messageResult));
+        log.info("{} DealCompleted,cost_time {} ms ,Return - {} ", servletPath, costTime, objectMapper.writeValueAsString(messageResult));
         return obj;
     }
     //endregion

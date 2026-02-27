@@ -189,6 +189,26 @@ public class TruckOrderController {
         return MessageResult.success(truckOrderService.getTruckOrderStausEnumClass());
     }
 
+
+    @GetMapping(value = "/publishTraceId")
+    public MessageResult<Void> publishTraceId() {
+        truckOrderService.publishTraceId();
+        return MessageResult.success();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     //region sse (sever-sent event)
     @Autowired
     private ISseEmitterService sseEmitterService;

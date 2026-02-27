@@ -38,8 +38,10 @@ import org.slf4j.MDC;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
@@ -125,8 +127,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
         boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
         boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
-        log.info("Proxy info - AOP: {}, CGLIB: {}, JDK: {}",
-                isAopProxy, isCglibProxy, isJdkProxy);
+        log.info("Proxy info - AOP: {}, CGLIB: {}, JDK: {}", isAopProxy, isCglibProxy, isJdkProxy);
+//        BeanPostProcessor
+//        InitializingBean
     }
 
     @Autowired

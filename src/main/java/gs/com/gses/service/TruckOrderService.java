@@ -58,4 +58,6 @@ public interface TruckOrderService extends IService<TruckOrder> {
 
     List<EnumClass> getTruckOrderStausEnumClass();
 
+
+    void publishTraceId();
 }

@@ -15,6 +15,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import brave.Tracer;
+import brave.Span;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -46,6 +49,9 @@ public class CustomEventListener {
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private Tracer tracer;
+
 
     /**
      * @Async 线程中：当前线程没有任何事务同步器 → Spring 认为“无法开事务”
@@ -71,25 +77,39 @@ public class CustomEventListener {
 //            maxAttempts = 3,
 //            backoff = @Backoff(delay = 1000, multiplier = 2)
 //    )
-
     @Async("threadPoolExecutor") //使用异步和调用线程不在一个线程内
     //TransactionSynchronizationManager 事务成功之后发送
-    @TransactionalEventListener //默认事务成功之后发送
+//    @TransactionalEventListener //默认事务成功之后发送
 //    @TransactionalEventListener  (phase = TransactionPhase.AFTER_COMMIT)
-//    @EventListener  // 事务不成功也会检测到发送消息
+    @EventListener  // 事务不成功也会检测到发送消息
 //    @Transactional(propagation = Propagation.REQUIRED) // @Async+@TransactionalEventListener会使service 层方法的事务失效
     public void handleMyCustomEvent(CustomEvent event) throws Exception {
-        //此处简单设计，失败了落表重试处理。或者重新设计本地消息表
-        //ApplicationEventPublisher eventPublisher;
-        //  eventPublisher.publishEvent(event);
-        log.info("Received custom event: {}" ,objectMapper.writeValueAsString(event));
+        // 创建全新的 trace（完全独立）
+
+        //和http 请求的traceId 一样
+        //生成新的SpanId
+        brave.Span newSpan = tracer.nextSpan()
+                .name("async-new-trace")
+                .kind(Span.Kind.SERVER)
+                .start();
+
+        //生成新的traceId
+//        Span newSpan = tracer.newTrace()
+//                .name("async-new-trace")
+//                .kind(Span.Kind.SERVER)
+//                .start();
+        try (Tracer.SpanInScope ws = tracer.withSpanInScope(newSpan)) {
+            //此处简单设计，失败了落表重试处理。或者重新设计本地消息表
+            //ApplicationEventPublisher eventPublisher;
+            //  eventPublisher.publishEvent(event);
+            log.info("Received custom event: {}", objectMapper.writeValueAsString(event));
 //        Spring Retry 在最后一次重试失败后才会抛出异常
 //        int m = Integer.parseInt("m");
-        //处理完更新本地消息表，处理完成
-        List<MqMessage> messageList = event.getMsg();
-        log.info("messageList size : {}" ,messageList.size());
-        for (MqMessage message : messageList) {
-            try {
+            //处理完更新本地消息表，处理完成
+            List<MqMessage> messageList = event.getMsg();
+            log.info("messageList size : {}", messageList.size());
+            for (MqMessage message : messageList) {
+                try {
 
 
 //                因为 MqMessageEventHandler 是在 @Async 的线程池线程中执行的，而
@@ -100,47 +120,41 @@ public class CustomEventListener {
 //                int nn = 1;
 
 
+                    //@Async + @Transactional 事务不生效
+                    //        事务模板方法
+                    // 在这里执行事务性操作
+                    // 操作成功则事务提交，否则事务回滚
+                    Exception e = transactionTemplate.execute(transactionStatus -> {
 
+                        // 事务性操作
+                        // 如果操作成功，不抛出异常，事务将提交
 
+                        try {
 
+                            if (message.getSendMq()) {
+                                log.info("messageId {} SendMq,", message.getId());
+                                mqMessageService.rePublish(Arrays.asList(message));
+                            } else {
+                                mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.EVENT);
+                                int nn = 1;
+                            }
 
-
-
-                //@Async + @Transactional 事务不生效
-                //        事务模板方法
-                // 在这里执行事务性操作
-                // 操作成功则事务提交，否则事务回滚
-                Exception e = transactionTemplate.execute(transactionStatus -> {
-
-                    // 事务性操作
-                    // 如果操作成功，不抛出异常，事务将提交
-
-                    try {
-
-                        if (message.getSendMq()) {
-                            log.info("messageId {} SendMq,", message.getId());
-                            mqMessageService.rePublish(Arrays.asList(message));
-                        } else {
-                            mqMessageService.MqMessageEventHandler(message, MqMessageSourceEnum.EVENT);
-                            int nn = 1;
-                        }
-
-                        return null;
-                    } catch (Exception ex) {
-                        log.info("executing consume message {} fail", message.getId());
-                        log.error("", ex);
-                        // 如果操作失败，抛出异常，事务将回滚
-                        transactionStatus.setRollbackOnly();
-                        return ex;
-                        //此处是定时任务 ，处理异常不抛出
+                            return null;
+                        } catch (Exception ex) {
+                            log.info("executing consume message {} fail", message.getId());
+                            log.error("", ex);
+                            // 如果操作失败，抛出异常，事务将回滚
+                            transactionStatus.setRollbackOnly();
+                            return ex;
+                            //此处是定时任务 ，处理异常不抛出
 //                    transactionStatus.setRollbackOnly();
 //                    throw  e;
-                    }
+                        }
 
 
 //        TransactionCallbackWithoutResult
 
-                });
+                    });
 
 
 //                if (e != null) {
@@ -161,11 +175,15 @@ public class CustomEventListener {
 //                }
 
 
-            } catch (Exception ex) {
-               log.error("",ex);
-            }
-            int n = 0;
+                } catch (Exception ex) {
+                    log.error("", ex);
+                }
+                int n = 0;
 
+            }
+
+        } finally {
+            newSpan.finish();
         }
 
 

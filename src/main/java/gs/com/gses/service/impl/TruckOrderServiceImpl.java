@@ -795,6 +795,40 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         mqttProduce.publish(UtilityConst.TRUCK_ORDER_COMPLETE_TOPIC, jsonStr, msgId);
     }
 
+
+    @Override
+    public void publishTraceId() {
+
+        List<MqMessage> mqMessageList = new ArrayList<>();
+        String content = "content";
+        MqMessage mqMessage = new MqMessage();
+        mqMessage.setBusinessId(1L);
+        mqMessage.setBusinessKey(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+        mqMessage.setMsgContent(content);
+        mqMessage.setQueue(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+        mqMessage.setTopic(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+        mqMessage.setSendMq(false);
+        mqMessageList.add(mqMessage);
+
+
+        // 获取当前服务的ID springBootProject
+        String serviceId = applicationContext.getId();
+        // 或使用 busProperties.getId()
+        // String serviceId = busProperties.getId();
+
+        // 获取当前服务实例ID（通常与busProperties.getId()相同）  springBootProject:8088:f89b296d4ca5589865e70da7de918722
+        String originService = busProperties.getId();
+
+        //            EwmsEvent event = new EwmsEvent(this, "TruckOrderComplete");
+        //  busProperties.getId():  contextId, // 通常是 spring.application.name
+        CustomEvent event = new CustomEvent(this, originService, mqMessageList);
+        log.info("ThreadId {} ,eventPublisher event", Thread.currentThread().getId());
+        //最好使用本地消息表
+        //发送消息的时候可能崩溃，不能保证消息被消费。如果发送成功了，还要设计消息表兜底失败的消息
+//        MyCustomEvent event = new MyCustomEvent(busProperties.getId());
+        eventPublisher.publishEvent(event);
+    }
+
     @Override
     public TruckOrder add(TruckOrderRequest truckOrderRequest) {
         TruckOrder truckOrder = new TruckOrder();
