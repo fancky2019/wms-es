@@ -1,4 +1,4 @@
-package gs.com.gses.config;
+package gs.com.gses.config.jackson;
 
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -13,7 +13,6 @@ import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
-import gs.com.gses.config.jackson.LocalDateTimeUniversalDeserializer;
 import gs.com.gses.config.zonedDateTimeConfig.ZonedDateTimeDeserializer;
 import gs.com.gses.config.zonedDateTimeConfig.ZonedDateTimeSerializer;
 import org.springframework.context.annotation.Bean;

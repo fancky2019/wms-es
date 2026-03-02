@@ -37,6 +37,7 @@ import org.redisson.api.RedissonClient;
 import org.slf4j.MDC;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.aop.target.SingletonTargetSource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
@@ -115,6 +116,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     private MqMessageService selfProxy;
     @Autowired
     private ObjectProvider<MqMessageService> serviceProvider;
+    //“代理套代理 + early reference”
+//容器中取的双重代理（双重代理）事务增强器没有：targetSource [SingletonTargetSource for target object [com.sun.proxy.$Proxy276]]
 
     @PostConstruct
     public void init() {

@@ -79,9 +79,9 @@ public class CustomEventListener {
 //    )
     @Async("threadPoolExecutor") //使用异步和调用线程不在一个线程内
     //TransactionSynchronizationManager 事务成功之后发送
-//    @TransactionalEventListener //默认事务成功之后发送
+    @TransactionalEventListener //默认事务成功之后发送
 //    @TransactionalEventListener  (phase = TransactionPhase.AFTER_COMMIT)
-    @EventListener  // 事务不成功也会检测到发送消息
+//    @EventListener  // 事务不成功也会检测到发送消息
 //    @Transactional(propagation = Propagation.REQUIRED) // @Async+@TransactionalEventListener会使service 层方法的事务失效
     public void handleMyCustomEvent(CustomEvent event) throws Exception {
         // 创建全新的 trace（完全独立）

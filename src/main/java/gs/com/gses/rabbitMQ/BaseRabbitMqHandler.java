@@ -76,34 +76,58 @@ public class BaseRabbitMqHandler {
 
             msgContent = new String(message.getBody());
 
+            //业务层自行保证幂等，mq无法保证幂等
+            //获取分布式锁（使用Redis的setIfAbsent）
+            Boolean locked = redisTemplate.opsForValue()
+                    .setIfAbsent(mqMsgIdKey, retryCount, 5, TimeUnit.MINUTES);
 
-            ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
-
-            //添加重复消费redis 校验，不会存在并发同一个message
-            Object retryCountObj = valueOperations.get(mqMsgIdKey);
-
-
-            if (retryCountObj == null) {
-                //value 重试次数
-                valueOperations.set(mqMsgIdKey, 0);
-            } else {
-                //没有过期时间,说明没有消费成功
+            if (Boolean.FALSE.equals(locked)) {
+                // 检查是否是过期锁（处理中状态）
+                Object retryCountObj = redisTemplate.opsForValue().get(mqMsgIdKey);
                 if (redisTemplate.getExpire(mqMsgIdKey) == -1) {
                     retryCount = (int) retryCountObj;
-                    //没有重试
-                    if (retryCount == 0) {
-                        long deliveryTag = message.getMessageProperties().getDeliveryTag();
-                        //补偿 ack--消费了却没有ack 成功。
-                        channel.basicAck(deliveryTag, false);
-                        log.info("msgId - {} has been consumed,msg - {}", msgId, msgContent);
-                        return;
-                    }
-                } else {
+                    log.info("setIfAbsent {} fail",mqMsgIdKey);
+                    //由于业务处理成功和redis 设置成功不是一个原子操作，会有漏洞,Redis 只做「并发互斥锁」，真正幂等靠数据库唯一约束
+                    //业务层有状态机判断用状态机，否则添加本地消息表和业务层事务保持原子性
+                }else {
                     log.info("msgId - {} has been consumed,msg - {}", msgId, msgContent);
                     channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
                     return;
                 }
             }
+
+//            ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
+//            //添加重复消费redis 校验，不会存在并发同一个message
+//            Object retryCountObj = valueOperations.get(mqMsgIdKey);
+//
+//            if (retryCountObj == null) {
+//                //value 重试次数
+//                valueOperations.set(mqMsgIdKey, 0);
+//            } else {
+//                //没有过期时间,说明没有消费成功
+//                if (redisTemplate.getExpire(mqMsgIdKey) == -1) {
+//                    retryCount = (int) retryCountObj;
+//                    //由于业务处理成功和redis 设置成功不是一个原子操作，会有漏洞,Redis 只做「并发互斥锁」，真正幂等靠数据库唯一约束
+//                    //业务层有状态机判断用状态机，否则添加本地消息表和业务层事务保持原子性
+//
+//
+////                    //没有重试：此处可能消费失败、消费成功expire失败。干脆直接放行，业务层兜底
+////                    if (retryCount == 0) {
+////                        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+////                        //补偿 ack--消费了却没有ack 成功。
+////                        channel.basicAck(deliveryTag, false);
+////                        log.info("msgId - {} has been consumed,msg - {}", msgId, msgContent);
+////                        return;
+////                    }
+//                } else {
+//                    log.info("msgId - {} has been consumed,msg - {}", msgId, msgContent);
+//                    channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+//                    return;
+//                }
+//            }
+
+
+
             T t = objectMapper.readValue(msgContent, tClass);
             consumer.accept(t);
             log.info("ConsumeSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);

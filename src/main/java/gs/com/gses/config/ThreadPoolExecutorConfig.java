@@ -88,8 +88,8 @@ public class ThreadPoolExecutorConfig {
     public Executor threadPoolExecutor() {
 //        ExecutorService extends Executor
         //内部使用 LinkedBlockingQueue
-        //内部使用 ThreadPoolExecutor
-        //内部使用 ThreadPoolTaskExecutor
+        //jdk ThreadPoolExecutor
+        //spring ThreadPoolTaskExecutor,内部使用ThreadPoolExecutor
         ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();
         int processNum = Runtime.getRuntime().availableProcessors(); // 返回可用处理器的Java虚拟机的数量
         int corePoolSize = (int) (processNum / (1 - 0.2));
