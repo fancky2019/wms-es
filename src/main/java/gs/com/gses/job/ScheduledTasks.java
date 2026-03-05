@@ -29,6 +29,14 @@ public class ScheduledTasks {
     @Autowired
     private MqMessageService mqMessageService;
 
+//    private final  MqMessageService mqMessageService;
+//
+//    public ScheduledTasks(MqMessageService mqMessageService) {
+//        this.mqMessageService = mqMessageService;
+//        // 可以安全使用，因为 serviceB 是完全初始化好的
+//    }
+
+
 //    // 每5秒执行一次
 //    @Scheduled(fixedRate = 5000)
 //    public void taskWithFixedRate() {

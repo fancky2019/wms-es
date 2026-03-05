@@ -112,7 +112,7 @@ public class AuthenticationFilter implements Filter {
         //  LoginUserTokenDto dto = authorityService.checkPermission(request, token);
 
         String token = httpServletRequest.getHeader("Authorization");
-        log.info("token {}", token);
+//        log.info("token {}", token);
         LoginUserTokenDto userInfo = null;
         try {
             log.info("Start checkPermission");
@@ -162,8 +162,6 @@ public class AuthenticationFilter implements Filter {
             }
             try {
                 authenticationFail(httpServletRequest, httpServletResponse, messageResult, ex.getMessage());
-                //自己返回(returnJson)加return
-                return;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -173,7 +171,6 @@ public class AuthenticationFilter implements Filter {
                 messageResult.setCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 String msg = objectMapper.writeValueAsString(messageResult);
                 returnJson(httpServletRequest, httpServletResponse, msg);
-                return;
             } catch (Exception e) {
                 log.error("returnJson ", e);
             }
