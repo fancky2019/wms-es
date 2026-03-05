@@ -153,6 +153,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
             truckOrderItemRequest.setUuid(UUID.randomUUID().toString().replaceAll("-", ""));
         }
+        request.setAsync(true);
         if (request.getAsync()) {
             addTruckOrderAndItemAsync(request, token);
             return;
