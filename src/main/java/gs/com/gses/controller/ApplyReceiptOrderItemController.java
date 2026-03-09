@@ -1,16 +1,15 @@
 package gs.com.gses.controller;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.aspect.DuplicateSubmission;
 import gs.com.gses.ftp.FtpService;
 import gs.com.gses.model.request.wms.ApplyReceiptOrderItemRequest;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.service.ApplyReceiptOrderItemService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -23,6 +22,10 @@ public class ApplyReceiptOrderItemController {
 
     @Autowired
     private FtpService ftpService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
 
     @DuplicateSubmission
     @PostMapping(value = "/inspection")
@@ -56,11 +59,22 @@ public class ApplyReceiptOrderItemController {
     }
 
     @DuplicateSubmission
-    @PostMapping(value = "/inspectionForm")
+    @PostMapping(value = "/inspectionForm", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    @PostMapping(value = "/inspectionForm")
     public MessageResult inspectionForm(@RequestPart(value = "productFiles", required = false) MultipartFile[] productFiles,
                                         @RequestPart(value = "certificationFiles", required = false) MultipartFile[] certificationFiles,
-                                        @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest) throws Exception {
-        this.applyReceiptOrderItemService.inspectionForm(productFiles, certificationFiles, applyReceiptOrderItemRequest);
+                                        @RequestParam("applyReceiptOrderItemRequest") String applyReceiptOrderItemRequest) throws Exception {
+
+       //uni.uploadFile 会报错 ，postman 可以 @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest)
+//    兼容uniapp    @RequestParam("applyReceiptOrderItemRequest") String applyReceiptOrderItemRequest)
+        // 手动解析 JSON
+
+        ApplyReceiptOrderItemRequest request = objectMapper.readValue(
+                applyReceiptOrderItemRequest,
+                ApplyReceiptOrderItemRequest.class
+        );
+
+        this.applyReceiptOrderItemService.inspectionForm(productFiles, certificationFiles, request);
 //        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
     }

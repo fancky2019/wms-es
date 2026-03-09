@@ -124,7 +124,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         //事务生效可获取完整bean
         //生命周期顺序：实例化 → 依赖注入 → AOP代理完成 → @PostConstruct
         //在 Bean 初始化完成后获取完整的代理
+        //使用cglib 代理
 //        this.selfProxy = applicationContext.getBean(MqMessageService.class);
+        //使用cglib 代理
         this.selfProxy = serviceProvider.getObject();
         // 验证代理完整性
         boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
