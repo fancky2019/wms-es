@@ -378,7 +378,7 @@ logging:
 ftp:
   host: 10.100.202.113
   port: 21
-  username: fancky
+  username: fancky1
   password: Abc!123456
   base-path: wms/
   passive-mode: true

@@ -58,16 +58,35 @@ public class ApplyReceiptOrderItemController {
         return MessageResult.success();
     }
 
-    @DuplicateSubmission
-    @PostMapping(value = "/inspectionForm", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PostMapping(value = "/inspectionForm")
-    public MessageResult inspectionForm(@RequestPart(value = "productFiles", required = false) MultipartFile[] productFiles,
-                                        @RequestPart(value = "certificationFiles", required = false) MultipartFile[] certificationFiles,
-                                        @RequestParam("applyReceiptOrderItemRequest") String applyReceiptOrderItemRequest) throws Exception {
 
-       //uni.uploadFile 会报错 ，postman 可以 @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest)
-//    兼容uniapp    @RequestParam("applyReceiptOrderItemRequest") String applyReceiptOrderItemRequest)
-        // 手动解析 JSON
+
+    /**
+     * @RequestPart 解析 JSON 时 强依赖 Content-Type： application/json
+     * @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest)
+     * @RequestParam 完全不关心 Content-Type,接受任何文本类型。兼容：Vue、Uniapp、Android、iOS、Postman
+     *
+     * Spring 官方建议在 multipart 表单里：
+     *
+     * 类型	推荐注解
+     * 文件	@RequestParam MultipartFile
+     * 普通字段	@RequestParam
+     * JSON body	@RequestPart
+     *
+     * @param productFiles
+     * @param certificationFiles
+     * @param applyReceiptOrderItemRequest
+     * @return
+     * @throws Exception
+     */
+    @DuplicateSubmission
+    @PostMapping(value = "/inspectionForm")
+    public MessageResult inspectionForm(@RequestParam(value = "productFiles", required = false) MultipartFile[] productFiles,
+                                        @RequestParam(value = "certificationFiles", required = false) MultipartFile[] certificationFiles,
+//                                        @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest
+                                        @RequestParam("applyReceiptOrderItemRequest") String applyReceiptOrderItemRequest) throws Exception {
+        //       //uni.uploadFile 会报错 ，postman 可以 @RequestPart("applyReceiptOrderItemRequest") ApplyReceiptOrderItemRequest applyReceiptOrderItemRequest)
+////    兼容uniapp    @RequestParam("applyReceiptOrderItemRequest") String applyReceiptOrderItemRequest)
+//        // 手动解析 JSON
 
         ApplyReceiptOrderItemRequest request = objectMapper.readValue(
                 applyReceiptOrderItemRequest,
@@ -75,7 +94,9 @@ public class ApplyReceiptOrderItemController {
         );
 
         this.applyReceiptOrderItemService.inspectionForm(productFiles, certificationFiles, request);
-//        this.applyReceiptOrderItemService.inspectionOptimization(files, applyReceiptOrderItemRequest);
         return MessageResult.success();
     }
+
+
+
 }
