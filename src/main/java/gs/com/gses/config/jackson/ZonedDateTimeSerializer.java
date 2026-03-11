@@ -1,4 +1,4 @@
-package gs.com.gses.config.zonedDateTimeConfig;
+package gs.com.gses.config.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;

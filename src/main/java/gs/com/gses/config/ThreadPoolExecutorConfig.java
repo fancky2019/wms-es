@@ -102,12 +102,16 @@ public class ThreadPoolExecutorConfig {
         threadPoolExecutor.setCorePoolSize(corePoolSize); // 核心池大小
         threadPoolExecutor.setMaxPoolSize(maxPoolSize); // 最大线程数
         //内部使用 LinkedBlockingQueue
-        threadPoolExecutor.setQueueCapacity(maxPoolSize * 1000); // 队列程度
+        threadPoolExecutor.setQueueCapacity(maxPoolSize * 100); // 队列程度
         threadPoolExecutor.setThreadPriority(Thread.MAX_PRIORITY);
-        threadPoolExecutor.setDaemon(false);
-        threadPoolExecutor.setKeepAliveSeconds(3000);// 线程空闲时间
+//        threadPoolExecutor.setDaemon(false);
+//        threadPoolExecutor.setKeepAliveSeconds(3000);// 线程空闲时间
         threadPoolExecutor.setThreadNamePrefix("ThreadPool-Executor-"); // 线程名字前缀
 //        threadPoolExecutor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy()); // 拒绝策略
+
+        // 等待所有任务结束后再关闭线程池
+        threadPoolExecutor.setWaitForTasksToCompleteOnShutdown(true);
+        threadPoolExecutor.setAwaitTerminationSeconds(300);
         threadPoolExecutor.initialize();
         return threadPoolExecutor;
     }

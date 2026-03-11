@@ -7,11 +7,11 @@ import gs.com.gses.model.utility.RedisKey;
 import gs.com.gses.service.*;
 import gs.com.gses.utility.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisClusterConnection;
@@ -19,16 +19,19 @@ import org.springframework.data.redis.connection.RedisClusterNode;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
-@Component
+//@Component
+@Service
 public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     //    @Autowired
 //    @Lazy  // 防止循环依赖
@@ -75,6 +78,11 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     @Autowired
     private ObjectMapper objectMapper;
 
+
+    @Autowired
+    @Qualifier("threadPoolExecutor")
+    private Executor threadPoolExecutor;
+
     public static final String LOCATION_PREFIX = "BasicInfo:Location";
     public static final String LANEWAY_PREFIX = "BasicInfo:Laneway";
     public static final String ZONE_PREFIX = "BasicInfo:Zone";
@@ -85,7 +93,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     public static final String CONVEYOR_PREFIX = "BasicInfo:Conveyor";
     public static final String CONVEYOR_LANEWAY_PREFIX = "BasicInfo:ConveyorLaneway";
 
-    public static final int EMPTY_VALUE_EXPTRE_TIME = 5;
+    public static final int EMPTY_VALUE_EXPIRE_TIME = 5;
 
     // 缓存前缀
     private static final String ID_PREFIX = MATERIAL_PREFIX + "id:";
@@ -100,7 +108,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         int m = 0;
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initLocation() {
         log.info("start init location");
@@ -129,7 +137,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         log.info("init location complete");
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initLaneway() {
         log.info("start init Laneway");
@@ -141,7 +149,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         log.info("init Laneway complete");
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initZone() {
         log.info("start init Zone");
@@ -153,7 +161,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         log.info("init Zone complete");
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initMaterial() {
         log.info("start init Material");
@@ -354,7 +362,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
     }
 
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initWarehouse() {
         log.info("start init Warehouse");
@@ -366,7 +374,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         log.info("init Warehouse complete");
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initOrgnization() {
         log.info("start init Orgnization");
@@ -378,7 +386,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         log.info("init Orgnization complete");
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initPackageUnit() {
         log.info("start init PackageUnit");
@@ -390,7 +398,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         log.info("init PackageUnit complete");
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initConveyor() {
 
@@ -407,7 +415,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         log.info("init Conveyor complete");
     }
 
-    @Async("threadPoolExecutor")
+    //    @Async("threadPoolExecutor")
     @Override
     public void initConveyorLaneway() {
         log.info("start init ConveyorLaneway");
@@ -840,16 +848,43 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
          */
         log.info("start initBasicInfoCache");
         BasicInfoCacheService basicInfoCacheService = applicationContext.getBean(BasicInfoCacheService.class);
-        basicInfoCacheService.initLocation();
-        basicInfoCacheService.initLaneway();
-        basicInfoCacheService.initZone();
-        basicInfoCacheService.initMaterial();
-        basicInfoCacheService.initWarehouse();
-        basicInfoCacheService.initOrgnization();
-        basicInfoCacheService.initPackageUnit();
+//        basicInfoCacheService.initLocation();
+//        basicInfoCacheService.initLaneway();
+//        basicInfoCacheService.initZone();
+//        basicInfoCacheService.initMaterial();
+//        basicInfoCacheService.initWarehouse();
+//        basicInfoCacheService.initOrgnization();
+//        basicInfoCacheService.initPackageUnit();
+//
+//        basicInfoCacheService.initConveyor();
+//        basicInfoCacheService.initConveyorLaneway();
 
-        basicInfoCacheService.initConveyor();
-        basicInfoCacheService.initConveyorLaneway();
+
+        CompletableFuture<Void> initLocationFuture = CompletableFuture.runAsync(basicInfoCacheService::initLocation, threadPoolExecutor);
+        CompletableFuture<Void> initLanewayFuture = CompletableFuture.runAsync(basicInfoCacheService::initLaneway, threadPoolExecutor);
+        CompletableFuture<Void> initZoneFuture = CompletableFuture.runAsync(basicInfoCacheService::initZone, threadPoolExecutor);
+        CompletableFuture<Void> initMaterialFuture = CompletableFuture.runAsync(basicInfoCacheService::initMaterial, threadPoolExecutor);
+        CompletableFuture<Void> initWarehouseFuture = CompletableFuture.runAsync(basicInfoCacheService::initWarehouse, threadPoolExecutor);
+        CompletableFuture<Void> initOrgnizationFuture = CompletableFuture.runAsync(basicInfoCacheService::initOrgnization, threadPoolExecutor);
+        CompletableFuture<Void> initPackageUnitFuture = CompletableFuture.runAsync(basicInfoCacheService::initPackageUnit, threadPoolExecutor);
+        CompletableFuture<Void> initConveyorFuture = CompletableFuture.runAsync(basicInfoCacheService::initConveyor, threadPoolExecutor);
+        CompletableFuture<Void> initConveyorLanewayFuture = CompletableFuture.runAsync(basicInfoCacheService::initConveyorLaneway, threadPoolExecutor);
+
+        // 等待所有任务完成
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                initLocationFuture,
+                initLanewayFuture,
+                initZoneFuture,
+                initMaterialFuture,
+                initWarehouseFuture,
+                initOrgnizationFuture,
+                initPackageUnitFuture,
+                initConveyorFuture,
+                initConveyorLanewayFuture
+        );
+
+        // 阻塞等待所有任务完成
+        allFutures.join();  // 或者 allFutures.get()
         log.info("initBasicInfoCache complete");
     }
 

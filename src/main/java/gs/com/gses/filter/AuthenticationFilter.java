@@ -62,6 +62,12 @@ public class AuthenticationFilter implements Filter {
         // 转换为HttpServletRequest
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
         String requestURI = httpServletRequest.getRequestURI();
+
+//        //  /authentication-server/api/auth/getCurrentUser
+//        String requestURI = request.getRequestURI();
+//        // /api/auth/getCurrentUser
+//        String servletPath = request.getServletPath();
+
         // 获取客户端IP地址
         String clientIp = getClientIpAddress(httpServletRequest);
         log.info("Request from IP: {}, URI: {}", clientIp, requestURI);
