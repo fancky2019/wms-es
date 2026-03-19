@@ -601,7 +601,7 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
 //                        return null;
 //                    }
 //
-//// 2. 查 hash
+//// 2. 查 hash   1和2步骤可以换过来
 //                    Material m = (Material) redisTemplate.opsForHash()
 //                            .get("material:id", id);
 //                    if (m != null) {
@@ -985,5 +985,20 @@ public class BasicInfoCacheServiceImpl implements BasicInfoCacheService {
         ValueOperations<String, Object> valueOperations = redisTemplate.opsForValue();
         valueOperations.set(keyVal, val, timeout, unit);
     }
+
+
+    public List<String> multiGetByIds(List<String> userIds) {
+        // 将用户ID列表转换为Redis Key列表
+        List<String> keys = userIds.stream()
+                .map(id -> "user:" + id)
+                .collect(Collectors.toList());
+        //string key 批量获取
+        List<String> userJsonList = redisTemplate.opsForValue().multiGet(keys);
+        String hashKey = "sys:users";
+        // 批量获取Hash中多个field的值
+        List<Object> userList = redisTemplate.opsForHash().multiGet(hashKey, userIds);
+        return userJsonList;
+    }
+
 
 }
