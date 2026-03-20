@@ -50,6 +50,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -85,6 +86,11 @@ import java.util.stream.Collectors;
 //@Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 强制TARGET_CLASS代理获取完整bean,或者jdk动态代理通过PostConstruct内获取完整bean
 //接口加   @Transactional(rollbackFor = Exception.class,
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
+
+    @Autowired
+    private  DataSource dataSource;
+
+
 
     /**
      *
@@ -1281,6 +1287,10 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //        // AopContext内部使用ThreadLocal存储当前代理
 //        private static final ThreadLocal<Object> currentProxy = new ThreadLocal<>();
 //        异步方法内需要重新获取代理，通过 ApplicationContext.getBean()
+
+        //线程connection 保存ThreadLocal，跨线程要设置当前线程的Connection，否则事务不生效
+//        ConnectionHolder connectionHolder=(ConnectionHolder)TransactionSynchronizationManager.getResource(dataSource);
+//        TransactionSynchronizationManager.bindResource(dataSource,connectionHolder);
 
         MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         String threadName = Thread.currentThread().getName();
