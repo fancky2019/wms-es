@@ -87,8 +87,8 @@ import java.util.stream.Collectors;
 //接口加   @Transactional(rollbackFor = Exception.class,
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
 
-    @Autowired
-    private  DataSource dataSource;
+//    @Autowired
+//    private  DataSource dataSource;
 
 
 
