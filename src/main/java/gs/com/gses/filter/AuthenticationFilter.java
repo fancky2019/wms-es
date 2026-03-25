@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.util.StopWatch;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -122,9 +123,11 @@ public class AuthenticationFilter implements Filter {
         LoginUserTokenDto userInfo = null;
         try {
             log.info("Start checkPermission");
+            StopWatch stopWatch = new StopWatch("AuthenticationFilter");
+            stopWatch.start("checkPermissionRet");
             WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
-            log.info("WmsResponse {}", dto);
-
+            stopWatch.stop();
+            log.info("checkPermissionRetCostTime {} ms  WmsResponse {}",stopWatch.getTotalTimeMillis(), dto);
             if (dto.getResult()) {
                 log.info("Complete checkPermission success");
                 Map<String, String> userInfoMap = (Map) dto.getData();
