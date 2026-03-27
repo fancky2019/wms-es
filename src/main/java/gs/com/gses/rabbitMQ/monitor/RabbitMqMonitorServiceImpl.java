@@ -6,14 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,7 +35,7 @@ public class RabbitMqMonitorServiceImpl implements RabbitMqMonitorService {
      * @return QueueStats 队列统计信息对象
      */
     @Override
-    public QueueStats getQueueStatsByHttpApi(String vhost, String queueName) {
+    public QueueStatus getQueueStatsByHttpApi(String vhost, String queueName) {
         try {
 //            if ("/".equals(vhost)) {
 //                vhost = "%2F";
@@ -51,7 +45,7 @@ public class RabbitMqMonitorServiceImpl implements RabbitMqMonitorService {
             //      URI uri = URI.create(String.format("%s/api/queues/%s/%s", rabbitmqApiUrl, encodedVhost, queueName));
 
             //在浏览器中访问：http://localhost:15672/api/queues/%2F/DirectExchangeQueueSpringBootES尅获取更多信息
-            QueueStats stats = rabbitMQManagementClientApiService.getQueueStats(queueName, rabbitMQConfig.getToken());
+            QueueStatus stats = rabbitMQManagementClientApiService.getQueueStats(queueName, rabbitMQConfig.getToken());
 
             log.info("队列 '{}' 状态 - 总消息数: {}, Ready: {}, Unacked: {}, 消费者: {}", queueName, stats.getMessages(), stats.getMessagesReady(), stats.getMessagesUnacknowledged(), stats.getConsumers());
             return stats;
@@ -81,15 +75,15 @@ public class RabbitMqMonitorServiceImpl implements RabbitMqMonitorService {
      * 获取详细的队列统计信息
      */
     @Override
-    public QueueStats getQueueStatsRabbitTemplate(String queueName) {
+    public QueueStatus getQueueStatsRabbitTemplate(String queueName) {
         return rabbitTemplate.execute(channel -> {
             AMQP.Queue.DeclareOk declareOk = channel.queueDeclarePassive(queueName);
 
-            QueueStats queueStats = new QueueStats();
-            queueStats.setMessages(declareOk.getMessageCount());
-            queueStats.setName(declareOk.getQueue());
-            queueStats.setConsumers(declareOk.getConsumerCount());
-            return queueStats;
+            QueueStatus queueStatus = new QueueStatus();
+            queueStatus.setMessages(declareOk.getMessageCount());
+            queueStatus.setName(declareOk.getQueue());
+            queueStatus.setConsumers(declareOk.getConsumerCount());
+            return queueStatus;
         });
     }
 

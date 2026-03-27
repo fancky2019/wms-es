@@ -10,7 +10,7 @@ import lombok.Data;
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class QueueStats {
+public class QueueStatus {
 
     /**
      * 队列名称

@@ -4,9 +4,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +37,7 @@ public interface RabbitMQManagementClientApiService {
      * @return 包含队列各种状态（如消息数量、消费者数量等）的响应实体
      */
     @GetMapping("/queues/%2F/{queueName}")
-    QueueStats getQueueStats(@PathVariable("queueName") String queueName, @RequestHeader("Authorization") String token);
+    QueueStatus getQueueStats(@PathVariable("queueName") String queueName, @RequestHeader("Authorization") String token);
 
     @GetMapping("/queues/%2F")
     List<Map<String, Object>> getQueues(@RequestHeader("Authorization") String token);

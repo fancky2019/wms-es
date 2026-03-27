@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.util.HashMap;
@@ -51,6 +52,9 @@ public class RabbitMQConfig {
     ObjectMapper objectMapper;
     @Autowired
     private  PushConfirmCallback pushConfirmCallback;
+
+    @Autowired
+    private TaskExecutor rabbitMQThreadPoolExecutor;
 
 //    @Autowired
 //   private MqMessageService mqMessageService;
@@ -209,6 +213,8 @@ public class RabbitMQConfig {
         // 手动确认
         factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
         factory.setMessageConverter(new Jackson2JsonMessageConverter(this.objectMapper));
+        factory.setTaskExecutor(rabbitMQThreadPoolExecutor);
+        factory.setPrefetchCount(1);
         return factory;
     }
 
