@@ -295,8 +295,8 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                                                  Map<String, Warehouse> warehouseMap,
                                                  Map<String, Orgnization> orgnizationMap) throws InterruptedException {
         log.info("inventoryItemDetailList size {}", inventoryItemDetailList.size());
-        List<Long> inventoryItemDetailIdList =  inventoryItemDetailList.stream().map(p->p.getId()).distinct().collect(Collectors.toList());
-        log.info("inventoryItemDetaiIdlList  {}",StringUtils.join(inventoryItemDetailIdList,",") );
+        List<Long> inventoryItemDetailIdList = inventoryItemDetailList.stream().map(p -> p.getId()).distinct().collect(Collectors.toList());
+        log.info("inventoryItemDetaiIdlList  {}", StringUtils.join(inventoryItemDetailIdList, ","));
         List<InventoryInfo> inventoryInfos = new ArrayList<>();
         List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
         log.info("inventoryItemIdList {}", inventoryItemIdList.size());
@@ -1825,7 +1825,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 String initInventoryTimeStr = INIT_INVENTORY_TIME.format(formatter);
                 LocalDateTime creationTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(changedInventoryItemDetail.getCreationTime()), ZoneOffset.of("+8"));
                 String creationTimeStr = creationTime.format(formatter);
-                log.info("{} {} creationTimeStr {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(),creationTimeStr, modificationTimeStr, initInventoryTimeStr);
+                log.info("{} {} creationTimeStr {} modificationTime - {} isBefore INIT_INVENTORY_TIME - {} ", dataChangeInfo.getId(), dataChangeInfo.getEventType(), creationTimeStr, modificationTimeStr, initInventoryTimeStr);
                 return;
             }
         }
@@ -2759,8 +2759,10 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
     @Override
     public String allocatedReason(ShipOrderItemRequest shipOrderItemRequest) throws Exception {
+        String msg = "暂未查出公共原因";
         if (!enable && !basicInfoCacheService.getSbpEnable()) {
-            return "暂未查出公共原因";
+            log.info("Unenable");
+            return msg;
         }
 
         if (StringUtils.isEmpty(shipOrderItemRequest.getMaterialCode())) {
@@ -2776,109 +2778,149 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setMaterialId(materialId);
         PageData<InventoryInfo> pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "无库存:库存详情不存在";
+            msg = "无库存:库存详情不存在";
+            log.info(msg);
+            return msg;
         }
 
         if (StringUtils.isNotEmpty(shipOrderItemRequest.getPalletCode())) {
             request.setPallet(shipOrderItemRequest.getPalletCode());
             pageData = getInventoryInfoPage(request);
             if (pageData.getCount() == 0) {
-                return "无库存:托盘 - " + shipOrderItemRequest.getPalletCode() + " 没物料 " + shipOrderItemRequest.getMaterialCode() + " 库存";
+                msg = "无库存:托盘 - " + shipOrderItemRequest.getPalletCode() + " 没物料 " + shipOrderItemRequest.getMaterialCode() + " 库存";
+                log.info(msg);
+                return msg;
             }
         }
 
         request.setInventoryXStatus(0);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存主表状态不是正常";
+            msg = "库存主表状态不是正常";
+            log.info(msg);
+            return msg;
         }
         request.setInventoryIsExpired(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存主表已过期";
+            msg = "库存主表已过期";
+            log.info(msg);
+            return msg;
         }
         request.setInventoryIsLocked(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存主表已锁定";
+            msg = "库存主表已锁定";
+            log.info(msg);
+            return msg;
         }
         request.setInventoryItemIsLocked(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存明细已锁定";
+            msg = "库存明细已锁定";
+            log.info(msg);
+            return msg;
         }
         request.setInventoryItemXStatus(0);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存明细状态不是正常";
+            msg = "库存明细状态不是正常";
+            log.info(msg);
+            return msg;
         }
         request.setInventoryItemIsExpired(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存明细已过期";
+            msg = "库存明细已过期";
+            log.info(msg);
+            return msg;
         }
         request.setXStatus(0);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存详情状态不是正常";
+            msg = "库存详情状态不是正常";
+            log.info(msg);
+            return msg;
         }
         request.setIsLocked(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存详情已锁定";
+            msg = "库存详情已锁定";
+            log.info(msg);
+            return msg;
         }
         request.setIsExpired(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存详情已过期";
+            msg = "库存详情已过期";
+            log.info(msg);
+            return msg;
         }
         request.setLocationXStatus(1);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "货位状态未启用";
+            msg = "货位状态未启用";
+            log.info(msg);
+            return msg;
         }
         request.setForbidOutbound(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "货位禁出";
+            msg = "货位禁出";
+            log.info(msg);
+            return msg;
         }
         request.setLocationIsLocked(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "货位已锁定";
+            msg = "货位已锁定";
+            log.info(msg);
+            return msg;
         }
         request.setIsCountLocked(false);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "货位已盘点锁定";
+            msg = "货位已盘点锁定";
+            log.info(msg);
+            return msg;
         }
         //平库也可以分配，默认只能存储  货位类型 （0未知,1存储，2越库，3地面，4收货区,5月台
         request.setLocationXType(1);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "货位类型不是存储";
+            msg = "货位类型不是存储";
+            log.info(msg);
+            return msg;
         }
         request.setLanewayXStatus(1);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "巷道状态未启用";
+            msg = "巷道状态未启用";
+            log.info(msg);
+            return msg;
         }
         request.setEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存详情没有可分配的库存,检查任务";
+            msg = "库存详情没有可分配的库存,检查任务";
+            log.info(msg);
+            return msg;
         }
 
         request.setItemEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存明细没有可分配的库存,检查任务";
+            msg = "库存明细没有可分配的库存,检查任务";
+            log.info(msg);
+            return msg;
         }
 
         request.setInventoryEnoughPackQuantity(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存主表没有可分配的库存,检查任务";
+            msg = "库存主表没有可分配的库存,检查任务";
+            log.info(msg);
+            return msg;
         }
 
         if (StringUtils.isNotEmpty(shipOrderItemRequest.getShipOrderCode())) {
@@ -2894,7 +2936,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 request.setZoneId(shipOrderResponse.getZoneID());
                 pageData = getInventoryInfoPage(request);
                 if (pageData.getCount() == 0) {
-                    return "发货单指定zone - " + shipOrderResponse.getZoneID() + " 没有库存";
+                    msg = "发货单指定zone - " + shipOrderResponse.getZoneID() + " 没有库存";
+                    log.info(msg);
+                    return msg;
                 }
             }
 
@@ -2902,7 +2946,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 request.setWhid(shipOrderResponse.getWhid());
                 pageData = getInventoryInfoPage(request);
                 if (pageData.getCount() == 0) {
-                    return "发货单指定Whid - " + shipOrderResponse.getWhid() + " 没有库存";
+                    msg = "发货单指定Whid - " + shipOrderResponse.getWhid() + " 没有库存";
+                    log.info(msg);
+                    return msg;
                 }
             }
 
@@ -2917,7 +2963,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 request.setApplyOrOrderCode(shipOrderItemResponse.getShipAccordingToOrderCode());
                 pageData = getInventoryInfoPage(request);
                 if (pageData.getCount() == 0) {
-                    return "没有备货的库存";
+                    msg = "没有备货的库存";
+                    log.info(msg);
+                    return msg;
                 }
             }
 
@@ -2988,7 +3036,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                     request.setLanewaysIdList(conveyorLanewayIdList);
                     pageData = getInventoryInfoPage(request);
                     if (pageData.getCount() == 0) {
-                        return "指定月台 - " + toLocationCode + " 关联的巷道没有库存";
+                        msg = "指定月台 - " + toLocationCode + " 关联的巷道没有库存";
+                        log.info(msg);
+                        return msg;
                     }
                 }
             }
@@ -2999,7 +3049,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 request.setBatchNo(shipOrderItemResponse.getBatchNo());
                 pageData = getInventoryInfoPage(request);
                 if (pageData.getCount() == 0) {
-                    return "没有 " + shipOrderItemResponse.getBatchNo() + " 批次的库存";
+                    msg = "没有 " + shipOrderItemResponse.getBatchNo() + " 批次的库存";
+                    log.info(msg);
+                    return msg;
                 }
             }
 
@@ -3008,7 +3060,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 request.setBatchNo2(shipOrderItemResponse.getBatchNo2());
                 pageData = getInventoryInfoPage(request);
                 if (pageData.getCount() == 0) {
-                    return "没有 " + shipOrderItemResponse.getBatchNo2() + " 批次的库存";
+                    msg = "没有 " + shipOrderItemResponse.getBatchNo2() + " 批次的库存";
+                    log.info(msg);
+                    return msg;
                 }
             }
 
@@ -3017,7 +3071,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                 request.setBatchNo3(shipOrderItemResponse.getBatchNo3());
                 pageData = getInventoryInfoPage(request);
                 if (pageData.getCount() == 0) {
-                    return "没有 " + shipOrderItemResponse.getBatchNo3() + " 批次的库存";
+                    msg = "没有 " + shipOrderItemResponse.getBatchNo3() + " 批次的库存";
+                    log.info(msg);
+                    return msg;
                 }
             }
 
@@ -3026,10 +3082,12 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
         request.setApplyOrOrderCodeEmpty(true);
         pageData = getInventoryInfoPage(request);
         if (pageData.getCount() == 0) {
-            return "库存被备货";
+            msg = "库存被备货";
+            log.info(msg);
+            return msg;
         }
 
-        return "暂未查出公共原因";
+        return msg;
 
     }
 
