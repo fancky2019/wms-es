@@ -91,7 +91,6 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //    private  DataSource dataSource;
 
 
-
     /**
      *
      默认jdk 动态代理：
@@ -412,7 +411,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                         mqMessage = mqMessageList.get(0);
                     }
                     if (mqMessage == null) {
-                        throw new Exception("Can't get MqMessage by MsgId :" + mqMessage.getMsgId());
+                        throw new Exception("Can't get MqMessage by MsgId :" + msgId);
                     }
 //                    rabbitmq 同一条消息都已经消费了  rabbitmq才收到该消息的确认 confirm.要进行状态判断
                     if (status == MqMessageStatus.PRODUCE.getValue()) {
