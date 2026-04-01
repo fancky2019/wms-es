@@ -58,11 +58,12 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
 
     // rabbitmq 同一条消息都已经消费了  rabbitmq才收到该消息的确认 confirm.要进行状态判断
     @Override
-    public void confirm(CorrelationData correlationData, boolean ack, String s) {
+    public void confirm(CorrelationData cd, boolean ack, String s) {
         try {
 // s:channel error; protocol method: #method<channel.close>(reply-code=404, reply-text=NOT_FOUND - no exchange 'UnBindDirectExchange' in vhost '/', class-id=60, method-id=40)
+            CorrelationDataTag correlationData = (CorrelationDataTag) cd;
             String msgId = correlationData.getId();
-            MessageProperties messageProperties = correlationData.getReturned().getMessage().getMessageProperties();
+            MessageProperties messageProperties = correlationData.getMessage().getMessageProperties();
             String businessKey = messageProperties.getHeader("businessKey");
             String businessId = messageProperties.getHeader("businessId");
             String traceId = messageProperties.getHeader("traceId");
@@ -101,7 +102,7 @@ public class PushConfirmCallback implements RabbitTemplate.ConfirmCallback {
                 } catch (Exception ex) {
                     log.error("", ex);
                 }
-                MqMessageService mqMessageService=applicationContext.getBean(MqMessageService.class);
+                MqMessageService mqMessageService = applicationContext.getBean(MqMessageService.class);
                 mqMessageService.updateByMsgId(msgId, MqMessageStatus.PRODUCE.getValue(), queueName);
 
             } else {

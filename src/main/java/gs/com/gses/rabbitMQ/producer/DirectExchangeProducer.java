@@ -3,11 +3,13 @@ package gs.com.gses.rabbitMQ.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.entity.MqMessage;
+import gs.com.gses.rabbitMQ.CorrelationDataTag;
 import gs.com.gses.rabbitMQ.RabbitMqMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.core.ReturnedMessage;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.BatchingRabbitTemplate;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -51,7 +53,11 @@ public class DirectExchangeProducer {
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
         message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
-        CorrelationData correlationData = new CorrelationData(msgId);
+//        CorrelationData correlationData = new CorrelationData(msgId);
+        CorrelationDataTag correlationData = new CorrelationDataTag(msgId, message);
+//        //设置消息内容
+//        ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
+//        correlationData.setReturned(returnedMessage);
         log.info("BeforeRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
         rabbitTemplate.send(exchange, routingKey, message, correlationData);
         log.info("AfterRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
@@ -78,7 +84,11 @@ public class DirectExchangeProducer {
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
         message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
-        CorrelationData correlationData = new CorrelationData(msgId);
+//        CorrelationData correlationData = new CorrelationData(msgId);
+        CorrelationDataTag correlationData = new CorrelationDataTag(msgId, message);
+//        //设置消息内容
+//        ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
+//        correlationData.setReturned(returnedMessage);
         log.info("BeforeRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
         rabbitTemplate.send(exchange, routingKey, message, correlationData);
         log.info("AfterRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
@@ -104,7 +114,10 @@ public class DirectExchangeProducer {
         messageProperties.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
         //发送时候带上 CorrelationData(UUID.randomUUID().toString()),不然生产确认的回调中CorrelationData为空
         Message message = new Message(mqMessage.getMsgContent().getBytes(), messageProperties);
-        CorrelationData correlationData = new CorrelationData(msgId);
+        CorrelationDataTag correlationData = new CorrelationDataTag(msgId, message);
+        //设置消息内容
+//        ReturnedMessage returnedMessage = new ReturnedMessage(message, 0, "", "", "");
+//        correlationData.setMessage(returnedMessage);
         log.info("BeforeRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
         rabbitTemplate.send(exchange, routingKey, message, correlationData);
         log.info("AfterRabbitTemplateSend msgId - {},businessKey - {} ,businessId - {}", mqMessage.getMsgId(), mqMessage.getBusinessKey(), mqMessage.getBusinessId());
