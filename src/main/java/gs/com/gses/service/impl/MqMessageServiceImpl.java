@@ -994,12 +994,10 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                         //待优化成批量更新db
                         try {
                             if (success) {
-                                MqMessageService mqMessageService = applicationContext.getBean(MqMessageService.class);
-                                mqMessageService.updateByMsgId(message.getMsgId(), MqMessageStatus.PRODUCE.getValue());
+                                selfProxy.updateByMsgId(message.getMsgId(), MqMessageStatus.PRODUCE.getValue());
                                 log.info("update msg {} produce", message.getMsgId());
                             } else {
-                                MqMessageService mqMessageService = applicationContext.getBean(MqMessageService.class);
-                                mqMessageService.updateByMsgId(message.getMsgId(), MqMessageStatus.NOT_PRODUCED.getValue());
+                                selfProxy.updateByMsgId(message.getMsgId(), MqMessageStatus.NOT_PRODUCED.getValue());
                                 log.info("update msg {} produce fail", message.getMsgId());
                             }
                         } catch (Exception ex) {
