@@ -3,6 +3,7 @@ package gs.com.gses.rabbitMQ;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gs.com.gses.model.enums.MqMessageStatus;
+import gs.com.gses.rabbitMQ.producer.DirectExchangeProducer;
 import gs.com.gses.service.MqMessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -51,7 +52,7 @@ public class RabbitMQConfig {
     @Autowired
     ObjectMapper objectMapper;
     @Autowired
-    private  PushConfirmCallback pushConfirmCallback;
+    private PushConfirmCallback pushConfirmCallback;
 
     @Autowired
     private TaskExecutor rabbitMQThreadPoolExecutor;
@@ -75,7 +76,7 @@ public class RabbitMQConfig {
 
     //region mqMessage
     //x-message-ttl 参数的单位是毫秒。
-    public static final int MQ_MESSAGE_RETRY_INTERVAL =10000;// 5 * 60 * 1000;
+    public static final int MQ_MESSAGE_RETRY_INTERVAL = 10000;// 5 * 60 * 1000;
     // 路由键支持模糊匹配，符号“#”匹配一个或多个词，符号“*”匹配不多不少一个词
     public static final String DIRECT_MQ_MESSAGE_KEY = "directMqMessageKey";
     public static final String DIRECT_MQ_MESSAGE_NAME = "directMqMessageName";
@@ -152,9 +153,9 @@ public class RabbitMQConfig {
                 String failedMessage = new String(returnedMessage.getMessage().getBody());
 //                rabbitMqMessage = objectMapper.readValue(failedMessage, RabbitMqMessage.class);
 //                messageId = rabbitMqMessage.getMessageId();
-                MqMessageService mqMessageService=applicationContext.getBean(MqMessageService.class);
+                MqMessageService mqMessageService = applicationContext.getBean(MqMessageService.class);
 
-                mqMessageService.updateByMsgId(messageId, MqMessageStatus.NOT_PRODUCED.getValue(),queueName);
+                mqMessageService.updateByMsgId(messageId, MqMessageStatus.NOT_PRODUCED.getValue(), queueName);
                 //MQ_MESSAGE
             } catch (Exception e) {
                 log.info("", e);
@@ -203,6 +204,38 @@ public class RabbitMQConfig {
         return "Basic " + encodedAuth;
     }
 
+
+    @Bean
+    public RabbitTemplate rabbitTemplateManualConfirmCallback(ConnectionFactory connectionFactory) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setMandatory(true);
+        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter(this.objectMapper));
+        rabbitTemplate.setReturnsCallback(returnedMessage ->
+        {
+            String exchange = returnedMessage.getExchange();
+            String routingKey = returnedMessage.getRoutingKey();
+            int replyCod = returnedMessage.getReplyCode();
+            String replyText = returnedMessage.getReplyText();
+            String messageId = "";
+
+            try {
+
+                messageId = returnedMessage.getMessage()
+                        .getMessageProperties()
+                        .getMessageId();
+
+                //没有路由到队列的设置未生产成功
+//                IMqMessageService mqMessageService = applicationContext.getBean(IMqMessageService.class);
+//                mqMessageService.updateByMsgIdAsync(messageId, MqMessageStatus.NOT_PRODUCED.getValue());
+                MqMessageService mqMessageService = applicationContext.getBean(MqMessageService.class);
+                mqMessageService.updateByMsgId(messageId, MqMessageStatus.NOT_PRODUCED.getValue());
+            } catch (Exception e) {
+                log.info("", e);
+            }
+            log.info("消息 - {} 路由到队列失败.", messageId);
+        });
+        return rabbitTemplate;
+    }
 
     //json 序列化，默认SimpleMessageConverter jdk 序列化
     //配置RabbitTemplate和RabbitListenerContainerFactory

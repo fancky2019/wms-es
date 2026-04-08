@@ -40,7 +40,7 @@ public interface MqMessageService extends IService<MqMessage> {
     void updateByMsgId(String msgId, int status) throws Exception;
 
     void updateByMsgId(String msgId, int status, String queue) throws Exception;
-
+    void updateByMsgIdAsync(String msgId, int status) throws Exception;
     void updateStaus(long mqMessageId, MqMessageStatus status) throws Exception;
 
     PageData<MqMessageResponse> list(MqMessageRequest mqMessage) throws Exception;

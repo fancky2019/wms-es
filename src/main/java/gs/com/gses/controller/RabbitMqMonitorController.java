@@ -1,5 +1,6 @@
 package gs.com.gses.controller;
 
+import gs.com.gses.model.entity.MqMessage;
 import gs.com.gses.model.response.MessageResult;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
 import gs.com.gses.rabbitMQ.RabbitMqMessage;
@@ -71,17 +72,32 @@ public class RabbitMqMonitorController {
     @PostMapping("/rabbitMqTest")
     public MessageResult<Void> rabbitMqTest() throws Exception {
 
-        for (int i = 0; i < 200; i++) {
-            RabbitMqMessage mqMessage = new RabbitMqMessage();
-            mqMessage.setMsgId("1111111");
-            mqMessage.setMsgContent(System.currentTimeMillis() + "");
-            mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
-            mqMessage.setQueue(RabbitMQConfig.DIRECT_QUEUE_NAME);
-            mqMessage.setRouteKey(RabbitMQConfig.DIRECT_ROUTING_KEY);
-            mqMessage.setRetry(false);
-            directExchangeProducer.produce(mqMessage);
-            Thread.sleep(5);
-        }
+//        for (int i = 0; i < 200; i++) {
+//            RabbitMqMessage mqMessage = new RabbitMqMessage();
+//            mqMessage.setMsgId("1111111");
+//            mqMessage.setMsgContent(System.currentTimeMillis() + "");
+//            mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
+//            mqMessage.setQueue(RabbitMQConfig.DIRECT_QUEUE_NAME);
+//            mqMessage.setRouteKey(RabbitMQConfig.DIRECT_ROUTING_KEY);
+//            mqMessage.setRetry(false);
+//            directExchangeProducer.produce(mqMessage);
+//            Thread.sleep(5);
+//        }
+
+
+
+        String msgContent = System.currentTimeMillis() + "";
+        MqMessage mqMessage = new MqMessage();
+        mqMessage.setMsgId("1111111");
+        mqMessage.setMsgContent(System.currentTimeMillis() + "");
+        mqMessage.setExchange(RabbitMQConfig.DIRECT_EXCHANGE);
+        mqMessage.setRouteKey(RabbitMQConfig.DIRECT_MQ_MESSAGE_KEY);
+        mqMessage.setQueue(RabbitMQConfig.DIRECT_MQ_MESSAGE_NAME);
+        mqMessage.setRetry(false);
+        mqMessage.setBusinessId(1L);
+        mqMessage.setMsgId("221ad02d-9532-4b71-bbb4-6eaa9039f861");
+        directExchangeProducer.sendOrderedMessageSync(mqMessage);
+        Thread.sleep(5);
         return MessageResult.success();
     }
 

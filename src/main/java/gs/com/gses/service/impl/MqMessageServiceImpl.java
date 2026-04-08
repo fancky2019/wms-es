@@ -21,6 +21,7 @@ import gs.com.gses.model.utility.RedisKeyConfigConst;
 import gs.com.gses.multipledatasource.DataSource;
 import gs.com.gses.multipledatasource.DataSourceType;
 import gs.com.gses.rabbitMQ.RabbitMQConfig;
+import gs.com.gses.rabbitMQ.producer.DirectExchangeProducer;
 import gs.com.gses.service.MqMessageService;
 import gs.com.gses.service.TruckOrderItemService;
 import gs.com.gses.service.TruckOrderService;
@@ -59,14 +60,13 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.PostConstruct;
+import javax.management.remote.rmi._RMIConnection_Stub;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -160,6 +160,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     private Executor executor;
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private DirectExchangeProducer directExchangeProducer;
 
 //    private final @Lazy IProductTestService productTestService;
 
@@ -546,6 +549,114 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         selfProxy.updateByMsgId(msgId, status);
     }
 
+    /**
+     * 要同步更新防止乱序
+     * @param msgId
+     * @param status
+     * @throws Exception
+     */
+    @Async("mqFailHandlerExecutor")
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateByMsgIdAsync(String msgId, int status) throws Exception {
+//        this.updateById(mqMessage);
+//        this.update(mqMessage, new LambdaUpdateWrapper<MqMessage>().eq(MqMessage::getId, mqMessage.getId()));
+        //getCurrentTransactionName() 当前事务的名字（默认是 null）
+        String currentTransactionName = TransactionSynchronizationManager.getCurrentTransactionName();
+//isActualTransactionActive() 最重要、最准：真正有无事务
+//        它代表：
+//        当前线程的底层数据库连接是否在事务模式中
+//        Spring 是否在此线程中开启了 beginTransaction
+//        回滚、提交是否会生效
+
+
+        //        true → 说明当前线程中存在一个活动的事务（Connection 被绑定到线程）
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+//        isSynchronizationActive() = 当前线程是否启用了 Spring 的事务同步机制（允许绑定资源和事务回调）。
+//        并不完全等于“是否有事务”，但通常和事务同时开启。
+        boolean isSynchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
+
+        Exception e = transactionTemplate.execute(transactionStatus -> {
+            try {
+                String currentTransactionName1 = TransactionSynchronizationManager.getCurrentTransactionName();
+//isActualTransactionActive() 最重要、最准：真正有无事务
+//        它代表：
+//        当前线程的底层数据库连接是否在事务模式中
+//        Spring 是否在此线程中开启了 beginTransaction
+//        回滚、提交是否会生效
+
+
+                //        true → 说明当前线程中存在一个活动的事务（Connection 被绑定到线程）
+                boolean isActualTransactionActive1 = TransactionSynchronizationManager.isActualTransactionActive();
+//        isSynchronizationActive() = 当前线程是否启用了 Spring 的事务同步机制（允许绑定资源和事务回调）。
+//        并不完全等于“是否有事务”，但通常和事务同时开启。
+                boolean isSynchronizationActive1 = TransactionSynchronizationManager.isSynchronizationActive();
+
+
+                String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + msgId;
+                //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+                RLock lock = redissonClient.getLock(lockKey);
+                boolean lockSuccessfully = false;
+                try {
+
+//            lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, RedisKey.INIT_INVENTORY_INFO_FROM_DB_LEASE_TIME, TimeUnit.SECONDS);
+                    //  return this.tryLock(waitTime, -1L, unit); 不指定释放时间，RedissonLock内部设置-1，
+                    lockSuccessfully = lock.tryLock(RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME, TimeUnit.SECONDS);
+                    if (!lockSuccessfully) {
+                        String msg = MessageFormat.format("Get lock {0} fail，wait time : {1} s", lockKey, RedisKey.INIT_INVENTORY_INFO_FROM_DB_WAIT_TIME);
+                        throw new Exception(msg);
+                    }
+                    log.info("updateByMsgId get lock {}", lockKey);
+                    LambdaQueryWrapper<MqMessage> queryWrapper = new LambdaQueryWrapper<>();
+                    queryWrapper.eq(MqMessage::getMsgId, msgId);
+                    List<MqMessage> mqMessageList = this.list(queryWrapper);
+                    MqMessage mqMessage = null;
+                    if (mqMessageList.size() > 0) {
+                        mqMessage = mqMessageList.get(0);
+                    }
+                    if (mqMessage == null) {
+                        throw new Exception("Can't get MqMessage by MsgId :" + msgId);
+                    }
+
+                    Integer oldVersion = mqMessage.getVersion();
+                    mqMessage.setVersion(mqMessage.getVersion() + 1);
+                    mqMessage.setStatus(status);
+//                    mqMessage.setModifyTime(LocalDateTime.now());
+                    LambdaUpdateWrapper<MqMessage> updateWrapper = new LambdaUpdateWrapper<MqMessage>();
+                    updateWrapper.eq(MqMessage::getVersion, oldVersion);
+                    updateWrapper.eq(MqMessage::getId, mqMessage.getId());
+                    boolean re = this.update(mqMessage, updateWrapper);
+                    if (!re) {
+                        String message = MessageFormat.format("MqMessage update fail :id - {0} ,version - {1}", mqMessage.getId(), oldVersion);
+                        throw new Exception(message);
+                    }
+                } catch (Exception ex) {
+                    log.error("", ex);
+                    throw ex;
+                } finally {
+                    //非事务操作在此释放
+//            if (lockSuccessfully && lock.isHeldByCurrentThread()) {
+//                lock.unlock();
+//            }
+                    redisUtil.releaseLockAfterTransaction(lock, lockSuccessfully);
+                }
+
+
+                return null;
+            } catch (Exception ex) {
+                log.info("updateByMsgId {} fail", msgId);
+                log.error("", ex);
+                // 如果操作失败，抛出异常，事务将回滚
+                transactionStatus.setRollbackOnly();
+                return ex;
+                //此处是定时任务 ，处理异常不抛出
+//                    transactionStatus.setRollbackOnly();
+//                    throw  e;
+            }
+        });
+    }
+
+
     @Override
     public PageData<MqMessageResponse> list(MqMessageRequest request) throws JsonProcessingException {
         // 设置时区为 GMT+8   UTC
@@ -832,27 +943,87 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
      * 待优化成redisson
      * @param mqMessageList
      */
-    private synchronized void publish(List<MqMessage> mqMessageList) {
-
+    private void publish(List<MqMessage> mqMessageList) {
         log.info("start executing publish");
+
+        String operationLockKey = RedisKeyConfigConst.MQ_PUBLISH;
+        //并发访问，加锁控制，此方法内没有事务操作。可以用try finally 释放资源 否则用 MqSendUtil releaseLock 方法
+        RLock lock = redissonClient.getLock(operationLockKey);
+        boolean lockSuccessfully = false;
         try {
-            for (MqMessage message : mqMessageList) {
-                MqMessage dbMessage = this.getById(message.getId());
-                //已发送了
-                if (!dbMessage.getStatus().equals(MqMessageStatus.NOT_PRODUCED.getValue())) {
-                    continue;
-                }
-                log.info("rePublish MqMessage id {} msgId {}", message.getId(), message.getMsgId());
-                mqSendUtil.send(message);
+
+            lockSuccessfully = lock.tryLock();
+            if (!lockSuccessfully) {
+                log.info("get lock {} fail", RedisKeyConfigConst.MQ_PUBLISH);
             }
-        } catch (Exception ex) {
-            log.error("", ex);
+
+//异步发送不保证顺序
+//        try {
+//            for (MqMessage message : mqMessageList) {
+//                MqMessage dbMessage = this.getById(message.getId());
+//                //已发送了
+//                if (!dbMessage.getStatus().equals(MqMessageStatus.NOT_PRODUCED.getValue())) {
+//                    continue;
+//                }
+//                log.info("rePublish MqMessage id {} msgId {}", message.getId(), message.getMsgId());
+//                mqSendUtil.send(message);
+//            }
+//        } catch (Exception ex) {
+//            log.error("", ex);
+//        }
+
+
+            // 根据 businessId 分组,组内有序，key顺序不定
+            //        Map<Long, List<MqMessage>> groupedMap = mqMessageList.stream()
+            //                .collect(Collectors.groupingBy(MqMessage::getBusinessId));
+                        // 注意：groupingBy 默认会保持每组内元素的相对顺序
+            // 因为使用的是 ArrayList，它会按遇到元素的顺序添加
+            Map<Long, List<MqMessage>> groupedMap = mqMessageList.stream()
+                    .collect(Collectors.groupingBy(
+                            MqMessage::getBusinessId,
+                            LinkedHashMap::new,
+                            Collectors.toList()  // ArrayList 保持添加顺序
+                    ));
+            for (Long businessId : groupedMap.keySet()) {
+                List<MqMessage> groupMessageList = groupedMap.get(businessId);
+                //保证有序使用同步发送，组之间不保证顺序
+                if (groupMessageList.size() > 1) {
+                    for (MqMessage message : groupMessageList) {
+                        boolean success = directExchangeProducer.sendOrderedMessageSync(message);
+                        log.info("Publish msg {} {}", message.getMsgId(), success ? "success" : "fail");
+                        //待优化成批量更新db
+                        try {
+                            if (success) {
+                                MqMessageService mqMessageService = applicationContext.getBean(MqMessageService.class);
+                                mqMessageService.updateByMsgId(message.getMsgId(), MqMessageStatus.PRODUCE.getValue());
+                                log.info("update msg {} produce", message.getMsgId());
+                            } else {
+                                MqMessageService mqMessageService = applicationContext.getBean(MqMessageService.class);
+                                mqMessageService.updateByMsgId(message.getMsgId(), MqMessageStatus.NOT_PRODUCED.getValue());
+                                log.info("update msg {} produce fail", message.getMsgId());
+                            }
+                        } catch (Exception ex) {
+                            //业务层会处理重复消费问题
+                            log.info("update msg {} status fail", message.getMsgId());
+                        }
+                    }
+                } else {
+                    directExchangeProducer.produceMqMessage(groupMessageList.get(0), null);
+                }
+            }
+
+
+        } catch (Exception e) {
+            // throw  e;
+            log.error("", e);
+        } finally {
+            redisUtil.releaseLock(lock, lockSuccessfully);
         }
     }
 
     /**
      * 处理消费失败
-     * 加了 @Async  和xxl-hob 的线程池 不在同一个线程，使用mqFailHandlerExecutor 线程池
+     * 加了 @Async  和xxl-job 的线程池 不在同一个线程，使用mqFailHandlerExecutor 线程池
      * @param mqMessageList
      * @throws Exception
      */
