@@ -38,29 +38,19 @@ import org.redisson.api.RedissonClient;
 import org.slf4j.MDC;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.aop.target.SingletonTargetSource;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import javax.annotation.PostConstruct;
-import javax.management.remote.rmi._RMIConnection_Stub;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -72,9 +62,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * <p>
+ *
+ *  jdk 的两层代理（嵌套代理、多重代理）：targetSource 是代理对象不是原始对象
+ * targetSource [SingletonTargetSource for target object [com.sun.proxy.$Proxy273@7d0e9905]];
+ * cglib 一层代理targetSource 是原始对象
+ *  targetSource [SingletonTargetSource for target object [gs.com.gses.service.impl.MqMessageServiceImpl$$EnhancerBySpringCGLIB$$946c1f18@7efbef50]];
+ *
+ * targetSource 里写的是什么，谁就是被外层代理包裹的对象。
+ * 写的是原始类 → 1层代理
+ * 写的是代理类 → 2层或更多层代理
+ *
+ *
+ *
+ *
+ *
+ *
  * 服务实现类
- * </p>
+ *
  *
  * @author author
  * @since 2023-11-15
@@ -83,6 +87,7 @@ import java.util.stream.Collectors;
 @Service
 
 //@Primary
+//其他service 默认cglib代理，此类使用jdk动态代理。代理套代理导致多重代理，事务失效
 @Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 强制TARGET_CLASS代理获取完整bean,或者jdk动态代理通过PostConstruct内获取完整bean
 //接口加   @Transactional(rollbackFor = Exception.class,
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
@@ -90,7 +95,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //    @Autowired
 //    private  DataSource dataSource;
 
-
+//  MqMessageService proxy = (MqMessageService) AopContext.currentProxy();
     /**
      *
      默认jdk 动态代理：
@@ -127,6 +132,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //
 //    @PostConstruct
 //    public void init() {
+    // 打印代理信息
+//    String proxyName = AopContext.currentProxy().getClass().getName();
 //        //事务生效可获取完整bean
 //        //生命周期顺序：实例化 → 依赖注入 → AOP代理完成 → @PostConstruct
 //        //在 Bean 初始化完成后获取完整的代理
