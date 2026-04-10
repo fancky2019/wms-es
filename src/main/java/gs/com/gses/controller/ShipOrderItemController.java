@@ -7,6 +7,7 @@ import gs.com.gses.model.response.PageData;
 import gs.com.gses.model.response.wms.ShipOrderItemResponse;
 import gs.com.gses.service.ShipOrderItemService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -33,5 +34,8 @@ public class ShipOrderItemController {
         return MessageResult.success();
     }
 
-
+    @GetMapping("/tranTest")
+    public void tranTest() {
+        shipOrderItemService.tranTest();
+    }
 }

@@ -31,6 +31,8 @@ import gs.com.gses.service.OutBoundOrderService;
 import gs.com.gses.service.WmsTaskService;
 import gs.com.gses.service.elasticsearch.ESDemoProductService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;

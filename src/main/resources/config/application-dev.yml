@@ -12,8 +12,8 @@ server:
 #开发配
 spring:
   #  #指定CGLIB代理
-  #  aop:
-  #    proxy-target-class: true
+#  aop:
+#    proxy-target-class: true
   #  mvc:
   #    pathmatch:
   #      matching-strategy: ant_path_matcher

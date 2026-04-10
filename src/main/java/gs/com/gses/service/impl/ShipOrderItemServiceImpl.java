@@ -36,6 +36,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
@@ -537,6 +538,13 @@ public class ShipOrderItemServiceImpl extends ServiceImpl<ShipOrderItemMapper, S
         } else {
             throw new Exception(" WmsApiException - " + wmsResponse.getExplain());
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void tranTest() {
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        int n = 0;
     }
 
     private void checkPackageQuantity(BigDecimal needQuantity, BigDecimal outQuantity) throws Exception {

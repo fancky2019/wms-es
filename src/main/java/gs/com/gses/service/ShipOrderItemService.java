@@ -30,5 +30,6 @@ public interface ShipOrderItemService extends IService<ShipOrderItem> {
 
     void outByAssignedInfo(OutByAssignedInfoBo requestList,String token) throws Exception;
 
+    void tranTest() ;
 
 }

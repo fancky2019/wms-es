@@ -83,7 +83,7 @@ import java.util.stream.Collectors;
 @Service
 
 //@Primary
-//@Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 强制TARGET_CLASS代理获取完整bean,或者jdk动态代理通过PostConstruct内获取完整bean
+@Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)  // 强制TARGET_CLASS代理获取完整bean,或者jdk动态代理通过PostConstruct内获取完整bean
 //接口加   @Transactional(rollbackFor = Exception.class,
 public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage> implements MqMessageService {
 
@@ -106,9 +106,9 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
      使用 @Lazy 后：aop 功能可能丢失
      真实对象 ← CGLIB代理（包含Advisors） ← Lazy代理（没有Advisors） ← Spring容器Bean
      */
-    @Autowired
-    @Lazy  // 防止循环依赖
-    private MqMessageService lazySelfProxy;
+//    @Autowired
+//    @Lazy  // 防止循环依赖
+//    private MqMessageService lazySelfProxy;
 
 //     通过setter方法注入，而不是字段注入
 //    @Autowired
@@ -118,29 +118,30 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
 //    }
 
     // 声明一个实例变量来持有完整的代理对象
-    private MqMessageService selfProxy;
-    @Autowired
-    private ObjectProvider<MqMessageService> serviceProvider;
-    //“代理套代理 + early reference”
-//容器中取的双重代理（双重代理）事务增强器没有：targetSource [SingletonTargetSource for target object [com.sun.proxy.$Proxy276]]
 
-    @PostConstruct
-    public void init() {
-        //事务生效可获取完整bean
-        //生命周期顺序：实例化 → 依赖注入 → AOP代理完成 → @PostConstruct
-        //在 Bean 初始化完成后获取完整的代理
-        //使用cglib 代理
-//        this.selfProxy = applicationContext.getBean(MqMessageService.class);
-        //使用cglib 代理
-        this.selfProxy = serviceProvider.getObject();
-        // 验证代理完整性
-        boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
-        boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
-        boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
-        log.info("Proxy info - AOP: {}, CGLIB: {}, JDK: {}", isAopProxy, isCglibProxy, isJdkProxy);
-//        BeanPostProcessor
-//        InitializingBean
-    }
+//    private MqMessageService selfProxy;
+//    @Autowired
+//    private ObjectProvider<MqMessageService> serviceProvider;
+//    //“代理套代理 + early reference”
+////容器中取的双重代理（双重代理）事务增强器没有：targetSource [SingletonTargetSource for target object [com.sun.proxy.$Proxy276]]
+//
+//    @PostConstruct
+//    public void init() {
+//        //事务生效可获取完整bean
+//        //生命周期顺序：实例化 → 依赖注入 → AOP代理完成 → @PostConstruct
+//        //在 Bean 初始化完成后获取完整的代理
+//        //使用cglib 代理
+////        this.selfProxy = applicationContext.getBean(MqMessageService.class);
+//        //使用cglib 代理
+//        this.selfProxy = serviceProvider.getObject();
+//        // 验证代理完整性
+//        boolean isAopProxy = AopUtils.isAopProxy(selfProxy);
+//        boolean isCglibProxy = AopUtils.isCglibProxy(selfProxy);
+//        boolean isJdkProxy = AopUtils.isJdkDynamicProxy(selfProxy);
+//        log.info("Proxy info - AOP: {}, CGLIB: {}, JDK: {}", isAopProxy, isCglibProxy, isJdkProxy);
+////        BeanPostProcessor
+////        InitializingBean
+//    }
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -337,6 +338,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(MqMessage mqMessage) throws Exception {
+        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
 
         String lockKey = RedisKey.UPDATE_MQ_MESSAGE_INFO + ":" + mqMessage.getId();
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
@@ -993,6 +995,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
                         log.info("Publish msg {} {}", message.getMsgId(), success ? "success" : "fail");
                         //待优化成批量更新db
                         try {
+                            MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
                             if (success) {
                                 selfProxy.updateByMsgId(message.getMsgId(), MqMessageStatus.PRODUCE.getValue());
                                 log.info("update msg {} produce", message.getMsgId());
@@ -1476,7 +1479,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         //使用jdk 动态代理，从容器中取得的bean事务不生效： Bean 可能还在创建过程中，获取到的是"提前暴露"的半成品代理
         //这个代理没有完整的 Advisor（增强器）信息，导致 @Transactional 注解不被识别
 //        selfProxy.TranMethod();
-        this.selfProxy.TranMethod();
+//        this.selfProxy.TranMethod();
         //使用lazySelfProxy 事务不生效
 //        this.lazySelfProxy.TranMethod();
 
