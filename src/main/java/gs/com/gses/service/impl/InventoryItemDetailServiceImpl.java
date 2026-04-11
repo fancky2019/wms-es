@@ -326,7 +326,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
             }
         } else {
             for (InventoryItemDetailResponse item : detailResponseList) {
-                if (item.getM_Str12() == null) {
+                if (StringUtils.isEmpty(item.getM_Str12())) {
                     exactlyMatchList.add(item);
                 } else {
                     otherList.add(item);
@@ -434,7 +434,13 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         List<String> barCodeList = new ArrayList<>();
         if (StringUtils.isNotEmpty(detail.getM_Str12())) {
             String[] deviceNoArray = detail.getM_Str12().split(",");
-            for (String deviceNo : deviceNoArray) {
+            //去重
+//            deviceNoArray = Arrays.stream(deviceNoArray).distinct().toArray(String[]::new);
+            // 去重（保持插入顺序）
+//            Set<String> set = new LinkedHashSet<>(Arrays.asList(deviceNoArray));
+            // 去重（顺序可能改变）
+            Set<String> deviceNoSet = new HashSet<>(Arrays.asList(deviceNoArray));
+            for (String deviceNo : deviceNoSet) {
                 //XM0801,DYH001,P0002043508
                 String barCode = "";
                 barCode = MessageFormat.format("{0},{1},{2}", detail.getM_Str7(), deviceNo, material.getXCode());
