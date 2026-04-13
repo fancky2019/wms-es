@@ -154,6 +154,31 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             truckOrderItemRequest.setUuid(UUID.randomUUID().toString().replaceAll("-", ""));
         }
         request.setAsync(true);
+
+
+        // 按 materialCode 分组
+        Map<String, List<TruckOrderItemRequest>> groupByMaterialCode = request.getTruckOrderItemRequestList().stream()
+                .collect(Collectors.groupingBy(
+                        item -> item.getMaterialCode() != null ? item.getMaterialCode() : "",
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        // 对每组内的列表按 deviceNo 是否为空排序
+        List<TruckOrderItemRequest> sortedTruckOrderItemRequests = new ArrayList<>();
+        for (Map.Entry<String, List<TruckOrderItemRequest>> entry : groupByMaterialCode.entrySet()) {
+            List<TruckOrderItemRequest> sortedList = entry.getValue().stream()
+//            Comparator.comparing 默认升序排序时，false 排在前面，true 排在后面。
+//            Boolean 类内 compareTo 方法
+                    //布尔值比较时，false 被视为 -1，true 被视为 1，所以升序排序时 false（不为空）会排在 true（为空）前面。
+                    .sorted(Comparator.comparing(
+                            (TruckOrderItemRequest item) -> StringUtils.isEmpty(item.getDeviceNo())
+                    ))
+                    .collect(Collectors.toList());
+            sortedTruckOrderItemRequests.addAll(sortedList);
+        }
+        request.setTruckOrderItemRequestList(sortedTruckOrderItemRequests);
+
         if (request.getAsync()) {
             addTruckOrderAndItemAsync(request, token);
             return;
@@ -220,8 +245,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 //            for (TruckOrderItemRequest itemRequest : request.getTruckOrderItemRequestList()) {
 //                List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
 //                List<AllocateModel> allocateModelList = new ArrayList<>();
-//                Boolean result = truckOrderItemService.checkAvailable(itemRequest, matchedShipOrderItemResponseList, allocateModelList);
-//                if (!result) {
+//                Boolean truckOrderItemRequests = truckOrderItemService.checkAvailable(itemRequest, matchedShipOrderItemResponseList, allocateModelList);
+//                if (!truckOrderItemRequests) {
 //                    String str = MessageFormat.format("CheckFail : 项目号 - {0} 设备号 - {1} 物料 - {2} 校验失败.", itemRequest.getProjectNo(), itemRequest.getDeviceNo(), itemRequest.getMaterialCode());
 //                    throw new Exception(str);
 //                }

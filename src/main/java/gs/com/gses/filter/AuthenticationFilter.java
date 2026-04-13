@@ -69,6 +69,14 @@ public class AuthenticationFilter implements Filter {
 //        // /api/auth/getCurrentUser
 //        String servletPath = request.getServletPath();
 
+
+//        if(true)
+//        {
+//            chain.doFilter(request, response);
+//            return;
+//        }
+
+
         // 获取客户端IP地址
         String clientIp = getClientIpAddress(httpServletRequest);
         log.info("Request from IP: {}, URI: {}", clientIp, requestURI);
