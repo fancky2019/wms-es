@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.wms.ApplyReceiptOrderMapper">
+<mapper namespace="com.gs.gses.mapper.wms.ApplyReceiptOrderMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.ApplyReceiptOrder">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.ApplyReceiptOrder">
             <id property="id" column="Id" jdbcType="BIGINT"/>
             <result property="XCode" column="XCode" jdbcType="VARCHAR"/>
             <result property="XStatus" column="XStatus" jdbcType="INTEGER"/>

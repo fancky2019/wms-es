@@ -51,9 +51,9 @@
             <DefaultRolloverStrategy max="20"/>
         </RollingFile>
 
-        <Async name="AsyncMail">
-            <appender-ref ref="Mail"/>
-        </Async>
+<!--        <Async name="AsyncMail">-->
+<!--            <appender-ref ref="Mail"/>-->
+<!--        </Async>-->
     </appenders>
 
     <loggers>

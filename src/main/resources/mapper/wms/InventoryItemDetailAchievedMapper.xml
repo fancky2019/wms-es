@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.wms.InventoryItemDetailAchievedMapper">
+<mapper namespace="com.gs.gses.mapper.wms.InventoryItemDetailAchievedMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.InventoryItemDetailAchieved">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.InventoryItemDetailAchieved">
             <id property="id" column="Id" jdbcType="BIGINT"/>
             <result property="inventoryItemId" column="InventoryItemId" jdbcType="BIGINT"/>
             <result property="carton" column="Carton" jdbcType="VARCHAR"/>

@@ -1,0 +1,83 @@
+package com.gs.gses.service.api;
+
+import com.gs.gses.model.entity.ShipOrder;
+import com.gs.gses.model.request.wms.ShipOrderPalletRequest;
+import com.gs.gses.model.request.wms.UpdateWmsTaskStatusRequest;
+import com.gs.gses.model.response.wms.WmsResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigInteger;
+import java.util.List;
+
+
+/**
+ * Feign 集成了hystrix ，若调试最好在配置文件
+ * feign:
+ * hystrix:
+ * enabled: false
+ * <p>
+ * 以便将原始的异常信息抛出
+ *
+ *
+ *
+ *
+ */
+
+//1、引入依赖
+//注意springboot和springcloud的版本对应：https://spring.io/projects/spring-cloud
+//<!--  FeignClient：注意版本号和其他版本一致-->
+//<dependency>
+//<groupId>org.springframework.cloud</groupId>
+//<!--注意此处的依赖是SpringBoot2.0以后专用的，如果您使用的SpringBoot版本低于2.0请使用spring-cloud-starter-feign-->
+//<artifactId>spring-cloud-starter-openfeign</artifactId>
+//<version>2.1.0.RELEASE</version>
+//</dependency>
+//2、启动类@EnableFeignClients//启用feign。微服务之间调用,服务发现
+//不能识别服务中有没有请求的路径方法。
+
+
+@FeignClient(name = "WmsService", url = "${sbp.wmsurl}")
+//@FeignClient(name = "WmsService", url = "${sbp.wmsurl}", fallbackFactory = WmsServiceFallbackFactory.class)
+//@FeignClient(value = "single-provider")//注册中心的服务名称
+public interface WmsService {
+
+
+    /**   var token = context.HttpContext.Request.Headers.Authorization;
+     token：要看header 里取的名字什么。token 还是 Authorization
+     String re = wmsService.completeShipOrder(shipOrderId,token);
+     */
+    @PostMapping("ShipOrder/CompleteShipOrder/{shipOrderId}")
+    String completeShipOrder(@PathVariable("shipOrderId") BigInteger shipOrderId, @RequestHeader("Authorization") String token);
+
+    @GetMapping("ShipOrder/Test")
+    String shipOrderTest(@RequestParam("test") String test);
+
+//    参数设计：
+//    保持GET参数对象简单（不超过10个字段）
+//    复杂查询考虑改用POST请求
+// 敏感数据不要放在URL参数中
+
+    @GetMapping("/ShipOrder/CheckRelation")
+    boolean checkRelation(@SpringQueryMap ShipOrder query, @RequestHeader("Authorization") String token);
+
+    //    String getUser(@RequestParam("name") String name);
+
+    /**
+     * 参数前要加 @RequestParam 或post @RequestBody
+     *
+     * RequestTemplate template
+     *   template.header("Authorization", "Bearer " + tokenService.getServiceToken());
+     * @param
+     * @return
+     */
+    @PostMapping("/ShipOrder/SubAssignPalletsByShipOrderBatch")
+    WmsResponse subAssignPalletsByShipOrderBatch(@RequestBody List<ShipOrderPalletRequest> dtoList, @RequestHeader("Authorization") String token) throws Exception;
+
+
+    @PostMapping("/WmsTask/CompleteOffline")
+    WmsResponse CompleteOffline(@RequestBody UpdateWmsTaskStatusRequest request, @RequestHeader("Authorization") String token) throws Throwable;
+
+
+}

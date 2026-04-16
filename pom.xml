@@ -565,7 +565,7 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <!--                    JAR文件缺少主清单属性解决方法-->
-                    <mainClass>gs.com.gses.WmsEsApplication</mainClass>
+                    <mainClass>com.gs.gses.WmsEsApplication</mainClass>
                     <!--                    不打包-->
                     <!--                    <skip>true</skip>-->
                 </configuration>
@@ -607,7 +607,7 @@
     <!--                            </filters>-->
     <!--                            <transformers>-->
     <!--                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">-->
-    <!--                                    <mainClass>gs.com.gses.WmsEsApplication</mainClass>-->
+    <!--                                    <mainClass>com.com.gses.WmsEsApplication</mainClass>-->
     <!--                                </transformer>-->
     <!--                            </transformers>-->
     <!--                        </configuration>-->

@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.wms.ShipPickOrderMapper">
+<mapper namespace="com.gs.gses.mapper.wms.ShipPickOrderMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.ShipPickOrder">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.ShipPickOrder">
             <id property="id" column="Id" jdbcType="BIGINT"/>
             <result property="warehouseId" column="WarehouseId" jdbcType="BIGINT"/>
             <result property="shipOrderId" column="ShipOrderId" jdbcType="BIGINT"/>

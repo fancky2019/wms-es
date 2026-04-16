@@ -1,0 +1,35 @@
+package com.gs.gses.service;
+
+import com.gs.gses.model.bo.wms.OutByAssignedInfoBo;
+import com.gs.gses.model.entity.ShipOrderItem;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.gs.gses.model.request.wms.ShipOrderItemRequest;
+import com.gs.gses.model.response.PageData;
+import com.gs.gses.model.response.wms.ShipOrderItemResponse;
+
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * @author lirui
+ * @description 针对表【ShipOrderItem】的数据库操作Service
+ * @createDate 2024-08-11 10:23:06
+ */
+public interface ShipOrderItemService extends IService<ShipOrderItem> {
+    List<ShipOrderItem> getByShipOrderIds(List<Long> shipOrderIdList);
+
+    Boolean checkItemExist(ShipOrderItemRequest request, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
+
+    Boolean checkItemExistBatch(List<ShipOrderItemRequest> requestList, List<ShipOrderItemResponse> matchedShipOrderItemResponseList) throws Exception;
+
+    PageData<ShipOrderItemResponse> getShipOrderItemPage(ShipOrderItemRequest request) throws Exception;
+
+    HashMap<Long, Long> copyShipOrderItem(long shipOrderId, long cloneShipOrderId) throws Exception;
+
+    List<Long> nextId(List<Long> idList) throws Exception;
+
+    void outByAssignedInfo(OutByAssignedInfoBo requestList,String token) throws Exception;
+
+    void tranTest() ;
+
+}

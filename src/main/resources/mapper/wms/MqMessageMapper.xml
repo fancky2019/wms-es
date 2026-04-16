@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.wms.MqMessageMapper">
+<mapper namespace="com.gs.gses.mapper.wms.MqMessageMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.MqMessage">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.MqMessage">
             <id property="id" column="Id" jdbcType="BIGINT"/>
             <result property="msgId" column="MsgId" jdbcType="VARCHAR"/>
             <result property="msgContent" column="MsgContent" jdbcType="VARCHAR"/>

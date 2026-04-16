@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.erp.ErpWorkOrderInfoViewMapper">
+<mapper namespace="com.gs.gses.mapper.erp.ErpWorkOrderInfoViewMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.erp.ErpWorkOrderInfoView">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.erp.ErpWorkOrderInfoView">
         <result property="workOrderCode" column="工单号" jdbcType="VARCHAR"/>
         <result property="materialCode" column="料号" jdbcType="VARCHAR"/>
         <result property="requiredQuantity" column="需求数量" jdbcType="DECIMAL"/>

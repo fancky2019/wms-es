@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.wms.MaterialMapper">
+<mapper namespace="com.gs.gses.mapper.wms.MaterialMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.Material">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.Material">
             <id property="id" column="Id" jdbcType="BIGINT"/>
             <result property="XCode" column="XCode" jdbcType="VARCHAR"/>
             <result property="XName" column="XName" jdbcType="VARCHAR"/>

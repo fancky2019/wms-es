@@ -1,0 +1,59 @@
+package com.gs.gses.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.gs.gses.model.entity.MqMessage;
+import com.gs.gses.model.entity.TruckOrder;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.gs.gses.model.enums.EnumClass;
+import com.gs.gses.model.request.wms.AddTruckOrderRequest;
+import com.gs.gses.model.request.wms.TruckOrderRequest;
+import com.gs.gses.model.response.PageData;
+import com.gs.gses.model.response.wms.TruckOrderResponse;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletResponse;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @author lirui
+ * @description 针对表【TruckOrder】的数据库操作Service
+ * @createDate 2025-05-28 13:18:54
+ */
+public interface TruckOrderService extends IService<TruckOrder> {
+    void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable;
+
+    void addTruckOrderAndItemAsync(AddTruckOrderRequest request, String token) throws Throwable;
+
+    void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable;
+
+    void updateTruckOrder(MultipartFile[] files, TruckOrderRequest request) throws Exception;
+
+    void expungeStaleAttachment(long id) throws Exception;
+
+    TruckOrder add(TruckOrderRequest truckOrderRequest);
+
+    PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request);
+
+    void trunkOrderMq(Integer id) throws Exception;
+
+    void exportTrunkOrderExcel(Long id, HttpServletResponse httpServletResponse) throws Exception;
+
+
+    Boolean deleteByIds(List<Long> idList) throws Exception;
+
+    void synchronizeStatus(MqMessage message) throws Exception;
+
+    void updateTruckOrder(TruckOrder truckOrder) throws Exception;
+
+
+    void printTest() throws JsonProcessingException;
+
+
+    Map<Integer, String> getStatusEnum();
+
+    List<EnumClass> getTruckOrderStausEnumClass();
+
+
+    void publishTraceId();
+}

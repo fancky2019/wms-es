@@ -1,0 +1,47 @@
+package com.gs.gses.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gs.gses.model.request.authority.LoginRequest;
+import com.gs.gses.model.request.authority.LoginUserTokenDto;
+import com.gs.gses.model.response.MessageResult;
+import com.gs.gses.service.WmsAuthorityService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/authority")
+public class AuthorityController {
+
+//    @Autowired
+//    private WmsService wmsService;
+
+    @Autowired
+    private WmsAuthorityService wmsAuthorityService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+
+    /**
+     *测试权限校验@ignore
+     * @param id
+     * @param token
+     * @return
+     * @throws InterruptedException
+     */
+    @GetMapping("/checkPermissionRet/{id}")
+    public MessageResult<LoginUserTokenDto> checkPermissionRet(@PathVariable Long id, @RequestHeader("Authorization") String token) throws InterruptedException {
+        return MessageResult.success(wmsAuthorityService.wmsUserInfo(token));
+    }
+
+    /**
+     *
+     * @param request
+     * @return
+     * @throws InterruptedException
+     */
+    @GetMapping("/login")
+    public MessageResult<LoginUserTokenDto> login(@RequestBody LoginRequest request) throws Exception {
+        return MessageResult.success(wmsAuthorityService.login(request));
+    }
+}

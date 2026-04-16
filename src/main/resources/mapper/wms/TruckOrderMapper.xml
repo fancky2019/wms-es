@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.wms.TruckOrderMapper">
+<mapper namespace="com.gs.gses.mapper.wms.TruckOrderMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.TruckOrder">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.TruckOrder">
             <id property="id" column="Id" jdbcType="BIGINT"/>
             <result property="truckOrderCode" column="TruckOrderCode" jdbcType="VARCHAR"/>
             <result property="senderAddress" column="SenderAddress" jdbcType="VARCHAR"/>

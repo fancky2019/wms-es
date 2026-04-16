@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="gs.com.gses.mapper.wms.ApplyShipOrderArchievedMapper">
+<mapper namespace="com.gs.gses.mapper.wms.ApplyShipOrderArchievedMapper">
 
-    <resultMap id="BaseResultMap" type="gs.com.gses.model.entity.ApplyShipOrderArchieved">
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.ApplyShipOrderArchieved">
             <id property="id" column="Id" jdbcType="BIGINT"/>
             <result property="creatorId" column="CreatorId" jdbcType="OTHER"/>
             <result property="creatorName" column="CreatorName" jdbcType="VARCHAR"/>

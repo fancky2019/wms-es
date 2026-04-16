@@ -1,0 +1,138 @@
+package com.gs.gses.model.entity;
+
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 
+ * @TableName TruckOrder
+ */
+@TableName(value ="TruckOrder")
+@Data
+public class TruckOrder implements Serializable {
+    /**
+     * 
+     */
+    @TableId(value = "Id", type = IdType.AUTO)
+    private Long id;
+
+    /**
+     * 
+     */
+    @TableField(value = "TruckOrderCode")
+    private String truckOrderCode;
+
+    /**
+     * 
+     */
+    @TableField(value = "SenderAddress")
+    private String senderAddress;
+
+    /**
+     * 
+     */
+    @TableField(value = "ReceiverAddress")
+    private String receiverAddress;
+
+    /**
+     * 
+     */
+    @TableField(value = "SenderPhone")
+    private String senderPhone;
+
+    /**
+     * 
+     */
+    @TableField(value = "ReceiverPhone")
+    private String receiverPhone;
+
+    /**
+     * 
+     */
+    @TableField(value = "SendTime")
+    private LocalDateTime sendTime;
+
+    /**
+     * 
+     */
+    @TableField(value = "TrunkType")
+    private String trunkType;
+
+    /**
+     * 
+     */
+    @TableField(value = "DriverPhone")
+    private String driverPhone;
+
+    /**
+     * 
+     */
+    @TableField(value = "TrunkNo")
+    private String trunkNo;
+    /**
+     *
+     */
+    @TableField(value = "FilePath")
+    private String filePath;
+    /**
+     * 
+     */
+    @TableField(value = "Deleted")
+    private Integer deleted;
+    /**
+     *    NOT_DEBITED(0, "新建"),
+     *     DEBITING(1, "扣账中"),
+     *     DEBITED(2, "扣账完成"),
+     *     DEBIT_FAIL(3, "扣账失败");
+     */
+    @TableField(value = "Status")
+    private Integer status;
+    /**
+     * 
+     */
+    @TableField(value = "Version")
+    private Integer version;
+
+    /**
+     * 
+     */
+    @TableField(value = "CreatorId")
+    private String creatorId;
+
+    /**
+     * 
+     */
+    @TableField(value = "CreatorName")
+    private String creatorName;
+
+    /**
+     * 
+     */
+    @TableField(value = "LastModifierId")
+    private String lastModifierId;
+
+    /**
+     * 
+     */
+    @TableField(value = "LastModifierName")
+    private String lastModifierName;
+
+    /**
+     * 代码赋值，没有走MetaObjectHandlerImp
+     */
+//    @TableField(value = "CreationTime")
+    @TableField(value = "CreationTime",fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime creationTime;
+
+    /**
+     * 代码赋值，没有走MetaObjectHandlerImp
+     */
+    @TableField(value = "LastModificationTime")
+    private LocalDateTime lastModificationTime;
+
+    @TableField(exist = false)
+    private static final long serialVersionUID = 1L;
+}
