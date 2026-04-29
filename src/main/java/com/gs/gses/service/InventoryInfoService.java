@@ -22,7 +22,7 @@ public interface InventoryInfoService {
 
     boolean checkDetailExistEs(List<InventoryItemDetailRequest> requestList) throws Exception;
 
-    void initInventoryInfoFromDb() throws Exception;
+    void initInventoryInfoFromDb(int flag) throws Exception;
 
     HashMap<Long, List<InventoryInfo>> getDefaultAllocatedInventoryInfoList(InventoryInfoRequest request) throws Exception;
 

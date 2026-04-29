@@ -30,9 +30,9 @@ public class InventoryController {
      */
     @DuplicateSubmission(timeOut = 5 * 60)
     @GetMapping("/initInventoryInfoFromDb")
-    public MessageResult<Void> initInventoryInfoFromDb() throws Exception {
+    public MessageResult<Void> initInventoryInfoFromDb(@RequestParam(defaultValue = "0") int flag) throws Exception {
 //        Thread.sleep(10000);
-        inventoryInfoService.initInventoryInfoFromDb();
+        inventoryInfoService.initInventoryInfoFromDb(flag);
         return MessageResult.success();
     }
 

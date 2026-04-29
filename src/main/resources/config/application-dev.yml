@@ -300,6 +300,7 @@ sbp:
   checkpermission: true
   initCache: false
   logMq: false
+  flag: 1
   #  enableCopyShipOrder: false
   flink:
     enable: false
@@ -376,6 +377,7 @@ logging:
 
 #注意密码过期，用户组了设置
 ftp:
+  enable: true
   host: 10.100.202.113
   port: 21
   username: fancky1

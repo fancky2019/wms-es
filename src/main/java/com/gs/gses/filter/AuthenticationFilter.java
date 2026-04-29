@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -43,6 +44,8 @@ public class AuthenticationFilter implements Filter {
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Value("${sbp.enable:false}")
+    private boolean enable;
     @Autowired
     private BasicInfoCacheService basicInfoCacheService;
 
@@ -82,6 +85,12 @@ public class AuthenticationFilter implements Filter {
             chain.doFilter(request, response);
             return;
         }
+
+//        if (!enable && !basicInfoCacheService.getSbpEnable()) {
+//            log.info("Unenable");
+//            return;
+//        }
+
         // 放行 Swagger 相关路径,不校验
         if (requestURI.contains("/swagger-ui") ||
                 requestURI.contains("/v3/api-docs") ||
@@ -96,9 +105,9 @@ public class AuthenticationFilter implements Filter {
 //            return;
             String key = BLACKLIST_PREFIX + clientIp;
             Object object = this.basicInfoCacheService.getStringKey(key);
-            String msg="blacklist";
+            String msg = "blacklist";
             if (object != null) {
-                log.info("sseConnect reject {}",clientIp);
+                log.info("sseConnect reject {}", clientIp);
                 try {
                     messageResult.setMessage(msg);
                     messageResult.setCode(httpServletResponse.getStatus());
@@ -130,7 +139,7 @@ public class AuthenticationFilter implements Filter {
             stopWatch.start("checkPermissionRet");
             WmsResponse dto = authorityService.checkPermissionRet(checkPermissionRequest, token);
             stopWatch.stop();
-            log.trace("checkPermissionRetCostTime {} ms  WmsResponse {}",stopWatch.getTotalTimeMillis(), dto);
+            log.trace("checkPermissionRetCostTime {} ms  WmsResponse {}", stopWatch.getTotalTimeMillis(), dto);
             if (dto.getResult()) {
                 log.info("Complete checkPermission success");
                 Map<String, String> userInfoMap = (Map) dto.getData();
@@ -141,7 +150,7 @@ public class AuthenticationFilter implements Filter {
 //            LoginUserTokenDto pojoJacksonPojo = objectMapper.readValue(jsonStr, LoginUserTokenDto.class);
                 UserInfoHolder.setUser(userInfo);
                 UserInfoHolder.setUser(userInfo.getId(), userInfo);
-                log.info("UserInfoHolder set complete {} {}",userInfo.getId(),userInfo.getAccountName());
+                log.info("UserInfoHolder set complete {} {}", userInfo.getId(), userInfo.getAccountName());
 
                 if (requestURI.contains("/sseConnect") && SseEmitterServiceImpl.sseCache.containsKey(userInfo.getId())) {
                     String msg = MessageFormat.format("userInfo {0} has been connected", userInfo.getId());
@@ -197,8 +206,8 @@ public class AuthenticationFilter implements Filter {
     private void rejectClient(HttpServletRequest httpServletRequest) {
         String clientIp = getClientIpAddress(httpServletRequest);
         String key = BLACKLIST_PREFIX + clientIp;
-        log.info("add blacklist {}",clientIp);
-        this.basicInfoCacheService.setKeyValExpire(key, 1, 60*3, TimeUnit.SECONDS);
+        log.info("add blacklist {}", clientIp);
+        this.basicInfoCacheService.setKeyValExpire(key, 1, 60 * 3, TimeUnit.SECONDS);
     }
 
     private void authenticationFail(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, MessageResult<Void> messageResult, String msg) throws Exception {

@@ -7,6 +7,7 @@ import com.gs.gses.sse.ISseEmitterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +27,9 @@ public class ScheduledTasks {
 
     @Autowired
     private ISseEmitterService sseEmitterService;
+
+    @Value("${sbp.flag:1}")
+    private Integer flag;
 
 //    private final  MqMessageService mqMessageService;
 //
@@ -54,8 +58,8 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0 3 * * ?")
     public void initInventoryInfoFromDb() throws InterruptedException {
         try {
-            log.info("ScheduledTasks initInventoryInfoFromDb");
-            inventoryInfoService.initInventoryInfoFromDb();
+            log.info("ScheduledTasks initInventoryInfoFromDb {}",flag);
+            inventoryInfoService.initInventoryInfoFromDb(flag);
         } catch (Exception ex) {
             log.error("", ex);
         }

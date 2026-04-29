@@ -9,6 +9,7 @@ import org.apache.commons.net.ftp.FTPReply;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,11 +44,14 @@ public class FtpServiceImpl implements FtpService {
     @Autowired
     private RedissonClient redissonClient;
 
-//    @Value("${ftp.base-path}")
-//    private String basePath;
+    @Value("${ftp.enable:true}")
+    private Boolean ftpEnable;
 
     @PostConstruct
     public void init() {
+        if (!ftpEnable) {
+            return;
+        }
         ftpClient = new FTPClient();
         ftpClient.setControlEncoding("GBK");
         //windows
@@ -132,7 +136,7 @@ public class FtpServiceImpl implements FtpService {
 
         } catch (IOException e) {
             disconnectQuietly(ftpClient);
-            throw new IOException("FTP连接失败: " + e.getMessage()+ "，响应信息: " + ftpClient.getReplyString(), e);
+            throw new IOException("FTP连接失败: " + e.getMessage() + "，响应信息: " + ftpClient.getReplyString(), e);
         }
     }
 
@@ -305,8 +309,7 @@ public class FtpServiceImpl implements FtpService {
                     log.error("创建目录失败: {}", currentPath);
                     log.error("FTP响应码: {}, 响应信息: {}", replyCode, replyString);
 
-                    throw new IOException("Could not create directory: " + currentPath +
-                            ", Reply: " + replyCode + " - " + replyString);
+                    throw new IOException("Could not create directory: " + currentPath + ", Reply: " + replyCode + " - " + replyString);
                 }
             }
         }
@@ -496,8 +499,7 @@ public class FtpServiceImpl implements FtpService {
 
         } catch (Exception e) {
             log.error("下载文件失败: {}", filePath, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(("下载失败: " + e.getMessage()).getBytes());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(("下载失败: " + e.getMessage()).getBytes());
         }
     }
 
@@ -513,11 +515,7 @@ public class FtpServiceImpl implements FtpService {
             String contentType = getContentType(filePath);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(contentType));
-            headers.setContentDisposition(
-                    ContentDisposition.inline()
-                            .filename(filePath.substring(filePath.lastIndexOf("/") + 1), StandardCharsets.UTF_8)
-                            .build()
-            );
+            headers.setContentDisposition(ContentDisposition.inline().filename(filePath.substring(filePath.lastIndexOf("/") + 1), StandardCharsets.UTF_8).build());
 
             return new ResponseEntity<>(fileData, headers, HttpStatus.OK);
 
@@ -532,12 +530,10 @@ public class FtpServiceImpl implements FtpService {
     private String createContentDispositionHeader(String fileName) {
         try {
             // URL编码文件名
-            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name())
-                    .replaceAll("\\+", "%20");
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20");
 
             // 兼容格式：同时提供filename和filename*
-            return String.format("attachment; filename=\"%s\"; filename*=UTF-8''%s",
-                    getSafeFileName(fileName), // 用于旧浏览器
+            return String.format("attachment; filename=\"%s\"; filename*=UTF-8''%s", getSafeFileName(fileName), // 用于旧浏览器
                     encodedFileName);          // 用于新浏览器
         } catch (Exception e) {
             return "attachment; filename=\"download.xlsx\"";
@@ -572,15 +568,12 @@ public class FtpServiceImpl implements FtpService {
             }
 
             // 设置响应头
-            String fileName = fileInfo.getName() != null ? fileInfo.getName() :
-                    filePath.substring(filePath.lastIndexOf("/") + 1);
+            String fileName = fileInfo.getName() != null ? fileInfo.getName() : filePath.substring(filePath.lastIndexOf("/") + 1);
 
-            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.toString())
-                    .replaceAll("\\+", "%20");
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.toString()).replaceAll("\\+", "%20");
 
             response.setContentType("application/octet-stream");
-            response.setHeader("Content-Disposition",
-                    "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName);
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName);
             response.setContentLengthLong(fileInfo.getSize());
 
 //            byte[] fileData = downloadFile(filePath);
@@ -638,10 +631,7 @@ public class FtpServiceImpl implements FtpService {
         }
 
         // 处理Windows和Linux路径分隔符
-        int lastSlashIndex = Math.max(
-                filePath.lastIndexOf("/"),
-                filePath.lastIndexOf("\\")
-        );
+        int lastSlashIndex = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
 
         if (lastSlashIndex >= 0 && lastSlashIndex < filePath.length() - 1) {
             return filePath.substring(lastSlashIndex + 1);
@@ -684,8 +674,7 @@ public class FtpServiceImpl implements FtpService {
     private String encodeFileName(String fileName) {
         try {
             // 对文件名进行URL编码
-            String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name())
-                    .replaceAll("\\+", "%20");
+            String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20");
 
             // 返回兼容格式：UTF-8编码的文件名，用双引号包裹
             return "UTF-8''" + encoded;

@@ -178,7 +178,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
     @Override
-    public void initInventoryInfoFromDb() throws Exception {
+    public void initInventoryInfoFromDb(int flag) throws Exception {
         log.info("initInventoryInfoFromDb");
         String lockKey = RedisKey.UPDATE_INVENTORY_INFO;// "redisson:updateInventoryInfo:" + id;
         //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
@@ -208,6 +208,9 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             // 删除索引
             if (indexOperations.exists()) {
                 indexOperations.delete();
+                if (flag == 0) {
+                    return;
+                }
             }
             log.info("createIndexAndMapping");
             createIndexAndMapping(InventoryInfo.class);
@@ -771,6 +774,12 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
     @Override
     public PageData<InventoryInfo> getInventoryInfoPage(InventoryInfoRequest request) throws Exception {
         log.info("getInventoryInfoPage - {}", objectMapper.writeValueAsString(request));
+
+        IndexOperations indexOperations = elasticsearchRestTemplate.indexOps(InventoryInfo.class);
+        // 删除索引
+        if (!indexOperations.exists()) {
+            return PageData.getDefault();
+        }
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
 
         // 对应 MyBatis Plus 中的：wrapper.and(qw -> { for(...) { qw.or(...) } })
