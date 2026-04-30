@@ -51,14 +51,11 @@ public class ScheduledTasks {
 //        System.out.println("固定延迟任务 - " + System.currentTimeMillis());
 //    }
 
-    /**
-     * 三点
-     * @throws InterruptedException
-     */
+
     @Scheduled(cron = "0 0 3 * * ?")
-    public void initInventoryInfoFromDb() throws InterruptedException {
+    public void initInventoryInfoFromDb() {
         try {
-            log.info("ScheduledTasks initInventoryInfoFromDb {}",flag);
+            log.info("ScheduledTasks initInventoryInfoFromDb {}", flag);
             inventoryInfoService.initInventoryInfoFromDb(flag);
         } catch (Exception ex) {
             log.error("", ex);
@@ -68,10 +65,10 @@ public class ScheduledTasks {
 
     /**
      * 两点
-     * @throws InterruptedException
+     *
      */
     @Scheduled(cron = "0 0 2 * * ?")
-    public void initBasicInfoCache() throws InterruptedException {
+    public void initBasicInfoCache() {
         try {
             log.info("ScheduledTasks initBasicInfoCache");
             basicInfoCacheService.initBasicInfoCache();
@@ -88,11 +85,11 @@ public class ScheduledTasks {
 
     /**
      * 5分钟一次
-     * @throws Exception
+     *
      */
     @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
 //    @Scheduled(cron = "0 */1 * * * ?") //1min 一次
-    public void mqOperation() throws Exception {
+    public void mqOperation() {
 
         try {
 
@@ -116,7 +113,7 @@ public class ScheduledTasks {
      */
     @Scheduled(cron = "*/10 * * * * ?")  //10s 一次
 //    @Scheduled(cron = "0 */5 * * * ?") //5min 一次
-    public void mysqlAsyncTran() throws Exception {
+    public void mysqlAsyncTran() {
 
         try {
 

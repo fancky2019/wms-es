@@ -48,6 +48,9 @@ import java.util.function.Consumer;
  * StreamingResponseBody：适用于流式传输二进制数据，如大文件下载。
  *
  * 访问 http://localhost:8081/sbp/user
+ *
+ *
+ * 使用此实现
  */
 @Slf4j
 @Service
@@ -200,7 +203,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
             return true;
         } catch (IOException e) {
             // 心跳发送失败，说明连接可能已经断开，移除该连接
-            log.error("sendHeartbeatFail，将移除连接：userId={}, 原因：{}", userId, e.getMessage());
+            log.error("sendHeartbeatFail，remove connection：userId={}, Cause：{}", userId, e.getMessage());
             removeUser(userId);
             return false;
         }
@@ -225,7 +228,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      **/
     private void sendMsgToClientByUserId(String userId, String eventName, String msg, SseEmitter sseEmitter) {
         if (sseEmitter == null) {
-            log.error("[sendMsgToClientByUserId]: 推送消息失败：客户端{}未创建长链接,失败消息:{}", userId, msg);
+            log.error("sendMsgToClientByUserId: push fail：client - {} disconnect, cause:{}", userId, msg);
             return;
         }
 
@@ -240,7 +243,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
             sseEmitter.send(sendData);
         } catch (IOException e) {
             // 推送消息失败，记录错误日志，进行重推
-            log.warn("[sendMsgToClientByUserId]: 推送消息失败：{},尝试进行重推", msg);
+            log.error("sendMsgToClientByUserId: push fail：{}", msg);
             removeUser(userId);
 
             // 出现异常时结束响应并传递错误信息
@@ -258,7 +261,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      **/
     private Runnable completionCallBack(String userId) {
         return () -> {
-            log.info("结束连接：{}", userId);
+            log.info("Disconnect：client {}", userId);
             removeUser(userId);
         };
     }
@@ -278,7 +281,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      **/
     private Runnable timeoutCallBack(String userId) {
         return () -> {
-            log.info("连接超时：{}", userId);
+            log.info("Connect timeout：{}", userId);
             removeUser(userId);
         };
     }
@@ -293,7 +296,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      **/
     private Consumer<Throwable> errorCallBack(String userId) {
         return throwable -> {
-            log.error("SseEmitterServiceImpl[errorCallBack]：连接异常,客户端ID:{}", userId);
+            log.error("SseEmitterServiceImpl[errorCallBack]：Connection error,client:{}", userId);
             removeUser(userId);
         };
     }
@@ -314,6 +317,6 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
 //            removeUser(userId);
         }
         sseCache.remove(userId);
-        log.info("SseEmitterServiceImpl[removeUser]:移除用户：{}", userId);
+        log.info("SseEmitterServiceImpl[removeUser]:remove client：{}", userId);
     }
 }

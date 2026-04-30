@@ -52,6 +52,8 @@ import java.util.function.Consumer;
  *
  * EventSource 仅适用于服务器推送事件（SSE），且要求服务器返回的响应格式符合 SSE 规范（如 Content-Type: text/event-stream）。
  * 使用 fetch 的流式 API：
+ *
+ * 使用SseEmitterServiceImpl
  */
 @Slf4j
 @Service

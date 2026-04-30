@@ -95,7 +95,7 @@ public class FtpServiceImpl implements FtpService {
                     return; // 连接有效，直接返回
                 } catch (IOException e) {
                     // NOOP失败，说明连接已断开，需要重新连接
-                    log.info("连接已断开，尝试重新连接...");
+                    log.info("disconnected, trying to reconnect...");
                     disconnectQuietly(ftpClient);
                 }
             }
@@ -111,12 +111,12 @@ public class FtpServiceImpl implements FtpService {
             // 检查连接响应
             int replyCode = ftpClient.getReplyCode();
             if (!FTPReply.isPositiveCompletion(replyCode)) {
-                throw new IOException("FTP连接失败，响应码: " + replyCode);
+                throw new IOException("FTP connect failed，replyCode: " + replyCode);
             }
 
             // 登录
             if (!ftpClient.login(ftpConfig.getUsername(), ftpConfig.getPassword())) {
-                throw new IOException("FTP登录失败");
+                throw new IOException("FTP login failed");
             }
 
             // 设置文件类型
@@ -132,11 +132,11 @@ public class FtpServiceImpl implements FtpService {
             // 设置keep-alive（您原来的设置）
             ftpClient.setControlKeepAliveTimeout(60);
 
-            System.out.println("FTP连接成功建立");
+            System.out.println("FTP connection established successfully");
 
         } catch (IOException e) {
             disconnectQuietly(ftpClient);
-            throw new IOException("FTP连接失败: " + e.getMessage() + "，响应信息: " + ftpClient.getReplyString(), e);
+            throw new IOException("FTP connection failed: " + e.getMessage() + "，ReplyString: " + ftpClient.getReplyString(), e);
         }
     }
 
@@ -155,19 +155,10 @@ public class FtpServiceImpl implements FtpService {
         return ftpClient;
     }
 
-//    // 一个安静关闭连接的工具方法
-//    private void disconnectQuietly(FTPClient ftpClient) {
-//        if (ftpClient.isConnected()) {
-//            try {
-//                ftpClient.disconnect();
-//            } catch (IOException e) {
-//                // 忽略断开连接时出现的异常
-//            }
-//        }
-//    }
 
-
-    // 安全的断开连接方法
+    /**
+     * 安全的断开连接方法
+     */
     private void disconnectQuietly(FTPClient ftpClient) {
         try {
             if (ftpClient != null && ftpClient.isConnected()) {
@@ -176,7 +167,7 @@ public class FtpServiceImpl implements FtpService {
             }
         } catch (IOException e) {
             // 安静地处理断开连接异常
-            log.error("断开连接时发生错误: " + e.getMessage());
+            log.error("disconnect err: " + e.getMessage());
         }
     }
 
@@ -248,7 +239,7 @@ public class FtpServiceImpl implements FtpService {
 
         // 检查本地文件是否存在
         if (!localFile.exists()) {
-            throw new FileNotFoundException("本地文件不存在: " + localFileName);
+            throw new FileNotFoundException("file not found: " + localFileName);
         }
 
         // 使用 try-with-resources 确保 FileInputStream 被关闭
@@ -265,22 +256,22 @@ public class FtpServiceImpl implements FtpService {
                 createDirectory(basePath);
                 ftpClient.changeWorkingDirectory(basePath);
             }
-            log.info("当前工作目录: {}", ftpClient.printWorkingDirectory());
+            log.info("Directory: {}", ftpClient.printWorkingDirectory());
 
             // 执行上传
             boolean isUploaded = ftpClient.storeFile(fileName, inputStream);
             if (isUploaded) {
-                log.info("文件上传成功: {} -> {}", localFileName, remoteFileName);
+                log.info("Upload success: {} -> {}", localFileName, remoteFileName);
             } else {
                 String replyString = ftpClient.getReplyString();
                 int replyCode = ftpClient.getReplyCode();
-                throw new Exception("文件上传失败. 响应码: " + replyCode + ", 响应信息: " + replyString);
+                throw new Exception("Upload failed. replyCode: " + replyCode + ", replyString: " + replyString);
 
             }
             return true;
 
         } catch (Exception e) {
-            log.error("文件上传异常: {}", localFileName, e);
+            log.error("Upload failed: {}", localFileName, e);
             throw e;
         }
     }
@@ -306,8 +297,8 @@ public class FtpServiceImpl implements FtpService {
                 } else {
                     int replyCode = ftpClient.getReplyCode();
                     String replyString = ftpClient.getReplyString();
-                    log.error("创建目录失败: {}", currentPath);
-                    log.error("FTP响应码: {}, 响应信息: {}", replyCode, replyString);
+                    log.error("create directory fail: {}", currentPath);
+                    log.error("FTP replyCode: {}, replyString: {}", replyCode, replyString);
 
                     throw new IOException("Could not create directory: " + currentPath + ", Reply: " + replyCode + " - " + replyString);
                 }
@@ -327,7 +318,7 @@ public class FtpServiceImpl implements FtpService {
             // 切换到文件所在目录
             boolean changedRoot = ftpClient.changeWorkingDirectory("/");
             if (!ftpClient.changeWorkingDirectory(fullPath)) {
-                throw new IOException("目录不存在: " + fullPath);
+                throw new IOException("Directory not found: " + fullPath);
             }
 
             // 下载文件
@@ -335,17 +326,17 @@ public class FtpServiceImpl implements FtpService {
                 boolean isDownloaded = ftpClient.retrieveFile(fileName, outputStream);
 
                 if (isDownloaded) {
-                    log.info("文件下载成功: {}/{}", fullPath, fileName);
+                    log.info("download success: {}/{}", fullPath, fileName);
                     return outputStream.toByteArray();
                 } else {
-                    log.error("文件下载失败. 响应码: {}", ftpClient.getReplyCode());
+                    log.error("download fail. ReplyCode: {}", ftpClient.getReplyCode());
                     throw new IOException("FTP retrieveFile failed");
                 }
             }
 
         } catch (IOException e) {
-            log.error("FTP下载过程中发生错误", e);
-            throw new RuntimeException("文件下载失败", e);
+            log.error("FTP download fail", e);
+            throw new RuntimeException("download fail", e);
         }
     }
 
@@ -405,7 +396,7 @@ public class FtpServiceImpl implements FtpService {
             }
             return null;
         } catch (IOException e) {
-            log.error("获取文件信息时发生错误: {}", remoteFilePath, e);
+            log.error("getFileInfo err: {}", remoteFilePath, e);
             return null;
         }
     }
@@ -425,7 +416,7 @@ public class FtpServiceImpl implements FtpService {
                 fileList.addAll(Arrays.asList(files));
             }
         } catch (IOException e) {
-            log.error("列出目录文件时发生错误: {}", remoteDirPath, e);
+            log.error("listFiles err: {}", remoteDirPath, e);
         }
         return fileList;
     }
@@ -445,9 +436,9 @@ public class FtpServiceImpl implements FtpService {
         } catch (IOException e) {
             int replyCode = ftpClient.getReplyCode();
             String replyString = ftpClient.getReplyString();
-            log.error("FTP响应码: {}, 响应信息: {}", replyCode, replyString);
+            log.error("FTP replyCode: {}, replyString: {}", replyCode, replyString);
 
-            log.error("检查文件是否存在时发生错误: {}", remoteFilePath, e);
+            log.error("fileExists err: {}", remoteFilePath, e);
             return false;
         }
     }
@@ -458,14 +449,14 @@ public class FtpServiceImpl implements FtpService {
         try {
             // 检查文件是否存在
             if (!fileExists(filePath)) {
-                log.warn("文件不存在: {}", filePath);
+                log.info("file not found: {}", filePath);
                 return ResponseEntity.notFound().build();
             }
 
             // 获取文件信息
             FTPFile fileInfo = getFileInfo(filePath);
             if (fileInfo == null) {
-                log.warn("无法获取文件信息: {}", filePath);
+                log.info("Get FTPFile fail: {}", filePath);
                 return ResponseEntity.notFound().build();
             }
 
@@ -494,12 +485,12 @@ public class FtpServiceImpl implements FtpService {
             headers.setPragma("no-cache");
             headers.setExpires(0);
 
-            log.info("成功下载文件: {}, 大小: {} bytes", filePath, fileData.length);
+            log.info("download success: {}, size: {} bytes", filePath, fileData.length);
             return new ResponseEntity<>(fileData, headers, HttpStatus.OK);
 
         } catch (Exception e) {
-            log.error("下载文件失败: {}", filePath, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(("下载失败: " + e.getMessage()).getBytes());
+            log.error("download fail: {}", filePath, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(("download fail: " + e.getMessage()).getBytes());
         }
     }
 
@@ -555,7 +546,7 @@ public class FtpServiceImpl implements FtpService {
             // 检查文件是否存在
             if (!fileExists(filePath)) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                response.getWriter().write("文件不存在");
+                response.getWriter().write("file not found");
                 return;
             }
 
@@ -563,7 +554,7 @@ public class FtpServiceImpl implements FtpService {
             FTPFile fileInfo = getFileInfo(filePath);
             if (fileInfo == null) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                response.getWriter().write("文件信息获取失败");
+                response.getWriter().write("get FTPFile fail");
                 return;
             }
 
@@ -591,7 +582,7 @@ public class FtpServiceImpl implements FtpService {
             boolean downloadSuccess = downloadFileToStream(filePath, outputStream);
 
             if (!downloadSuccess) {
-                throw new IOException("FTP文件下载失败");
+                throw new IOException("FTP download fail");
             }
 
             outputStream.flush();
@@ -601,10 +592,10 @@ public class FtpServiceImpl implements FtpService {
             try {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 response.setContentType("text/plain;charset=UTF-8");
-                response.getWriter().write("下载失败: " + e.getMessage());
+                response.getWriter().write("download fail: " + e.getMessage());
             } catch (IOException ex) {
                 // 记录日志
-                log.error("写入错误响应失败", ex);
+                log.error("write response failed ", ex);
             }
         }
     }
@@ -617,7 +608,7 @@ public class FtpServiceImpl implements FtpService {
             ensureConnected(ftpClient);
             return ftpClient.retrieveFile(remoteFilePath, outputStream);
         } catch (IOException e) {
-            log.error("流式下载失败: {}", remoteFilePath, e);
+            log.error("downloadFileToStream failed: {}", remoteFilePath, e);
             return false;
         }
     }
@@ -679,7 +670,7 @@ public class FtpServiceImpl implements FtpService {
             // 返回兼容格式：UTF-8编码的文件名，用双引号包裹
             return "UTF-8''" + encoded;
         } catch (UnsupportedEncodingException e) {
-            log.warn("文件名编码失败，使用原始文件名: {}", fileName, e);
+            log.warn("encodeFileName err: {}", fileName, e);
             return fileName;
         }
     }
@@ -700,7 +691,7 @@ public class FtpServiceImpl implements FtpService {
         boolean changedRoot = ftpClient.changeWorkingDirectory("/");
         boolean changed = ftpClient.changeWorkingDirectory(directoryPath);
         if (!changed) {
-            log.error("无法切换到目录: {}", directoryPath);
+            log.error("changeWorkingDirectory failed: {}", directoryPath);
             // 如果目录不存在，则创建（包括所有不存在的父目录）
             createDirectory(directoryPath);
             changed = ftpClient.changeWorkingDirectory(directoryPath);
@@ -711,7 +702,7 @@ public class FtpServiceImpl implements FtpService {
         FTPFile[] files = ftpClient.listFiles();
 
         if (files == null || files.length == 0) {
-            log.info("目录为空: {}", directoryPath);
+            log.info("directory is empty: {}", directoryPath);
             return true;
         }
 
@@ -722,9 +713,9 @@ public class FtpServiceImpl implements FtpService {
                 boolean deleted = ftpClient.deleteFile(fileName);
                 if (deleted) {
                     success = true;
-                    log.info("文件删除成功: {}/{}", directoryPath, fileName);
+                    log.info("file delete successfully: {}/{}", directoryPath, fileName);
                 } else {
-                    log.error("文件删除失败: {}/{}", directoryPath, fileName);
+                    log.error("file delete failed: {}/{}", directoryPath, fileName);
                     success = false; // 记录有失败，但继续尝试删除其他文件
                 }
             }
@@ -750,13 +741,13 @@ public class FtpServiceImpl implements FtpService {
 
 
             ensureConnected(ftpClient);
-            log.info("当前工作目录：" + ftpClient.printWorkingDirectory());
-            log.info("目标目录：" + directoryPath);
+            log.info("Current Directory：" + ftpClient.printWorkingDirectory());
+            log.info("directoryPath：" + directoryPath);
             // 切换到目标目录
             boolean changedRoot = ftpClient.changeWorkingDirectory("/");
             boolean changed = ftpClient.changeWorkingDirectory(directoryPath);
             if (!changed) {
-                log.info("无法切换到目录: {}", directoryPath);
+                log.info("changeWorkingDirectory failed: {}", directoryPath);
                 // 如果目录不存在，则创建（包括所有不存在的父目录）
                 createDirectory(directoryPath);
                 changed = ftpClient.changeWorkingDirectory(directoryPath);

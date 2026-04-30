@@ -13,7 +13,7 @@ public interface FtpService {
 
     boolean uploadFile(byte[] fileData, String remoteFileName) throws Exception;
 
-    boolean uploadFile( String localFileName, String remoteFileName) throws Exception;
+    boolean uploadFile(String localFileName, String remoteFileName) throws Exception;
 
     byte[] downloadFile(String fileFullName);
 
@@ -23,14 +23,13 @@ public interface FtpService {
 
     boolean fileExists(String remoteFilePath);
 
-
     ResponseEntity<byte[]> ftpDownloadFileResponseEntity(String fileFullName);
 
     ResponseEntity<byte[]> ftpPreviewFile(String filePath);
 
     void ftpDownloadFile(String filePath, HttpServletResponse response);
-    boolean deleteAllFilesInDirectory(String directoryPath) throws Exception;
 
+    boolean deleteAllFilesInDirectory(String directoryPath) throws Exception;
 
     boolean createWorkingDirectory(String directoryPath) throws Exception;
 }
