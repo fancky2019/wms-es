@@ -203,7 +203,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
             return true;
         } catch (IOException e) {
             // 心跳发送失败，说明连接可能已经断开，移除该连接
-            log.error("sendHeartbeatFail，remove connection：userId={}, Cause：{}", userId, e.getMessage());
+            log.error("sendHeartbeatFail! remove connection:userId={},Cause:{}", userId, e.getMessage());
             removeUser(userId);
             return false;
         }
@@ -296,7 +296,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      **/
     private Consumer<Throwable> errorCallBack(String userId) {
         return throwable -> {
-            log.error("SseEmitterServiceImpl[errorCallBack]：Connection error,client:{}", userId);
+            log.error("SseEmitterServiceImpl[errorCallBack]:Connection error,client:{}", userId);
             removeUser(userId);
         };
     }
