@@ -95,6 +95,8 @@ public class AuthenticationFilter implements Filter {
         if (requestURI.contains("/swagger-ui") ||
                 requestURI.contains("/v3/api-docs") ||
                 requestURI.contains("/swagger-resources")) {
+            //执行顺序：正确的顺序
+            //Filter 1 前置 → Filter 2 前置 → Filter 3 前置 → Controller → Filter 3 后置 → Filter 2 后置 → Filter 1 后置
 //            不调用 chain.doFilter() → 过滤器链断开 → 请求不会进入 Controller。
             chain.doFilter(request, response);
             return;

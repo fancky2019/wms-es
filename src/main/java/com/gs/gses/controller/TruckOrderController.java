@@ -214,6 +214,7 @@ public class TruckOrderController {
      * @return
      * @throws Exception
      */
+    @CrossOrigin(origins = "http://10.100.200.32:8889", allowCredentials = "true")
     @GetMapping(value = "/sseConnect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sseConnect() throws Exception {
         //SseEmitter

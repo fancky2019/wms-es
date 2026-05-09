@@ -505,6 +505,15 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             if (StringUtils.isEmpty(itemRequest.getProjectNo())) {
                 throw new Exception("ProjectNo fields contain blank values");
             }
+
+            if (StringUtils.isEmpty(itemRequest.getProjectNo())) {
+                throw new Exception("ProjectNo fields contain blank values");
+            }
+
+            if (itemRequest.getQuantity() == null || itemRequest.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new Exception("Invalid quantity");
+            }
+
         }
 
         //多个字段分组
@@ -1362,7 +1371,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
                     @Override
                     public void afterCompletion(int status) {
-                        sseEmitterService.sendMsgToClient(userId,"", msg);
+                        sseEmitterService.sendMsgToClient(userId, "", msg);
                     }
                 });
             }
