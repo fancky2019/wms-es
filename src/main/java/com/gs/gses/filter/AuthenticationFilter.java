@@ -133,6 +133,13 @@ public class AuthenticationFilter implements Filter {
         //  LoginUserTokenDto dto = authorityService.checkPermission(request, token);
 
         String token = httpServletRequest.getHeader("Authorization");
+        // 在过滤器中支持从 URL 参数获取 token
+        if (token == null || token.isEmpty()) {
+            token = httpServletRequest.getParameter("token");
+            if (token != null && !token.isEmpty()) {
+                token = "Bearer " + token;
+            }
+        }
 //        log.info("token {}", token);
         LoginUserTokenDto userInfo = null;
         try {

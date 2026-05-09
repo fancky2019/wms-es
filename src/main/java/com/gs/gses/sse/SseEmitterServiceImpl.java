@@ -51,6 +51,24 @@ import java.util.function.Consumer;
  *
  *
  * 使用此实现
+ *
+ *
+ * // 在浏览器 Console 中执行，在network中这条http://localhost:8088/api/truckOrder/sseConnect/?token
+ * 请求的连接中EventStream可以看到后台发送的sse消息
+ *
+ *
+ * const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NDBhZWQ1ZS0xZTM2LTViYTctNWY2NS0zYTBkYjljMDNkN2MiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6Ijg0MGFlZDVlLTFlMzYtNWJhNy01ZjY1LTNhMGRiOWMwM2Q3YyIsInByZWZlcnJlZF91c2VybmFtZSI6ImFkbWluIiwiZ2l2ZW5fbmFtZSI6Iuezu-e7n-euoeeQhuWRmCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6WyJhZG1pbmlzdHJhdG9yIiwidGVzdCJdLCJyb2xlIjpbImFkbWluaXN0cmF0b3IiLCJ0ZXN0Il0sIm5iZiI6MTc3ODMwNDk0NCwiZXhwIjoxNzc4MzkxMzQ0LCJpc3MiOiJBdXRob3JpemVTU08iLCJhdWQiOiJBdXRob3JpemVTU08ifQ.XBX6ht-0_YT47IcEUlsWFsJix9jzah7fY4Oi5Sv7bHo";
+ * const testUrl = 'http://localhost:8088/api/truckOrder/sseConnect/?token=' + encodeURIComponent(testToken);
+ * const es = new EventSource(testUrl);
+ * es.onopen = () => console.log('✅ 原生连接成功');
+ * es.onerror = (e) => console.log('❌ 原生错误, readyState:', es.readyState);
+ * es.addEventListener('connected', (e) => console.log('📨 connected:', e.data));
+ *
+ *
+ *
+ *
+ *  EventSource 不支持 Header,社区广泛接受用 URL 参数传 token
+ *
  */
 @Slf4j
 @Service
