@@ -5,4 +5,6 @@ public class RedisKeyConfigConst {
     public static  final  String MQ_FAIL_HANDLER="mqFailHandler:mqOperation";
     public static  final  String MQ_FAIL_HANDLER_TIME="mqFailHandler:latestExecutingTime";
     public static  final  String MQ_PUBLISH="Redisson:MqPublish";
+    public static final String BLACKLIST_PREFIX = "blacklist:";
+
 }

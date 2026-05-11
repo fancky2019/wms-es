@@ -192,18 +192,6 @@ public class TruckOrderController {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     //region sse (sever-sent event)
     @Autowired
     private ISseEmitterService sseEmitterService;
@@ -216,7 +204,7 @@ public class TruckOrderController {
      */
     @CrossOrigin(origins = "http://10.100.200.32:8889", allowCredentials = "true")
     @GetMapping(value = "/sseConnect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter sseConnect() throws Exception {
+    public SseEmitter sseConnect(@RequestParam("token") String token) throws Exception {
         //SseEmitter
         LoginUserTokenDto userTokenDto = UserInfoHolder.getUser();
         //此处返回SseEmitter类型，全局异常返回MessageResult，类型冲突
@@ -239,9 +227,15 @@ public class TruckOrderController {
         return MessageResult.success();
     }
 
+    @GetMapping(value = "/clearConnectCache")
+    public MessageResult<Void> clearConnectCache() {
+        sseEmitterService.clearConnectCache();
+        return MessageResult.success();
+    }
+
     @GetMapping(value = "/sseSendMsg")
     public MessageResult<Void> sendMsg(String userId) {
-        sseEmitterService.sendMsgToClient(userId, "",System.currentTimeMillis()+"");
+        sseEmitterService.sendMsgToClient(userId, "", System.currentTimeMillis() + "");
         return MessageResult.success();
     }
 

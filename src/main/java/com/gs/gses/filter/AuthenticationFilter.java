@@ -1,6 +1,7 @@
 package com.gs.gses.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gs.gses.model.utility.RedisKeyConfigConst;
 import feign.FeignException;
 import com.gs.gses.config.CorsProperties;
 import com.gs.gses.model.request.authority.CheckPermissionRequest;
@@ -49,7 +50,6 @@ public class AuthenticationFilter implements Filter {
     @Autowired
     private BasicInfoCacheService basicInfoCacheService;
 
-    private static final String BLACKLIST_PREFIX = "blacklist:";
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -105,7 +105,7 @@ public class AuthenticationFilter implements Filter {
         if (requestURI.contains("/sseConnect")) {
 //            chain.doFilter(request, response);
 //            return;
-            String key = BLACKLIST_PREFIX + clientIp;
+            String key = RedisKeyConfigConst.BLACKLIST_PREFIX + clientIp;
             Object object = this.basicInfoCacheService.getStringKey(key);
             String msg = "blacklist";
             if (object != null) {
@@ -214,7 +214,7 @@ public class AuthenticationFilter implements Filter {
 
     private void rejectClient(HttpServletRequest httpServletRequest) {
         String clientIp = getClientIpAddress(httpServletRequest);
-        String key = BLACKLIST_PREFIX + clientIp;
+        String key = RedisKeyConfigConst.BLACKLIST_PREFIX  + clientIp;
         log.info("add blacklist {}", clientIp);
         this.basicInfoCacheService.setKeyValExpire(key, 1, 60 * 3, TimeUnit.SECONDS);
     }

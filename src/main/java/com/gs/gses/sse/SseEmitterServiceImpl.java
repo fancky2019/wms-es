@@ -1,7 +1,10 @@
 package com.gs.gses.sse;
 
+import com.gs.gses.model.utility.RedisKeyConfigConst;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -10,6 +13,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
@@ -56,13 +60,55 @@ import java.util.function.Consumer;
  * // 在浏览器 Console 中执行，在network中这条http://localhost:8088/api/truckOrder/sseConnect/?token
  * 请求的连接中EventStream可以看到后台发送的sse消息
  *
+ * EventSource 默认重连间隔是 3 秒
+ *es.readyState：0=连接中，1=已连接，2=已关闭
  *
- * const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NDBhZWQ1ZS0xZTM2LTViYTctNWY2NS0zYTBkYjljMDNkN2MiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6Ijg0MGFlZDVlLTFlMzYtNWJhNy01ZjY1LTNhMGRiOWMwM2Q3YyIsInByZWZlcnJlZF91c2VybmFtZSI6ImFkbWluIiwiZ2l2ZW5fbmFtZSI6Iuezu-e7n-euoeeQhuWRmCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6WyJhZG1pbmlzdHJhdG9yIiwidGVzdCJdLCJyb2xlIjpbImFkbWluaXN0cmF0b3IiLCJ0ZXN0Il0sIm5iZiI6MTc3ODMwNDk0NCwiZXhwIjoxNzc4MzkxMzQ0LCJpc3MiOiJBdXRob3JpemVTU08iLCJhdWQiOiJBdXRob3JpemVTU08ifQ.XBX6ht-0_YT47IcEUlsWFsJix9jzah7fY4Oi5Sv7bHo";
- * const testUrl = 'http://localhost:8088/api/truckOrder/sseConnect/?token=' + encodeURIComponent(testToken);
- * const es = new EventSource(testUrl);
- * es.onopen = () => console.log('✅ 原生连接成功');
- * es.onerror = (e) => console.log('❌ 原生错误, readyState:', es.readyState);
- * es.addEventListener('connected', (e) => console.log('📨 connected:', e.data));
+ *
+ *
+ *
+ *
+ const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4NDBhZWQ1ZS0xZTM2LTViYTctNWY2NS0zYTBkYjljMDNkN2MiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6Ijg0MGFlZDVlLTFlMzYtNWJhNy01ZjY1LTNhMGRiOWMwM2Q3YyIsInByZWZlcnJlZF91c2VybmFtZSI6ImFkbWluIiwiZ2l2ZW5fbmFtZSI6Iuezu-e7n-euoeeQhuWRmCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6WyJhZG1pbmlzdHJhdG9yIiwidGVzdCJdLCJyb2xlIjpbImFkbWluaXN0cmF0b3IiLCJ0ZXN0Il0sIm5iZiI6MTc3ODQ2NDk1NCwiZXhwIjoxNzc4NTUxMzU0LCJpc3MiOiJBdXRob3JpemVTU08iLCJhdWQiOiJBdXRob3JpemVTU08ifQ.7hlsnFs8S07s86ftKQeYlxa70mW27KMJ1ri5YH_OWeQ";
+ const testUrl = 'http://localhost:8088/api/truckOrder/sseConnect/?token=' + encodeURIComponent(testToken);
+ const es = new EventSource(testUrl);
+
+ es.onopen = () => console.log('✅ 连接成功');
+ es.onerror = (e) => console.log('❌ 错误, readyState:', es.readyState);
+
+ //// 接收所有消息
+ //es.onmessage = (e) => {
+ //        //debugger
+ //        console.log('📨 数据:', e.data);
+ //// 解析JSON数据JSON.parse(e.data);
+ //    const data = e.data;
+ //    switch(data.type) {
+ //        case 'connected':
+ //        console.log('🔗 已连接:', data);
+ //            break;
+ //                    case 'heartbeat':
+ //                    console.log('💓 心跳:', data);
+ //            break;
+ //                    case 'order':
+ //                    console.log('📦 订单:', data);
+ //            break;
+ //default:
+ //        console.log('📨 其他:', data);
+ //    }
+ //            };
+
+ // 方式1：onmessage - 只能收到e.type=message的消息，后台不指定name 默认值message,指定空字符串 name("") 会被当作默认的 message 事件处理。 ，收不到心跳heartbeat
+ es.onmessage = (e) => {
+ //   debugger;
+ console.log(`e.type: ${e.type}, onmessage 收到:`, e.data);
+ };
+
+ // 方式2：addEventListener - 能收到特定事件名的消息
+ es.addEventListener('message', (e) => {
+ console.log(`e.type: ${e.type}, message 事件收到:`, e.data);
+ });
+
+ es.addEventListener('heartbeat', (e) => {
+ console.log(`e.type: ${e.type}, heartbeat 事件收到:`, e.data);
+ });
  *
  *
  *
@@ -70,6 +116,8 @@ import java.util.function.Consumer;
  *  EventSource 不支持 Header,社区广泛接受用 URL 参数传 token
  *
  */
+
+
 @Slf4j
 @Service
 public class SseEmitterServiceImpl implements ISseEmitterService {
@@ -78,6 +126,8 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
      * 容器，保存连接，用于输出返回
      */
     public static Map<String, SseEmitter> sseCache = new ConcurrentHashMap<>();
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     //    @PostConstruct
     public void init() {
@@ -106,6 +156,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
         log.info("CreateSseConnectSuccess：{} sseCache Size {}", userId, sseCache.size());
         //SSE协议特性：客户端（Postman）在收到第一个 data: 格式的响应后，才会认为SSE连接真正建立
         //发送一个连接成功消息CONNECTED给前端。
+        // name 事件类型：业务消息类型，前端好做区分处理
         sseEmitter.send(SseEmitter.event().id("USER_ID").name(SseConst.CONNECTED).data("SSE_CONNECTED"));
         return sseEmitter;
     }
@@ -114,14 +165,17 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
     public void pushTest(String userId) {
         CompletableFuture.runAsync(() ->
         {
-            while (true) {
+            int i=0;
+            while (i<20) {
                 String msg = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                 try {
                     Thread.sleep(5000);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
+                log.info("pushTest userId：{}", userId);
                 sendMsgToClient(userId, "", msg);
+                i++;
             }
         });
     }
@@ -181,8 +235,9 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
     public SseEmitter sendMsgToClient(String userId, String eventName, String msg) {
         SseEmitter sseEmitter = sseCache.get(userId);
         if (sseEmitter == null) {
-            log.info("userId - {} : sse  is not connected ", userId);
+            log.info("sendMsgToClient userId - {} : sse  is not connected ", userId);
         } else {
+            log.info("sendMsgToClient userId：{}", userId);
             sendMsgToClientByUserId(userId, eventName, msg, sseEmitter);
             return sseEmitter;
         }
@@ -199,6 +254,27 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
                 sendHeartbeatToClient(userId, sseEmitter);
             }
         }
+    }
+
+    @Override
+    public void clearConnectCache() {
+        // 关闭所有 SSE 连接后再清空
+        for (SseEmitter emitter : sseCache.values()) {
+            try {
+                // 正常完成, 或者 emitter.completeWithError(new RuntimeException("服务端重置连接"));
+                emitter.complete();
+            } catch (Exception e) {
+                log.warn("关闭SSE连接失败", e);
+            }
+        }
+        sseCache.clear();
+
+        // 使用 StringRedisTemplate
+        Set<String> keys = redisTemplate.keys(RedisKeyConfigConst.BLACKLIST_PREFIX + "*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+
     }
 
     /**
@@ -249,11 +325,11 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
             log.error("sendMsgToClientByUserId: push fail：client - {} disconnect, cause:{}", userId, msg);
             return;
         }
-
-        //默认空
+        //默认 message .指定空字符串 name("") 会被当作默认的 message 事件处理。
         if (StringUtils.isEmpty(eventName)) {
             eventName = SseConst.MESSAGE;
         }
+        log.info("sendMsgToClientByUserId：userId - {} eventName - {}", userId,eventName);
         SseEmitter.SseEventBuilder sendData = SseEmitter.event().id("TASK_RESULT")
                 .name(eventName)  // 事件类型：业务消息类型，前端好做区分处理
                 .data(msg, MediaType.APPLICATION_JSON);

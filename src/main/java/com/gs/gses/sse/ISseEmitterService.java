@@ -17,4 +17,9 @@ public interface ISseEmitterService {
     SseEmitter sendMsgToClient(String userId, String eventName, String msg);
 
     void sseHeartbeat();
+
+    void clearConnectCache();
+
+
+
 }
