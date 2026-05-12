@@ -1,12 +1,16 @@
 package com.gs.gses.sse;
 
+import com.gs.gses.model.response.wms.TruckOrderResponse;
 import com.gs.gses.model.utility.RedisKeyConfigConst;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -293,7 +297,7 @@ public class SseEmitterServiceImpl implements ISseEmitterService {
                     .data(SseConst.HEARTBEAT_MESSAGE, MediaType.TEXT_PLAIN);
 
             sseEmitter.send(heartbeatEvent);
-            log.info("sendHeartbeatSuccess：userId={}", userId);
+            log.info("sendHeartbeatSuccess:userId={}", userId);
             return true;
         } catch (IOException e) {
             // 心跳发送失败，说明连接可能已经断开，移除该连接
