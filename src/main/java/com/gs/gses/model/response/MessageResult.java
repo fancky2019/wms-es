@@ -3,6 +3,10 @@ package com.gs.gses.model.response;
 import org.slf4j.MDC;
 
 import java.io.Serializable;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 
 public class MessageResult<T> implements Serializable {
@@ -16,11 +20,12 @@ public class MessageResult<T> implements Serializable {
     //  MDC.put("traceId", traceId);//traceId在过滤器的destroy()中生成、清除
     private String traceId = MDC.get("traceId");
     private T data;
-    private Long timestamp;   // 时间戳
+    private String time;
 
     public MessageResult() {
         this.success = true;
-        this.timestamp = timestamp;
+        this.time =  DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .format(LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault()));
     }
 
     public Boolean getSuccess() {
@@ -39,12 +44,12 @@ public class MessageResult<T> implements Serializable {
 //        this.traceId = traceId;
 //    }
 
-    public Long getTimestamp() {
-        return timestamp;
+    public String getTime() {
+        return time;
     }
 
-    public void setTimestamp(Long timestamp) {
-        this.timestamp = timestamp;
+    public void setTime(String time) {
+        this.time = time;
     }
 
     public void setData(T data) {
@@ -75,7 +80,6 @@ public class MessageResult<T> implements Serializable {
         MessageResult<T> messageResult = new MessageResult<>();
         messageResult.setSuccess(true);
         messageResult.setCode(200);
-        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
     public static <T> MessageResult<T> success(T data) {
@@ -83,7 +87,6 @@ public class MessageResult<T> implements Serializable {
         messageResult.setSuccess(true);
         messageResult.setCode(200);
         messageResult.setData(data);
-        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 
@@ -92,7 +95,6 @@ public class MessageResult<T> implements Serializable {
         messageResult.setSuccess(false);
         messageResult.setCode(500);
         messageResult.setData(data);
-        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 
@@ -100,7 +102,6 @@ public class MessageResult<T> implements Serializable {
         MessageResult<T> messageResult = new MessageResult<>();
         messageResult.setSuccess(false);
         messageResult.setCode(500);
-        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 
@@ -109,7 +110,6 @@ public class MessageResult<T> implements Serializable {
         messageResult.setSuccess(success);
         messageResult.setCode(code);
         messageResult.setData(data);
-        messageResult.setTimestamp(System.currentTimeMillis());
         return messageResult;
     }
 }

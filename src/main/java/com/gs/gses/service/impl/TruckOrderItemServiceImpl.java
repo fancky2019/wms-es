@@ -544,13 +544,34 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         TruckOrder retainTruckOrder = truckOrderList.get(0);
         Long retainId = retainTruckOrder.getId();
         List<Long> deletedTruckOrderIdList = truckOrderIdList.stream().filter(p -> !p.equals(retainId)).collect(Collectors.toList());
+
+        TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
+        truckOrderItemRequest.setSearchCount(false);
+        truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
+        truckOrderItemRequest.setTruckOrderIdList(deletedTruckOrderIdList);
+        PageData<TruckOrderItemResponse> pageData = this.getTruckOrderItemPage(truckOrderItemRequest);
+        List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
+        if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
+            String deletedTruckOrderIdStr = StringUtils.join(deletedTruckOrderIdList, ",");
+            throw new Exception("Can not get  TruckOrderItem by truckOrderId " + deletedTruckOrderIdStr);
+        }
+
+        for (TruckOrderItemResponse item : truckOrderItemResponseList) {
+            log.info("mergeTruckOrder- {},{},{}", item.getId(), item.getTruckOrderId(), retainId);
+            if (item.getStatus().equals(TruckOrderStausEnum.NOT_DEBITED.getValue()) ||
+                    item.getStatus().equals(TruckOrderStausEnum.DEBITING.getValue())) {
+                String mergeMsg = MessageFormat.format("TruckOrderId {0} TruckOrderItemId :{1} is being debited, please wait for the debit to complete,", item.getTruckOrderId(), item.getId());
+                throw new Exception(mergeMsg);
+            }
+        }
+
         String mergeMsg = MessageFormat.format("retainId:{0},deletedTruckOrderIdList:{1}", retainId, deletedTruckOrderIdList.stream().map(Object::toString).collect(Collectors.joining(",")));
         log.info(mergeMsg);
         boolean re = this.truckOrderService.deleteByIds(deletedTruckOrderIdList);
         if (!re) {
             throw new Exception("Delete truckOrder fail");
         }
-        log.info("Delete truckOrder success {}",StringUtils.join(deletedTruckOrderIdList,","));
+        log.info("Delete truckOrder success {}", StringUtils.join(deletedTruckOrderIdList, ","));
         List<String> attachmentPathList = truckOrderList.stream().filter(p -> StringUtils.isNotEmpty(p.getFilePath())).map(p -> p.getFilePath()).collect(Collectors.toList());
         List<String> splitAttachmentPathList = new ArrayList<>();
         for (String path : attachmentPathList) {
@@ -563,19 +584,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         retainTruckOrder.setFilePath(mergedAttachmentPath);
         this.truckOrderService.updateTruckOrder(retainTruckOrder);
 
-        TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
-        truckOrderItemRequest.setSearchCount(false);
-        truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
-        truckOrderItemRequest.setTruckOrderIdList(deletedTruckOrderIdList);
-        PageData<TruckOrderItemResponse> pageData = this.getTruckOrderItemPage(truckOrderItemRequest);
-        List<TruckOrderItemResponse> truckOrderItemResponseList = pageData.getData();
-        if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
-            String deletedTruckOrderIdStr = StringUtils.join(deletedTruckOrderIdList, ",");
-            throw new Exception("Can not get  TruckOrderItem by truckOrderId " + deletedTruckOrderIdStr);
-        }
-        for (TruckOrderItemResponse item : truckOrderItemResponseList) {
-            log.info("mergeTruckOrder- {},{},{}", item.getId(), item.getTruckOrderId(), retainId);
-        }
+
         List<Long> truckOrderItemIdList = truckOrderItemResponseList.stream().map(TruckOrderItemResponse::getId).collect(Collectors.toList());
         boolean lockSuccessfully = false;
         try {
@@ -730,7 +739,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
                 @Override
                 public void afterCompletion(int status) {
-                    sseEmitterService.sendMsgToClient(userId,"", msg);
+                    sseEmitterService.sendMsgToClient(userId, "", msg);
 
                 }
             });

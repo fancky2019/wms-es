@@ -86,5 +86,9 @@ public enum TruckOrderStausEnum {
         }
         return null;
     }
+
+    public boolean processing() {
+        return this == NOT_DEBITED || this == DEBITING;
+    }
 }
 
