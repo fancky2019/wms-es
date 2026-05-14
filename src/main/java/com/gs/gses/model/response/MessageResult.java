@@ -20,12 +20,14 @@ public class MessageResult<T> implements Serializable {
     //  MDC.put("traceId", traceId);//traceId在过滤器的destroy()中生成、清除
     private String traceId = MDC.get("traceId");
     private T data;
-    private String time;
+//    private String time;
+    // 时间戳
+    private final Long timestamp= System.currentTimeMillis();
 
     public MessageResult() {
         this.success = true;
-        this.time =  DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                .format(LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault()));
+//        this.time =  DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+//                .format(LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault()));
     }
 
     public Boolean getSuccess() {
@@ -44,13 +46,14 @@ public class MessageResult<T> implements Serializable {
 //        this.traceId = traceId;
 //    }
 
-    public String getTime() {
-        return time;
+//    public String getTime() {
+//        return time;
+//    }
+
+    public Long getTimestamp() {
+        return timestamp;
     }
 
-    public void setTime(String time) {
-        this.time = time;
-    }
 
     public void setData(T data) {
         this.data = data;
