@@ -79,7 +79,7 @@ import java.util.stream.Collectors;
  *
  * 服务实现类
  *
- *
+ *事件发布/订阅模式（最推荐）解决循环依赖设计：A调用B类服务，改成A类发布事件，B类订阅
  * @author author
  * @since 2023-11-15
  */
@@ -1485,7 +1485,7 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         //自注入selfProxy导致Spring在Bean创建过程中提前创建了一个不完整的代理（0 advisors）。
         //使用jdk 动态代理，从容器中取得的bean事务不生效： Bean 可能还在创建过程中，获取到的是"提前暴露"的半成品代理
         //这个代理没有完整的 Advisor（增强器）信息，导致 @Transactional 注解不被识别
-//        selfProxy.TranMethod();
+        selfProxy.TranMethod();
 //        this.selfProxy.TranMethod();
         //使用lazySelfProxy 事务不生效
 //        this.lazySelfProxy.TranMethod();
@@ -1525,8 +1525,8 @@ public class MqMessageServiceImpl extends ServiceImpl<MqMessageMapper, MqMessage
         MqMessageService service = applicationContext.getBean(MqMessageService.class);
         MqMessageService selfProxy = applicationContext.getBean(MqMessageService.class);
         String threadName = Thread.currentThread().getName();
-        boolean isActualTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
-        boolean isSynchronizationActive = TransactionSynchronizationManager.isSynchronizationActive();
+        boolean isActualTransactionActive9 = TransactionSynchronizationManager.isActualTransactionActive();
+        boolean isSynchronizationActive9 = TransactionSynchronizationManager.isSynchronizationActive();
         boolean proxy = AopUtils.isAopProxy(selfProxy);
 
         // 1. 检查代理类型

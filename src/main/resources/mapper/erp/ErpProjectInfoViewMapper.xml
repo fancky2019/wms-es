@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gs.gses.mapper.erp.ErpProjectInfoViewMapper">
+
+    <resultMap id="BaseResultMap" type="com.gs.gses.model.entity.erp.ErpProjectInfoView">
+        <result property="projectCode" column="PJAB001" jdbcType="VARCHAR"/>
+        <result property="projectName" column="PJABL003" jdbcType="VARCHAR"/>
+        <result property="projectAddress" column="PJABUD010" jdbcType="VARCHAR"/>
+
+    </resultMap>
+
+    <sql id="Base_Column_List">
+         PJAB001,PJABL003,PJABUD010
+    </sql>
+</mapper>

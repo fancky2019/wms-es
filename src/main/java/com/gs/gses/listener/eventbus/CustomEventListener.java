@@ -7,8 +7,12 @@ import com.gs.gses.model.enums.MqMessageSourceEnum;
 import com.gs.gses.service.MqMessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -59,6 +63,8 @@ public class CustomEventListener {
      * @Transactional 无法创建事务
      *
      *
+     *事务传播：@TransactionalEventListener 默认的传播行为是 Propagation.REQUIRES_NEW。这意味着它会挂起当前事务（发布者的事务），并启动一个新的事务。如果你希望监听器和发布者在同一个事务内，需要显式设置 @Transactional(propagation = Propagation.REQUIRED)。
+     *
      *
      *
      * @param event
@@ -75,6 +81,14 @@ public class CustomEventListener {
 //            backoff = @Backoff(delay = 1000, multiplier = 2)
 //    )
     @Async("threadPoolExecutor") //使用异步和调用线程不在一个线程内
+
+    //和发布者保持原子性：方式一
+//    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)  // 关键：指定BEFORE_COMMIT
+
+//    和发布者保持原子性：方式二
+//    @EventListener
+//    @Transactional(propagation = Propagation.REQUIRED)  // 加入发布者事务
+
     //TransactionSynchronizationManager 事务成功之后发送
     @TransactionalEventListener //默认事务成功之后发送
 //    @TransactionalEventListener  (phase = TransactionPhase.AFTER_COMMIT)
