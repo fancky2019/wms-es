@@ -68,6 +68,7 @@ spring:
   # 主数据源配置
   datasource:
     primary:
+#      GensongWms3DB  wms_liku
       jdbc-url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
       username: sa
@@ -295,6 +296,7 @@ sbp:
     - "http://localhost:*"
     - "http://127.0.0.1:*"
   authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
+#  hostAndPort: 127.0.0.1:9200
 #  hostAndPort: 10.100.200.43:9200
   hostAndPort: 10.100.202.113:9200
   checkpermission: true
@@ -377,7 +379,7 @@ logging:
 
 #注意密码过期，用户组了设置
 ftp:
-  enable: true
+  enable: false
   host: 10.100.202.113
   port: 21
   username: fancky1

@@ -27,8 +27,10 @@ import com.gs.gses.model.enums.EnumClass;
 import com.gs.gses.model.enums.TruckOrderStausEnum;
 import com.gs.gses.model.request.Sort;
 import com.gs.gses.model.request.authority.LoginUserTokenDto;
+import com.gs.gses.model.request.erp.ErpProjectInfoViewRequest;
 import com.gs.gses.model.request.wms.*;
 import com.gs.gses.model.response.PageData;
+import com.gs.gses.model.response.erp.ErpProjectInfoViewResponse;
 import com.gs.gses.model.response.mqtt.OrderMaterial;
 import com.gs.gses.model.response.mqtt.OrderMaterialMq;
 import com.gs.gses.model.response.mqtt.PrintWrapper;
@@ -45,6 +47,7 @@ import com.gs.gses.service.ShipPickOrderService;
 import com.gs.gses.service.TruckOrderItemService;
 import com.gs.gses.service.TruckOrderService;
 import com.gs.gses.service.api.WmsService;
+import com.gs.gses.service.erp.ErpProjectInfoViewService;
 import com.gs.gses.sse.ISseEmitterService;
 import com.gs.gses.utility.*;
 import lombok.extern.slf4j.Slf4j;
@@ -144,7 +147,8 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     private Executor threadPoolExecutor;
     @Autowired
     private ISseEmitterService sseEmitterService;
-
+    @Autowired
+    private ErpProjectInfoViewService erpProjectInfoViewService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -269,7 +273,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             if (contextMap != null) {
                 MDC.setContextMap(contextMap);
             }
-            log.info("ThreadId:" + Thread.currentThread().getId());
+            log.info("contextMap ThreadId:" + Thread.currentThread().getId());
 
             List<ShipOrderItemResponse> matchedShipOrderItemResponseList = new ArrayList<>();
             List<AllocateModel> allocateModelList = new ArrayList<>();
@@ -940,6 +944,56 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
                 request.setLastModifierId(userTokenDto.getId());
                 request.setLastModifierName(userTokenDto.getUserName());
             }
+
+
+
+//            TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
+//            truckOrderItemRequest.setPageIndex(1);
+//            truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
+//            truckOrderItemRequest.setTruckOrderId(request.getId());
+//            PageData<TruckOrderItemResponse> truckOrderItemResponsePage = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
+//            List<TruckOrderItemResponse> truckOrderItemResponseList = truckOrderItemResponsePage.getData();
+//            if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
+//                throw new Exception("Get not TruckOrderItem info by TruckOrderId " + request.getId());
+//            }
+//
+//            List<String> projectNoList = truckOrderItemResponseList.stream().filter(p -> StringUtils.isNotEmpty(p.getProjectNo())).map(p -> p.getProjectNo()).distinct().collect(Collectors.toList());
+//
+//            if (CollectionUtils.isEmpty(projectNoList)) {
+//                String msg = MessageFormat.format("TruckOrder {0} projectNo is empty", request.getId());
+//                throw new Exception(msg);
+//            }
+//            int size = projectNoList.size();
+//            if (size > 1) {
+//                String projectNoStr = StringUtils.join(projectNoList, ',');
+//                String msg = MessageFormat.format("TruckOrder {0} has multiply projectNo {1}", request.getId(), projectNoStr);
+//            }
+//            String projectNo = projectNoList.get(0);
+//            ErpProjectInfoViewRequest erpProjectInfoViewRequest = new ErpProjectInfoViewRequest();
+//            erpProjectInfoViewRequest.setPageIndex(1);
+//            erpProjectInfoViewRequest.setPageSize(Integer.MAX_VALUE);
+//            erpProjectInfoViewRequest.setProjectCode(projectNo);
+//            PageData<ErpProjectInfoViewResponse> erpProjectInfoViewResponsePage = erpProjectInfoViewService.getErpProjectInfoViewPage(erpProjectInfoViewRequest);
+//
+//            List<ErpProjectInfoViewResponse> erpProjectInfoViewResponseList = erpProjectInfoViewResponsePage.getData();
+//
+//            if (CollectionUtils.isEmpty(erpProjectInfoViewResponseList)) {
+//                String msg = MessageFormat.format("Get ProjectInfoView by projectNo {0}  fail", projectNo);
+//                throw new Exception(msg);
+//            }
+//            ErpProjectInfoViewResponse projectInfoView = erpProjectInfoViewResponseList.get(erpProjectInfoViewResponseList.size() - 1);
+//            String receiverAddress = projectInfoView.getProjectAddress();
+//            if (StringUtils.isEmpty(receiverAddress)) {
+//                receiverAddress="ProjectAddress is empty";
+////                throw new Exception("ProjectAddress is empty");
+
+//            }
+//            request.setReceiverAddress(receiverAddress);
+
+
+
+
+
 
             LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.set(TruckOrder::getSenderAddress, request.getSenderAddress());

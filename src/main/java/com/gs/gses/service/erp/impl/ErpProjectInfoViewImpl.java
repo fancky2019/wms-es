@@ -17,6 +17,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,7 +29,11 @@ import java.util.stream.Collectors;
 @Service
 public class ErpProjectInfoViewImpl extends ServiceImpl<ErpProjectInfoViewMapper, ErpProjectInfoView> implements ErpProjectInfoViewService {
 
+
+//    事务内动态切换数据源，默认是切不过去的：Spring事务中的 Connection 是线程绑定的，当前事务已经绑定好的 MASTER Connection不会重新切换。
     @DataSource(DataSourceType.THIRD)
+//    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)  // 挂起当前事务
     @Override
     public PageData<ErpProjectInfoViewResponse> getErpProjectInfoViewPage(ErpProjectInfoViewRequest request) throws Exception {
         LambdaQueryWrapper<ErpProjectInfoView> projectInfoViewQueryWrapper = new LambdaQueryWrapper<>();
