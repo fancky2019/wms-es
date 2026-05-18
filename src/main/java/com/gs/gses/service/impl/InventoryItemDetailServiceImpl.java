@@ -195,6 +195,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
         stopWatch.start(currentTaskName);
         LambdaQueryWrapper<InventoryItemDetail> wrapper = new LambdaQueryWrapper<>();
 
+        wrapper.gt(InventoryItemDetail::getPackageQuantity, 0);
         wrapper.and(qw -> {
             for (InventoryItemDetailRequest query : requestList) {
                 qw.or(w -> {
