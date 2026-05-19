@@ -946,54 +946,47 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
             }
 
 
+            TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
+            truckOrderItemRequest.setPageIndex(1);
+            truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
+            truckOrderItemRequest.setTruckOrderId(request.getId());
+            PageData<TruckOrderItemResponse> truckOrderItemResponsePage = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
+            List<TruckOrderItemResponse> truckOrderItemResponseList = truckOrderItemResponsePage.getData();
+            if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
+                throw new Exception("Get not TruckOrderItem info by TruckOrderId " + request.getId());
+            }
 
-//            TruckOrderItemRequest truckOrderItemRequest = new TruckOrderItemRequest();
-//            truckOrderItemRequest.setPageIndex(1);
-//            truckOrderItemRequest.setPageSize(Integer.MAX_VALUE);
-//            truckOrderItemRequest.setTruckOrderId(request.getId());
-//            PageData<TruckOrderItemResponse> truckOrderItemResponsePage = this.truckOrderItemService.getTruckOrderItemPage(truckOrderItemRequest);
-//            List<TruckOrderItemResponse> truckOrderItemResponseList = truckOrderItemResponsePage.getData();
-//            if (CollectionUtils.isEmpty(truckOrderItemResponseList)) {
-//                throw new Exception("Get not TruckOrderItem info by TruckOrderId " + request.getId());
-//            }
-//
-//            List<String> projectNoList = truckOrderItemResponseList.stream().filter(p -> StringUtils.isNotEmpty(p.getProjectNo())).map(p -> p.getProjectNo()).distinct().collect(Collectors.toList());
-//
-//            if (CollectionUtils.isEmpty(projectNoList)) {
-//                String msg = MessageFormat.format("TruckOrder {0} projectNo is empty", request.getId());
-//                throw new Exception(msg);
-//            }
-//            int size = projectNoList.size();
-//            if (size > 1) {
-//                String projectNoStr = StringUtils.join(projectNoList, ',');
-//                String msg = MessageFormat.format("TruckOrder {0} has multiply projectNo {1}", request.getId(), projectNoStr);
-//            }
-//            String projectNo = projectNoList.get(0);
-//            ErpProjectInfoViewRequest erpProjectInfoViewRequest = new ErpProjectInfoViewRequest();
-//            erpProjectInfoViewRequest.setPageIndex(1);
-//            erpProjectInfoViewRequest.setPageSize(Integer.MAX_VALUE);
-//            erpProjectInfoViewRequest.setProjectCode(projectNo);
-//            PageData<ErpProjectInfoViewResponse> erpProjectInfoViewResponsePage = erpProjectInfoViewService.getErpProjectInfoViewPage(erpProjectInfoViewRequest);
-//
-//            List<ErpProjectInfoViewResponse> erpProjectInfoViewResponseList = erpProjectInfoViewResponsePage.getData();
-//
-//            if (CollectionUtils.isEmpty(erpProjectInfoViewResponseList)) {
-//                String msg = MessageFormat.format("Get ProjectInfoView by projectNo {0}  fail", projectNo);
-//                throw new Exception(msg);
-//            }
-//            ErpProjectInfoViewResponse projectInfoView = erpProjectInfoViewResponseList.get(erpProjectInfoViewResponseList.size() - 1);
-//            String receiverAddress = projectInfoView.getProjectAddress();
-//            if (StringUtils.isEmpty(receiverAddress)) {
-//                receiverAddress="ProjectAddress is empty";
-////                throw new Exception("ProjectAddress is empty");
+            List<String> projectNoList = truckOrderItemResponseList.stream().filter(p -> StringUtils.isNotEmpty(p.getProjectNo())).map(p -> p.getProjectNo()).distinct().collect(Collectors.toList());
 
-//            }
-//            request.setReceiverAddress(receiverAddress);
+            if (CollectionUtils.isEmpty(projectNoList)) {
+                String msg = MessageFormat.format("TruckOrder {0} projectNo is empty", request.getId());
+                throw new Exception(msg);
+            }
+            int size = projectNoList.size();
+            if (size > 1) {
+                String projectNoStr = StringUtils.join(projectNoList, ',');
+                String msg = MessageFormat.format("TruckOrder {0} has multiply projectNo {1}", request.getId(), projectNoStr);
+            }
+            String projectNo = projectNoList.get(0);
+            ErpProjectInfoViewRequest erpProjectInfoViewRequest = new ErpProjectInfoViewRequest();
+            erpProjectInfoViewRequest.setPageIndex(1);
+            erpProjectInfoViewRequest.setPageSize(Integer.MAX_VALUE);
+            erpProjectInfoViewRequest.setProjectCode(projectNo);
+            PageData<ErpProjectInfoViewResponse> erpProjectInfoViewResponsePage = erpProjectInfoViewService.getErpProjectInfoViewPage(erpProjectInfoViewRequest);
 
+            List<ErpProjectInfoViewResponse> erpProjectInfoViewResponseList = erpProjectInfoViewResponsePage.getData();
 
-
-
-
+            if (CollectionUtils.isEmpty(erpProjectInfoViewResponseList)) {
+                String msg = MessageFormat.format("Get ProjectInfoView by projectNo {0}  fail", projectNo);
+                throw new Exception(msg);
+            }
+            ErpProjectInfoViewResponse projectInfoView = erpProjectInfoViewResponseList.get(erpProjectInfoViewResponseList.size() - 1);
+            String receiverAddress = projectInfoView.getProjectAddress();
+            if (StringUtils.isEmpty(receiverAddress)) {
+//                receiverAddress="ERP ProjectAddress is empty";
+                throw new Exception("ERP ProjectAddress is empty");
+            }
+            request.setReceiverAddress(receiverAddress);
 
             LambdaUpdateWrapper<TruckOrder> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.set(TruckOrder::getSenderAddress, request.getSenderAddress());
