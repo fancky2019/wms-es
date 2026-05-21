@@ -111,7 +111,7 @@ public class ThreadPoolExecutorConfig {
 
         // 等待所有任务结束后再关闭线程池
         threadPoolExecutor.setWaitForTasksToCompleteOnShutdown(true);
-        threadPoolExecutor.setAwaitTerminationSeconds(300);
+        threadPoolExecutor.setAwaitTerminationSeconds(30);
         threadPoolExecutor.initialize();
         return threadPoolExecutor;
     }
@@ -135,6 +135,11 @@ public class ThreadPoolExecutorConfig {
         threadPoolExecutor.setDaemon(false);
         threadPoolExecutor.setKeepAliveSeconds(3000);// 线程空闲时间
         threadPoolExecutor.setThreadNamePrefix("mqFailHandler-Executor-"); // 线程名字前缀
+
+        // 等待所有任务结束后再关闭线程池
+        threadPoolExecutor.setWaitForTasksToCompleteOnShutdown(true);
+        // 任务最多等30秒，任务会超时被强制停止
+        threadPoolExecutor.setAwaitTerminationSeconds(30);
         threadPoolExecutor.initialize();
         return threadPoolExecutor;
     }
@@ -160,6 +165,10 @@ public class ThreadPoolExecutorConfig {
         executor.setKeepAliveSeconds(60);                // 空闲线程存活时间
         executor.setThreadNamePrefix("RabbitMQ-Executor-");    // 线程名前缀
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+
+        // 等待所有任务结束后再关闭线程池
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.initialize();
 
         return executor;

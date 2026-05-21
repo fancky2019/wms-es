@@ -5,6 +5,7 @@ import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
@@ -35,6 +36,11 @@ public class MqttProduceCallBack implements MqttCallback {
     @Override
     public void deliveryComplete(IMqttDeliveryToken token) {
         IMqttAsyncClient client = token.getClient();
-        log.info(client.getClientId() + " publish success！");
+        // 从 token 中获取用户上下文（发送时候设置）
+        String traceId = (String) token.getUserContext();
+        if (traceId != null) {
+            MDC.put("traceId", traceId);
+        }
+        log.info(client.getClientId() + " publish success!");
     }
 }

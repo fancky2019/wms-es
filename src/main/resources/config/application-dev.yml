@@ -23,6 +23,8 @@ spring:
     allow-circular-references: true
   application:
     name: springBootProject
+  lifecycle:
+    timeout-per-shutdown-phase: 30s  # 为应用关闭时的每个"生命周期阶段"设置一个最大等待时间。 @PreDestroy.destroy()  线程池的优雅关闭（如果配置了等待）
   servlet:
     multipart:
       enabled: true
@@ -221,6 +223,7 @@ spring:
         prefetch: 30
         #默认 auto，不然消费异常业务ack掉。尽管配置重新入队auto还是会重试入队之后ack掉
         acknowledge-mode: manual
+
         #消费异常的数据重新入队。
     #        default-requeue-rejected: true
 
@@ -233,6 +236,13 @@ spring:
       #      base-url: http://127.0.0.1:15672/api
       port: 15672
       base-url: http://${spring.rabbitmq.host}:${spring.rabbitmq.management.port}/api
+
+  #避免eventbus rabbitmq queueDeclarePassive 失败
+  cloud:
+    stream:
+      bindings:
+        springCloudBusInput:
+          group: bus-group
 
   # MQTT配置信息
   mqtt:

@@ -299,14 +299,14 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
                                                  Map<String, Orgnization> orgnizationMap) throws InterruptedException {
         log.info("inventoryItemDetailList size {}", inventoryItemDetailList.size());
         List<Long> inventoryItemDetailIdList = inventoryItemDetailList.stream().map(p -> p.getId()).distinct().collect(Collectors.toList());
-        log.info("inventoryItemDetaiIdlList  {}", StringUtils.join(inventoryItemDetailIdList, ","));
+        log.info("inventoryItemDetailIdlList  {}", StringUtils.join(inventoryItemDetailIdList, ","));
         List<InventoryInfo> inventoryInfos = new ArrayList<>();
         List<Long> inventoryItemIdList = inventoryItemDetailList.stream().map(p -> p.getInventoryItemId()).distinct().collect(Collectors.toList());
-        log.info("inventoryItemIdList {}", inventoryItemIdList.size());
         if (CollectionUtils.isEmpty(inventoryItemIdList)) {
             log.info("addByInventoryItemDetailInfo fail inventoryItemIdList is empty");
             return 0;
         }
+        log.info("inventoryItemIdList {}",StringUtils.join(inventoryItemIdList, ","));
         List<InventoryItem> inventoryItemList = this.inventoryItemService.listByIds(inventoryItemIdList);
         List<Long> inventoryIdList = inventoryItemList.stream().map(p -> p.getInventoryId()).distinct().collect(Collectors.toList());
         if (CollectionUtils.isEmpty(inventoryIdList)) {
@@ -358,7 +358,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
 
 
             List<Long> organiztionSupplierIdList = inventoryItemList.stream().filter(p -> p.getOrganiztionSupplierId() != null).map(p -> p.getOrganiztionSupplierId()).distinct().collect(Collectors.toList());
-            List<Long> organiztionIdList = inventoryItemList.stream().filter(p -> p.getOrganiztionSupplierId() != null).map(p -> p.getOrganiztionId()).distinct().collect(Collectors.toList());
+            List<Long> organiztionIdList = inventoryItemList.stream().filter(p -> p.getOrganiztionId() != null).map(p -> p.getOrganiztionId()).distinct().collect(Collectors.toList());
 
             List<Long> allOrganiztionIdList = new ArrayList<>();
             allOrganiztionIdList.addAll(organiztionSupplierIdList);
