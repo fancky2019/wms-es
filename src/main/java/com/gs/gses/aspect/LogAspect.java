@@ -289,6 +289,7 @@ public class LogAspect {
                 } else {
                     //增加重试机制，没有获取到设置过期时间的锁
                     String msg = MessageFormat.format("Get lock {0}  fail", tokenKey);
+                    log.info(msg);
                     return MessageResult.faile(msg);
                 }
             } catch (Exception e) {
