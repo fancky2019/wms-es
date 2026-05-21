@@ -363,7 +363,7 @@ public class InventoryInfoServiceImpl implements InventoryInfoService {
             List<Long> allOrganiztionIdList = new ArrayList<>();
             allOrganiztionIdList.addAll(organiztionSupplierIdList);
             allOrganiztionIdList.addAll(organiztionIdList);
-            if (!allOrganiztionIdList.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(allOrganiztionIdList)) {
                 List<String> allOrganiztionIdStrList = allOrganiztionIdList.stream().map(p -> p.toString()).collect(Collectors.toList());
                 List<Orgnization> orgnizationList = redisTemplate.opsForHash().multiGet(BasicInfoCacheServiceImpl.ORGNIZATION_PREFIX, allOrganiztionIdStrList);
                 if (CollectionUtils.isNotEmpty(orgnizationList)) {

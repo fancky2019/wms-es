@@ -193,10 +193,12 @@ public class AuthenticationFilter implements Filter {
             try {
                 authenticationFail(httpServletRequest, httpServletResponse, messageResult, ex.getMessage());
             } catch (Exception e) {
+                log.error("authenticationFail");
                 throw new RuntimeException(e);
             }
         } catch (Exception ex) {
             try {
+                log.error("HandleFilterException", ex);
                 messageResult.setMessage(ex.getMessage());
                 messageResult.setCode(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 String msg = objectMapper.writeValueAsString(messageResult);
