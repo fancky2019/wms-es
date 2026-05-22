@@ -755,6 +755,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
         TruckOrder truckOrder = add(request.getTruckOrderRequest());
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
+            truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
             truckOrderItemRequest.setStatus(status);
             truckOrderItemRequest.setTruckOrderId(truckOrder.getId());
             truckOrderItemRequest.setCreationTime(LocalDateTime.now());
@@ -1137,7 +1138,12 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Override
     public PageData<TruckOrderResponse> getTruckOrderPage(TruckOrderRequest request) {
         LambdaQueryWrapper<TruckOrder> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(TruckOrder::getDeleted, 0);
+//        queryWrapper.eq(TruckOrder::getDeleted, 0);
+        queryWrapper.and(wrapper -> wrapper
+                .eq(TruckOrder::getDeleted, 0)
+                .or()
+                .isNull(TruckOrder::getDeleted)
+        );
         if (StringUtils.isNotEmpty(request.getTruckOrderCode())) {
             queryWrapper.eq(TruckOrder::getTruckOrderCode, request.getTruckOrderCode());
         }

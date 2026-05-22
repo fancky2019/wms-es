@@ -43,5 +43,6 @@ public interface TruckOrderItemService extends IService<TruckOrderItem> {
     String failureReason(Long truckOrderItemId) throws Exception;
 
     void reDebit(Long truckOrderItemId) throws Exception;
+    void createMqMessage(List<Long> truckOrderIdList) throws Exception;
 
 }

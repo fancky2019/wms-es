@@ -88,4 +88,10 @@ public class TruckOrderItemController {
         truckOrderItemService.reDebit(id);
         return MessageResult.success();
     }
+
+    @PostMapping("/createMqMessage")
+    public MessageResult<String> createMqMessage(@RequestBody List<Long> truckOrderIdList) throws Exception {
+        truckOrderItemService.createMqMessage(truckOrderIdList);
+        return MessageResult.success();
+    }
 }

@@ -325,6 +325,15 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         List<TruckOrderItem> truckOrderItemList = new ArrayList<>();
         for (TruckOrderItemRequest request : requestList) {
+//            if (request.getDeleted() == null) {
+//                request.setDeleted(0);
+//            }
+//            if (request.getVersion() == null) {
+//                request.setVersion(0);
+//            }
+            if (request.getStatus() == null) {
+                request.setStatus(0);
+            }
             TruckOrderItem item = new TruckOrderItem();
             BeanUtils.copyProperties(request, item);
 //              每条回填ID
@@ -359,11 +368,11 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
                 .list();
         stopWatch.stop();
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
-        LambdaQueryWrapper<TruckOrderItem> truckOrderItemQueryWrapper = new LambdaQueryWrapper<>();
-        truckOrderItemQueryWrapper.eq(TruckOrderItem::getDeleted, 0);
-        truckOrderItemQueryWrapper.eq(TruckOrderItem::getTruckOrderId, truckOrderId);
-        truckOrderItemQueryWrapper.orderByAsc(TruckOrderItem::getId);  // 升序
-        truckOrderItemDbList = this.list(truckOrderItemQueryWrapper);
+//        LambdaQueryWrapper<TruckOrderItem> truckOrderItemQueryWrapper = new LambdaQueryWrapper<>();
+//        truckOrderItemQueryWrapper.eq(TruckOrderItem::getDeleted, 0);
+//        truckOrderItemQueryWrapper.eq(TruckOrderItem::getTruckOrderId, truckOrderId);
+//        truckOrderItemQueryWrapper.orderByAsc(TruckOrderItem::getId);  // 升序
+//        truckOrderItemDbList = this.list(truckOrderItemQueryWrapper);
         return truckOrderItemDbList;
 
 //        return truckOrderItemList;
@@ -431,7 +440,14 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Override
     public PageData<TruckOrderItemResponse> getTruckOrderItemPage(TruckOrderItemRequest request) throws Exception {
         LambdaQueryWrapper<TruckOrderItem> truckOrderItemQueryWrapper = new LambdaQueryWrapper<>();
-        truckOrderItemQueryWrapper.eq(TruckOrderItem::getDeleted, 0);
+//        truckOrderItemQueryWrapper.eq(TruckOrderItem::getDeleted, 0);
+
+
+        truckOrderItemQueryWrapper.and(wrapper -> wrapper
+                .eq(TruckOrderItem::getDeleted, 0)
+                .or()
+                .isNull(TruckOrderItem::getDeleted)
+        );
         if (StringUtils.isNotEmpty(request.getTruckOrderCode())) {
             LambdaQueryWrapper<TruckOrder> truckOrderQueryWrapper = new LambdaQueryWrapper<>();
             truckOrderQueryWrapper.eq(TruckOrder::getTruckOrderCode, request.getTruckOrderCode());
@@ -862,6 +878,39 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         mqMessage.setStatus(MqMessageStatus.CONSUME_FAIL.getValue());
         mqMessage.setNextRetryTime(LocalDateTime.now());
         this.mqMessageService.update(mqMessage);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void createMqMessage(List<Long> truckOrderIdList) throws Exception {
+        for (Long truckOrderId : truckOrderIdList) {
+            List<TruckOrderItem> truckOrderItemList = lambdaQuery()
+                    .and(wrapper -> wrapper
+                            .eq(TruckOrderItem::getDeleted, 0)
+                            .or()
+                            .isNull(TruckOrderItem::getDeleted)
+                    )
+                    .eq(TruckOrderItem::getTruckOrderId, truckOrderId)
+                    .orderByAsc(TruckOrderItem::getId)
+                    .list();
+
+            List<MqMessageRequest> mqMessageRequestList = new ArrayList<>();
+            for (TruckOrderItem truckOrderItem : truckOrderItemList) {
+                String content = objectMapper.writeValueAsString(truckOrderItem.getId());
+                MqMessageRequest mqMessage = new MqMessageRequest();
+                mqMessage.setBusinessId(truckOrderItem.getId());
+                mqMessage.setBusinessKey(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+                mqMessage.setMsgContent(content);
+                mqMessage.setQueue(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+                mqMessage.setTopic(UtilityConst.TRUCK_ORDER_ITEM_DEBIT);
+                mqMessage.setSendMq(false);
+                mqMessageRequestList.add(mqMessage);
+            }
+            List<MqMessage> mqMessageList = mqMessageService.addMessageBatch(mqMessageRequestList);
+            publishMsg(mqMessageList);
+        }
+
+
     }
 
 }
