@@ -71,7 +71,7 @@ spring:
   datasource:
     primary:
 #      GensongWms3DB  wms_liku
-      jdbc-url: jdbc:sqlserver://10.100.200.43;DatabaseName=wms_liku;trustServerCertificate=true
+      jdbc-url: jdbc:sqlserver://10.100.200.213;DatabaseName=wms_liku;trustServerCertificate=true
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
       username: sa
       password: gen@song123
@@ -307,8 +307,8 @@ sbp:
     - "http://127.0.0.1:*"
   authority: http://10.100.200.43:9001/api/app      #;//http://10.100.200.43:9001/api/app   http://gen-song.vip:14001/api/app
 #  hostAndPort: 127.0.0.1:9200
-  hostAndPort: 10.100.200.213:9200
-#  hostAndPort: 10.100.202.113:9200
+#  hostAndPort: 10.100.200.213:9200
+  hostAndPort: 10.100.202.113:9200
   checkpermission: true
   initCache: false
   logMq: false

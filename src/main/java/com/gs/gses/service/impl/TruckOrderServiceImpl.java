@@ -684,6 +684,11 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
         stopWatch.start(currentTaskName);
         TruckOrder truckOrder = saveTruckOrderAndItem(splitRequest, createTime, null);
         stopWatch.stop();
+
+//        if (true) {
+//            throw new Exception("test");
+//        }
+
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
         log.info("currentTaskName stopWatch {} cost {}", stopWatch.getId(), stopWatch.getTotalTimeMillis());
     }

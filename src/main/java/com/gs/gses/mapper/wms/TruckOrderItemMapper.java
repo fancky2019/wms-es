@@ -4,6 +4,8 @@ import com.gs.gses.model.entity.TruckOrderItem;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.List;
+
 /**
 * @author lirui
 * @description 针对表【TruckOrderItem】的数据库操作Mapper
@@ -12,7 +14,7 @@ import org.apache.ibatis.annotations.Mapper;
 */
 @Mapper
 public interface TruckOrderItemMapper extends BaseMapper<TruckOrderItem> {
-
+   void batchInsert(List<TruckOrderItem> list);
 }
 
 

@@ -46,6 +46,10 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
     @Autowired
     private HttpServletRequest httpServletRequest;
 
+    /**
+     * 会比较耗时
+     * @param metaObject
+     */
     @Override
     public void insertFill(MetaObject metaObject) {
         //create_time
@@ -58,13 +62,13 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
         Object originalObject = metaObject.getOriginalObject();
         if (originalObject instanceof TruckOrder) {
             TruckOrder truckOrder = (TruckOrder) originalObject;
-            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(),truckOrder.getFilePath());
+            log.info("TruckOrderInsert:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(), truckOrder.getFilePath());
         } else if (originalObject instanceof TruckOrderItem) {
             TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
             log.info("TruckOrderItemInsert:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
         } else if (originalObject instanceof MqMessage) {
             MqMessage message = (MqMessage) originalObject;
-            log.info("MqMessageInsert:BusinessId {} MsgContent {} status{}", message.getBusinessId(), message.getMsgContent(),message.getStatus());
+            log.info("MqMessageInsert:BusinessId {} MsgContent {} status{}", message.getBusinessId(), message.getMsgContent(), message.getStatus());
         }
         int n = 0;
     }
@@ -101,13 +105,13 @@ public class MetaObjectHandlerImp implements MetaObjectHandler {
         Object originalObject = metaObject.getOriginalObject();
         if (originalObject instanceof TruckOrder) {
             TruckOrder truckOrder = (TruckOrder) originalObject;
-            log.info("TruckOrderUpdate:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(),truckOrder.getFilePath());
+            log.info("TruckOrderUpdate:truckOrderId {} truckOrderCode {} filePath {}", truckOrder.getId(), truckOrder.getTruckOrderCode(), truckOrder.getFilePath());
         } else if (originalObject instanceof TruckOrderItem) {
             TruckOrderItem truckOrderItem = (TruckOrderItem) originalObject;
             log.info("TruckOrderItemUpdate:truckOrderId {} truckOrderItemId {}", truckOrderItem.getTruckOrderId(), truckOrderItem.getId());
-        }else if (originalObject instanceof MqMessage) {
+        } else if (originalObject instanceof MqMessage) {
             MqMessage message = (MqMessage) originalObject;
-            log.info("MqMessageUpdate:BusinessId {} MsgContent {} status{}", message.getBusinessId(), message.getMsgContent(),message.getStatus());
+            log.info("MqMessageUpdate:BusinessId {} MsgContent {} status{}", message.getBusinessId(), message.getMsgContent(), message.getStatus());
         }
         int n = 0;
     }

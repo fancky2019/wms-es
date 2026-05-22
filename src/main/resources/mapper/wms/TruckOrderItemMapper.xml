@@ -47,4 +47,68 @@
         ProcessMsg,LatestProcessTime,ShipOrderCode,
         Pallet,InventoryItemDetailId
     </sql>
+
+    <!-- 批量插入，不包含 Id 自增列 -->
+    <insert id="batchInsert">
+        INSERT INTO TruckOrderItem (
+        TruckOrderId,
+        ProjectNo,
+        ProjectName,
+        ApplyShipOrderCode,
+        ShipOrderId,
+        ShipOrderItemId,
+        MaterialId,
+        MaterialCode,
+        DeviceName,
+        DeviceNo,
+        Quantity,
+        SendBatchNo,
+        Remark,
+        Deleted,
+        Version,
+        CreatorId,
+        CreatorName,
+        LastModifierId,
+        LastModifierName,
+        CreationTime,
+        LastModificationTime,
+        Status,
+        ProcessMsg,
+        LatestProcessTime,
+        ShipOrderCode,
+        Pallet,
+        InventoryItemDetailId
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.truckOrderId},
+            #{item.projectNo},
+            #{item.projectName},
+            #{item.applyShipOrderCode},
+            #{item.shipOrderId},
+            #{item.shipOrderItemId},
+            #{item.materialId},
+            #{item.materialCode},
+            #{item.deviceName},
+            #{item.deviceNo},
+            #{item.quantity},
+            #{item.sendBatchNo},
+            #{item.remark},
+            #{item.deleted},
+            #{item.version},
+            #{item.creatorId},
+            #{item.creatorName},
+            #{item.lastModifierId},
+            #{item.lastModifierName},
+            #{item.creationTime},
+            #{item.lastModificationTime},
+            #{item.status},
+            #{item.processMsg},
+            #{item.latestProcessTime},
+            #{item.shipOrderCode},
+            #{item.pallet},
+            #{item.inventoryItemDetailId}
+            )
+        </foreach>
+    </insert>
 </mapper>

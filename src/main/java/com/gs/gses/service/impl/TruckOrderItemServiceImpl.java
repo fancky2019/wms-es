@@ -313,20 +313,57 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     }
 
     @Override
-    public List<TruckOrderItem> addBatch(List<TruckOrderItemRequest> requestList) {
+    public List<TruckOrderItem> addBatch(List<TruckOrderItemRequest> requestList) throws Exception {
+
+        if (CollectionUtils.isEmpty(requestList)) {
+            throw new Exception("TruckOrderItemRequest is empty");
+        }
+        Long truckOrderId = requestList.get(0).getTruckOrderId();
+        if (truckOrderId == null || truckOrderId < 0) {
+            throw new Exception("TruckOrderItemAddBatch truckOrderId is empty");
+        }
+
         List<TruckOrderItem> truckOrderItemList = new ArrayList<>();
         for (TruckOrderItemRequest request : requestList) {
             TruckOrderItem item = new TruckOrderItem();
             BeanUtils.copyProperties(request, item);
-            this.save(item);
+//              每条回填ID
+//            this.save(item);
             truckOrderItemList.add(item);
         }
+
+
         //SQL Server的JDBC驱动限制：SQL Server的JDBC驱动在批量插入时无法完美支持返回所有插入记录的主键值，只能返回最后一个插入记录的主键值
 //        this.saveBatch(truckOrderItemList);
-
 //        this.customSaveBatch(truckOrderItemList);
+        String currentTaskName = "batchInsert";
+        StopWatch stopWatch = new StopWatch("TruckOrderItem-AddBatch");
+        stopWatch.start(currentTaskName);
+        this.getBaseMapper().batchInsert(truckOrderItemList);
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
 
-        return truckOrderItemList;
+        currentTaskName = "QueryInsert";
+        stopWatch.start(currentTaskName);
+        List<TruckOrderItem> truckOrderItemDbList = lambdaQuery()
+                .and(wrapper -> wrapper
+                        .eq(TruckOrderItem::getDeleted, 0)
+                        .or()
+                        .isNull(TruckOrderItem::getDeleted)
+                )
+                .eq(TruckOrderItem::getTruckOrderId, truckOrderId)
+                .orderByAsc(TruckOrderItem::getId)
+                .list();
+        stopWatch.stop();
+        log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
+        LambdaQueryWrapper<TruckOrderItem> truckOrderItemQueryWrapper = new LambdaQueryWrapper<>();
+        truckOrderItemQueryWrapper.eq(TruckOrderItem::getDeleted, 0);
+        truckOrderItemQueryWrapper.eq(TruckOrderItem::getTruckOrderId, truckOrderId);
+        truckOrderItemQueryWrapper.orderByAsc(TruckOrderItem::getId);  // 升序
+        truckOrderItemDbList = this.list(truckOrderItemQueryWrapper);
+        return truckOrderItemDbList;
+
+//        return truckOrderItemList;
     }
 
     @Override
@@ -558,8 +595,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         for (TruckOrderItemResponse item : truckOrderItemResponseList) {
             log.info("mergeTruckOrder- {},{},{}", item.getId(), item.getTruckOrderId(), retainId);
-            if (item.getStatus().equals(TruckOrderStausEnum.NOT_DEBITED.getValue()) ||
-                    item.getStatus().equals(TruckOrderStausEnum.DEBITING.getValue())) {
+            if (item.getStatus().equals(TruckOrderStausEnum.NOT_DEBITED.getValue()) || item.getStatus().equals(TruckOrderStausEnum.DEBITING.getValue())) {
                 String mergeMsg = MessageFormat.format("TruckOrderId {0} TruckOrderItemId :{1} is being debited, please wait for the debit to complete,", item.getTruckOrderId(), item.getId());
                 throw new Exception(mergeMsg);
             }
@@ -595,8 +631,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             }
             log.info("transactionLockManager get lock success ,truckOrderItemIdList {}", StringUtils.join(truckOrderItemIdList, ","));
             LambdaUpdateWrapper<TruckOrderItem> truckOrderItemLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-            truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList)
-                    .set(TruckOrderItem::getTruckOrderId, retainId);
+            truckOrderItemLambdaUpdateWrapper.in(TruckOrderItem::getId, truckOrderItemIdList).set(TruckOrderItem::getTruckOrderId, retainId);
             boolean re1 = this.update(null, truckOrderItemLambdaUpdateWrapper);
             if (!re1) {
                 throw new Exception("Update TruckOrderItem truckOrderId fail");
