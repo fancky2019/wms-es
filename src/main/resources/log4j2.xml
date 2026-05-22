@@ -97,7 +97,7 @@
 
         <!--   debug  all  info  异步-->
 <!--        <AsyncRoot level="info">-->
-        <AsyncRoot level="debug">
+        <AsyncRoot level="info">
             <appender-ref ref="Console"/>
             <appender-ref ref="RollingFile"/>
 <!--            <appender-ref ref="Mail"/>-->
