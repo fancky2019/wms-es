@@ -332,6 +332,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
             truckOrderItemList.add(item);
         }
 
+//        if (true) {
+//            throw new Exception("TruckOrderItem is empty");
+//        }
 
         //SQL Server的JDBC驱动限制：SQL Server的JDBC驱动在批量插入时无法完美支持返回所有插入记录的主键值，只能返回最后一个插入记录的主键值
 //        this.saveBatch(truckOrderItemList);

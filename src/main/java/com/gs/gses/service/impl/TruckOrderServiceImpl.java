@@ -154,6 +154,9 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     @Override
     public void addTruckOrderAndItem(AddTruckOrderRequest request, String token) throws Throwable {
 
+        if (CollectionUtils.isEmpty(request.getTruckOrderItemRequestList())) {
+            throw new Exception("TruckOrderItem is empty");
+        }
         for (TruckOrderItemRequest truckOrderItemRequest : request.getTruckOrderItemRequestList()) {
             truckOrderItemRequest.setUuid(UUID.randomUUID().toString().replaceAll("-", ""));
         }
@@ -885,6 +888,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void addTruckOrderAndItemOnly(AddTruckOrderRequest request, String token) throws Throwable {
 
         if (request.getTruckOrderRequest().getCreationTime() == null) {
