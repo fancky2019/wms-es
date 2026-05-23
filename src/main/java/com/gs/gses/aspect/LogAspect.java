@@ -288,7 +288,7 @@ public class LogAspect {
                     return obj;
                 } else {
                     //增加重试机制，没有获取到设置过期时间的锁
-                    String msg = MessageFormat.format("Get lock {0}  fail", tokenKey);
+                    String msg = MessageFormat.format("AroundMethodGetLockFail - {0}  ", tokenKey);
                     log.info(msg);
                     return MessageResult.faile(msg);
                 }

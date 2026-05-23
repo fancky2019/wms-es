@@ -683,9 +683,9 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         long truckOrderItemId = objectMapper.readValue(mqMessage.getMsgContent(), Long.class);
 
-        String lockKey = RedisKey.DEBIT;
-        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
-        RLock lock = redissonClient.getLock(lockKey);
+//        String lockKey = RedisKey.DEBIT;
+//        //获取分布式锁，此处单体应用可用 synchronized，分布式就用redisson 锁
+//        RLock lock = redissonClient.getLock(lockKey);
         boolean lockSuccessfully = false;
         String itemLockKey = RedisKey.UPDATE_TRUCK_ORDER_ITEM + ":" + truckOrderItemId;
         List<String> lockKeys = new ArrayList<>();

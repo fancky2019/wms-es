@@ -37,7 +37,7 @@ import javax.servlet.http.HttpServletRequest;
  *
  *插入无法获取id信息
  *
- *
+ *MetaObjectHandler 的填充发生在 SQL 执行前、对象被传入 Mapper 后 的那一刻，事务提交之前
  */
 @Slf4j
 @Component
