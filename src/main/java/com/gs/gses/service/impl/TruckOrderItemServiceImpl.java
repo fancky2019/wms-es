@@ -314,7 +314,6 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
     @Override
     public List<TruckOrderItem> addBatch(List<TruckOrderItemRequest> requestList) throws Exception {
-
         if (CollectionUtils.isEmpty(requestList)) {
             throw new Exception("TruckOrderItemRequest is empty");
         }
@@ -325,12 +324,6 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
         List<TruckOrderItem> truckOrderItemList = new ArrayList<>();
         for (TruckOrderItemRequest request : requestList) {
-//            if (request.getDeleted() == null) {
-//                request.setDeleted(0);
-//            }
-//            if (request.getVersion() == null) {
-//                request.setVersion(0);
-//            }
             if (request.getStatus() == null) {
                 request.setStatus(0);
             }
@@ -351,6 +344,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         String currentTaskName = "batchInsert";
         StopWatch stopWatch = new StopWatch("TruckOrderItem-AddBatch");
         stopWatch.start(currentTaskName);
+        log.info("addBatchTruckOrderItem");
         this.getBaseMapper().batchInsert(truckOrderItemList);
         stopWatch.stop();
         log.info("currentTaskName {} cost {}", currentTaskName, stopWatch.getLastTaskTimeMillis());
@@ -883,19 +877,48 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void createMqMessage(List<Long> truckOrderIdList) throws Exception {
+
+        if (CollectionUtils.isEmpty(truckOrderIdList)) {
+            throw new Exception("truckOrderId is empty");
+        }
+
+        for (Long id : truckOrderIdList) {
+            if (id != null && id <= 0) {
+                String msg = MessageFormat.format("invalid id - {0}", id);
+                throw new Exception(msg);
+            }
+        }
+
+        List<TruckOrderItem> allTruckOrderItemList = lambdaQuery()
+                .and(wrapper -> wrapper
+                        .eq(TruckOrderItem::getDeleted, 0)
+                        .or()
+                        .isNull(TruckOrderItem::getDeleted)
+                )
+                .in(TruckOrderItem::getTruckOrderId, truckOrderIdList)
+                .orderByAsc(TruckOrderItem::getId)
+                .list();
+
+
+//        Integer version = null;
+//        List<TruckOrderItem> allTruckOrderItemList1 = lambdaQuery()
+//                //翻译成=null sql语法查不到数据
+//                .eq(TruckOrderItem::getVersion, version)
+//                .in(TruckOrderItem::getTruckOrderId, truckOrderIdList)
+//                .orderByAsc(TruckOrderItem::getId)
+//                .list();
+
+        Map<Long, List<TruckOrderItem>> map = allTruckOrderItemList.stream().collect(Collectors.groupingBy(TruckOrderItem::getTruckOrderId));
+
         for (Long truckOrderId : truckOrderIdList) {
-            List<TruckOrderItem> truckOrderItemList = lambdaQuery()
-                    .and(wrapper -> wrapper
-                            .eq(TruckOrderItem::getDeleted, 0)
-                            .or()
-                            .isNull(TruckOrderItem::getDeleted)
-                    )
-                    .eq(TruckOrderItem::getTruckOrderId, truckOrderId)
-                    .orderByAsc(TruckOrderItem::getId)
-                    .list();
+            List<TruckOrderItem> currentTruckOrderItemList = map.get(truckOrderId);
+            // 跳过不存在的 truckOrderId
+            if (CollectionUtils.isEmpty(currentTruckOrderItemList)) {
+                continue;
+            }
 
             List<MqMessageRequest> mqMessageRequestList = new ArrayList<>();
-            for (TruckOrderItem truckOrderItem : truckOrderItemList) {
+            for (TruckOrderItem truckOrderItem : currentTruckOrderItemList) {
                 String content = objectMapper.writeValueAsString(truckOrderItem.getId());
                 MqMessageRequest mqMessage = new MqMessageRequest();
                 mqMessage.setBusinessId(truckOrderItem.getId());

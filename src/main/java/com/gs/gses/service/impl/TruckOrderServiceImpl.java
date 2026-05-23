@@ -876,6 +876,7 @@ public class TruckOrderServiceImpl extends ServiceImpl<TruckOrderMapper, TruckOr
 
     @Override
     public TruckOrder add(TruckOrderRequest truckOrderRequest) {
+        log.info("addTruckOrder");
         TruckOrder truckOrder = new TruckOrder();
         BeanUtils.copyProperties(truckOrderRequest, truckOrder);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");

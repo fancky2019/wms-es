@@ -95,7 +95,7 @@
 <!--            <AppenderRef ref="Console"/>-->
         </Logger>
 
-        <!--   debug  all  info  异步-->
+        <!--   debug  all  info debug 异步-->
 <!--        <AsyncRoot level="info">-->
         <AsyncRoot level="info">
             <appender-ref ref="Console"/>
