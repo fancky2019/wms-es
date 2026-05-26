@@ -244,7 +244,7 @@ public class InventoryItemDetailServiceImpl extends ServiceImpl<InventoryItemDet
 
             int size = currentInventoryItemDetailList.size();
             if (size == 0) {
-                String msg = MessageFormat.format("Can't Match InventoryItemDetail by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
+                String msg = MessageFormat.format("No InventoryItemDetail found by ProjectNo {0} MaterialCode {1} DeviceNo {2}", request.getM_Str7(), request.getMaterialCode(), request.getM_Str12());
                 throw new Exception(msg);
             }
 

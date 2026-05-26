@@ -245,7 +245,6 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
         currentTaskName = "checkItemExistBatch";
         stopWatch.start(currentTaskName);
 //        Boolean detailExist1 = inventoryInfoService.checkDetailExistEs(inventoryItemDetailRequestList);
-
         Boolean shipOrderItemExist = shipOrderItemService.checkItemExistBatch(shipOrderItemRequestList, matchedShipOrderItemResponseList);
 
         stopWatch.stop();
