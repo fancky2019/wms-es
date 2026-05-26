@@ -44,12 +44,12 @@ import java.util.stream.Collectors;
  * @Aspect 在Filter 后执行
  *
  *
- Advisors(增强器) :它组合了Advice（通知）和Pointcut（切点），是一个完整的切面单元。
- Advisor = Advice + Pointcut
+Advisors(增强器) :它组合了Advice（通知）和Pointcut（切点），是一个完整的切面单元。
+Advisor = Advice + Pointcut
 
 <dependency>
-	<groupId>org.springframework.boot</groupId>
-	<artifactId>spring-boot-starter-aop</artifactId>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-aop</artifactId>
 </dependency>
 
 切点表达式:参考https://www.cnblogs.com/zhangxufeng/p/9160869.html
@@ -71,7 +71,7 @@ execution(public * com.spring.service.BusinessObject.businessService(java.lang.S
 
  *通配符：该通配符主要用于匹配单个单词，或者是以某个词为前缀或后缀的单词。
 ..通配符：该通配符表示0个或多个项，主要用于declaring-type-pattern和param-pattern中，如果用于declaring-type-pattern中，
-          则表示匹配当前包及其子包，如果用于param-pattern中，则表示匹配0个或多个参数。
+则表示匹配当前包及其子包，如果用于param-pattern中，则表示匹配0个或多个参数。
  */
 @Aspect
 @Component
@@ -159,6 +159,9 @@ public class LogAspect {
                         .collect(Collectors.joining(",")) + "]");
             } else if (arg instanceof HttpServletRequest || arg instanceof HttpServletResponse) {
                 // 忽略这些参数
+            } else if (isSensitive(arg)) {
+                //不打印token
+                // ignore sensitive data
             } else {
                 loggableArgs.add(arg);
             }
@@ -313,6 +316,18 @@ public class LogAspect {
         log.debug("{} : {} - {} DealCompleted,Return - {}", uri, className, methodName, objectMapper.writeValueAsString(result));
         return result;
 
+    }
+
+    private boolean isSensitive(Object arg) {
+
+        if (!(arg instanceof String)) {
+            return false;
+        }
+
+        String str = (String) arg;
+        return str.startsWith("Bearer ")
+                || str.contains("access_token")
+                || str.contains("refresh_token");
     }
 
     private Object monitor(ProceedingJoinPoint jp, String servletPath) throws Throwable {
