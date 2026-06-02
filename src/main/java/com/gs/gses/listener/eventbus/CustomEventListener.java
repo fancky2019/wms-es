@@ -122,6 +122,7 @@ public class CustomEventListener {
             for (MqMessage message : messageList) {
                 try {
 
+                    //待优化：此处没有进行多线程优化，会导致消息积压没处理。
 
 //                因为 MqMessageEventHandler 是在 @Async 的线程池线程中执行的，而
 //                @Transactional 依赖当前线程的事务同步器(TransactionSynchronizationManager.isSynchronizationActive())，
@@ -132,7 +133,7 @@ public class CustomEventListener {
 
 
                     //@Async + @Transactional 事务不生效
-                    //        事务模板方法
+                    // 事务模板方法
                     // 在这里执行事务性操作
                     // 操作成功则事务提交，否则事务回滚
                     Exception e = transactionTemplate.execute(transactionStatus -> {
