@@ -79,10 +79,10 @@ public class BaseRabbitMqHandler {
                 Object retryCountObj = redisTemplate.opsForValue().get(mqMsgIdKey);
                 if (redisTemplate.getExpire(mqMsgIdKey) == -1) {
                     retryCount = (int) retryCountObj;
-                    log.info("setIfAbsent {} fail",mqMsgIdKey);
+                    log.info("setIfAbsent {} fail", mqMsgIdKey);
                     //由于业务处理成功和redis 设置成功不是一个原子操作，会有漏洞,Redis 只做「并发互斥锁」，真正幂等靠数据库唯一约束
                     //业务层有状态机判断用状态机，否则添加本地消息表和业务层事务保持原子性
-                }else {
+                } else {
                     log.info("msgId - {} has been consumed,msg - {}", msgId, msgContent);
                     channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
                     return;
@@ -120,10 +120,14 @@ public class BaseRabbitMqHandler {
 //            }
 
 
-
             T t = objectMapper.readValue(msgContent, tClass);
+            //业务层兜底幂等性
             consumer.accept(t);
             log.info("ConsumeSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
+
+            //处理本息消息表状态：此处最好和业务一起更新保持原子性。
+            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUMED.getValue(), queue);
+
             //消费成功设置过期时间删除key.
             if (redisTemplate.expire(mqMsgIdKey, EXPIRE_TIME, TimeUnit.SECONDS)) {
                 log.info("SetExpire mqMsgIdKey - {} success", mqMsgIdKey);
@@ -134,7 +138,6 @@ public class BaseRabbitMqHandler {
 
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
             log.info("AckSuccess msgId - {},businessKey - {} ,businessId - {}", msgId, businessKey, businessId);
-            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUMED.getValue(),queue);
         } catch (Exception e) {
             log.error("ConsumerFail msgId - {},businessKey - {} ,businessId - {} retry - {}", msgId, businessKey, businessId, retry);
             log.error("", e);
@@ -248,7 +251,7 @@ public class BaseRabbitMqHandler {
 
             //region update mqMessage
             //重试仍然没有成功，标记为消费失败。走定时任务补偿
-            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUME_FAIL.getValue(),queueName);
+            mqMessageService.updateByMsgId(msgId, MqMessageStatus.CONSUME_FAIL.getValue(), queueName);
             //endregion
         }
 

@@ -794,7 +794,7 @@ public class TruckOrderItemServiceImpl extends ServiceImpl<TruckOrderItemMapper,
 
 
         } catch (Exception ex) {
-            log.error("", ex);
+//            log.error("", ex);
             throw ex;
         } finally {
             //非事务操作在此释放
