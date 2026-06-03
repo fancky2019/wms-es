@@ -6,10 +6,14 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
+import org.springframework.scheduling.concurrent.ExecutorConfigurationSupport;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Configuration
 // 必须三处都配置
@@ -119,10 +123,14 @@ public class ThreadPoolExecutorConfig {
     /**
      * 不同业务使用不同线程池
      * 异步方法上直接加 @Async("threadPoolExecutor")
+     *
+     *
      * @return
      */
     @Bean(name = "mqFailHandlerExecutor")
     public Executor mqFailHandlerExecutor() {
+        //ThreadPoolTaskExecutor 是对 ThreadPoolExecutor 的封装
+//        ExecutorConfigurationSupport extends CustomizableThreadFactory
         ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();
         int processNum = Runtime.getRuntime().availableProcessors(); // 返回可用处理器的Java虚拟机的数量
         int corePoolSize = (int) (processNum / (1 - 0.2));
@@ -132,9 +140,33 @@ public class ThreadPoolExecutorConfig {
         //内部使用 LinkedBlockingQueue
         threadPoolExecutor.setQueueCapacity(maxPoolSize * 1000); // 队列程度
         threadPoolExecutor.setThreadPriority(Thread.MAX_PRIORITY);
+        //默认 daemon = false;
         threadPoolExecutor.setDaemon(false);
         threadPoolExecutor.setKeepAliveSeconds(3000);// 线程空闲时间
         threadPoolExecutor.setThreadNamePrefix("mqFailHandler-Executor-"); // 线程名字前缀
+
+
+      // 当前默认行为 - 队列满且达到最大线程数时抛出 RejectedExecutionException
+//        threadPoolExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+
+//        // 2. 设置线程工厂（可选，用于更精细的线程控制）
+//        threadPoolExecutor.setThreadFactory(new ThreadFactory() {
+//            private final AtomicLong threadCounter = new AtomicLong(1);
+//
+//            @Override
+//            public Thread newThread(Runnable r) {
+//                Thread thread = new Thread(r, "mqFailHandler-Executor-" + threadCounter.getAndIncrement());
+//                thread.setPriority(Thread.MAX_PRIORITY);
+//                thread.setDaemon(false);
+//                // 设置未捕获异常处理器
+//                thread.setUncaughtExceptionHandler((t, e) -> {
+//                    log.error("Thread {} threw uncaught exception: {}", t.getName(), e.getMessage(), e);
+//                });
+//                return thread;
+//            }
+//        });
+
+
 
         // 等待所有任务结束后再关闭线程池
         threadPoolExecutor.setWaitForTasksToCompleteOnShutdown(true);
