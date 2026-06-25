@@ -129,6 +129,7 @@ public class ThreadPoolExecutorConfig {
      */
     @Bean(name = "mqFailHandlerExecutor")
     public Executor mqFailHandlerExecutor() {
+//      new  ThreadPoolExecutor()
         //ThreadPoolTaskExecutor 是对 ThreadPoolExecutor 的封装
 //        ExecutorConfigurationSupport extends CustomizableThreadFactory
         ThreadPoolTaskExecutor threadPoolExecutor = new ThreadPoolTaskExecutor();

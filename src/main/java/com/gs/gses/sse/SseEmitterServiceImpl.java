@@ -40,8 +40,10 @@ import java.util.function.Consumer;
  * 支持事件流：SSE使用事件流（event stream）的格式来传输数据，可以发送不同类型的事件，方便客户端进行处理
  *
  *
- * websocket 双工，sse 单工
+ * websocket 双工，sse 单工。sse 基于http :HTTP/1.1 或 HTTP/2 (单向流)
  *
+ *
+ * SignalR :HTTP (握手) + WebSocket (通信)
  *
  *
  *
